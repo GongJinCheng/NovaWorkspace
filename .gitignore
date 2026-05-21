@@ -1,13 +1,34 @@
 node_modules/
 dist/
+
+# Build maps
 *.js.map
-_p*.js
-_patch*.js
-_test.js
+
+# Temporary / ad-hoc helper scripts
+fix.js
+_fix.cjs
+fix-statusbar.ps1
 do_patch.ps1
-# Temp/helper files from coding sessions
-_gen*.py
-_gen*.cjs
-_write*.mjs
-_test*.txt
-_tmp*.txt
+*.tmp.ps1
+*.tmp.cjs
+*.tmp.mjs
+_tmp*
+_test*
+_patch*
+_gen*
+_write*
+
+# OS / editor noise
+Thumbs.db
+.DS_Store
+*.swp
+*.swo
+*.bak
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# Electron / misc generated
+package-lock.json
