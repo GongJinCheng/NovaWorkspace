@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Todo Page - Entry and Detail Drawer Coordinator
  * Handles filters, view modes, sliding details drawer, auto-saves, and subtask managers.
  */
@@ -42,6 +42,22 @@ async function initTodoPage(): Promise<void> {
   document.getElementById('todo-drawer-close')?.addEventListener('click', () => {
     closeDrawer();
   });
+
+  // Close drawer when clicking outside it
+  const pageTodo = document.getElementById('page-todo');
+  if (pageTodo) {
+    pageTodo.addEventListener('click', (e) => {
+      const target = e.target as HTMLElement;
+      const drawer = document.getElementById('todo-detail-drawer');
+      if (drawer && drawer.classList.contains('active')) {
+        // Don't close if click is inside the drawer
+        if (drawer.contains(target)) return;
+        // Don't close if click is on a task card (that opens a different task's details)
+        if (target.closest('.todo-task-card')) return;
+        closeDrawer();
+      }
+    });
+  }
 
   console.log('[Todo] Workstation page initialized');
 }

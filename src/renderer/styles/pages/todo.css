@@ -1,4 +1,4 @@
-/* ============================================================
+﻿/* ============================================================
  * pages/todo.css - Todo Center (Phase 2 Redesign)
  * Techno-Gothic style: theme-aware surfaces, subtle glows, clean hierarchy
  * ============================================================ */
@@ -223,8 +223,8 @@
   display: flex;
   flex-direction: column;
   min-height: 0;
-  padding: 24px 28px;
-  gap: 20px;
+  padding: 20px 24px;
+  gap: 10px;
   overflow: hidden;
   min-width: 0;
 }
@@ -243,7 +243,7 @@
   gap: 14px;
   align-items: stretch;
   flex-shrink: 0;
-  padding: 16px;
+  padding: 14px;
   background: linear-gradient(135deg, rgba(99,102,241,0.06), rgba(96,165,250,0.02));
   border: 1px solid rgba(99,102,241,0.16);
   border-radius: 16px;
@@ -253,7 +253,7 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 12px 14px;
+  padding: 10px 12px;
   border-radius: 14px;
   background: rgba(99,102,241,0.06);
 }
@@ -313,27 +313,32 @@
 
 .todo-command-metrics {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 8px;
   align-self: center;
+  min-width: 0;
 }
 
 .todo-metric-chip {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 10px 12px;
+  padding: 8px 10px;
   border-radius: 12px;
   background: var(--bg-elevated, #12121a);
   border: 1px solid var(--border-subtle, rgba(255,255,255,0.06));
-  min-width: 84px;
+  flex: 1;
+  min-width: 0;
+  justify-content: center;
+  flex-direction: column;
 }
 
 .todo-metric-num {
   font-variant-numeric: tabular-nums;
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 800;
   color: var(--text-primary, #f0f0f5);
+  line-height: 1;
 }
 
 .todo-metric-label {
@@ -350,6 +355,22 @@
 .todo-metric-chip.done { border-color: rgba(52,211,153,0.25); }
 
 /* --- Quick Add Input --- */
+.todo-capture-bar {
+  flex-shrink: 0;
+  background: linear-gradient(135deg, rgba(99,102,241,0.04), rgba(96,165,250,0.02));
+  border: 1px solid rgba(99,102,241,0.12);
+  border-radius: 14px;
+  padding: 10px 12px;
+  position: relative;
+  transition: border-color 0.3s;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.todo-capture-bar:focus-within {
+  border-color: rgba(99,102,241,0.3);
+}
+
 .todo-quick-add {
   flex-shrink: 0;
   background: linear-gradient(135deg, rgba(99,102,241,0.04), rgba(96,165,250,0.02));
@@ -370,7 +391,7 @@
   background: var(--bg-surface, #0a0a0f);
   border: 1px solid var(--border-default, rgba(255,255,255,0.08));
   border-radius: 10px;
-  padding: 10px 14px;
+  padding: 8px 12px;
   transition: border-color 0.2s, box-shadow 0.2s;
 }
 .todo-input-wrap:focus-within {
@@ -420,8 +441,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
-  margin-top: 10px;
+  gap: 8px;
+  margin-top: 8px;
   flex-wrap: wrap;
 }
 
@@ -490,7 +511,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: 10px;
   flex-wrap: wrap;
   flex-shrink: 0;
 }
@@ -568,8 +589,10 @@
 /* --- Task Area --- */
 .todo-task-area {
   flex: 1;
-  min-height: 0;
-  overflow-y: auto;
+  min-height: 120px;
+  overflow-y: overlay;
+  overflow-x: hidden;
+  padding: 0 4px;
 }
 
 .todo-planboard {
@@ -659,7 +682,7 @@
   cursor: pointer;
 }
 .todo-task-card:hover {
-  transform: translateY(-2px) scale(1.005);
+  transform: translateY(-2px) scale(1.002);
   box-shadow: 0 6px 20px rgba(0,0,0,0.3), 0 0 1px rgba(255,255,255,0.12);
   border-color: rgba(255,255,255,0.12);
 }
@@ -685,7 +708,7 @@
 .todo-task-body {
   flex: 1;
   min-width: 0;
-  padding: 10px 12px;
+  padding: 8px 12px;
 }
 
 .todo-task-header {
@@ -752,7 +775,7 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  margin-top: 6px;
+  margin-top: 4px;
   flex-wrap: wrap;
 }
 .todo-due-badge {
@@ -797,7 +820,10 @@
 .todo-timeline {
   flex-shrink: 0;
   border-top: 1px solid var(--border-subtle, rgba(255,255,255,0.06));
-  padding-top: 12px;
+  padding-top: 10px;
+  min-height: 0;
+  max-height: 120px;
+  overflow-y: auto;
 }
 .todo-timeline-header {
   display: flex; align-items: center; gap: 6px;
