@@ -1,0 +1,427 @@
+/* ============================================================
+ * pages/files.css — File Manager Page
+ * 
+ * File sidebar, file tree, editor area, tabs, tab items,
+ * editor container, welcome screen, status bar, toolbar.
+ * ============================================================ */
+
+/* === File Manager Full === */
+.file-manager-full {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.file-sidebar {
+  width: 280px;
+  background: var(--bg-surface);
+  border-right: 1px solid var(--border-subtle);
+  display: flex;
+  flex-direction: column;
+  transition: background-color 0.3s ease;
+  flex-shrink: 0;
+}
+
+.file-sidebar-header {
+  padding: 16px;
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.file-sidebar-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+/* Duplicate — later in original */
+.file-sidebar-title {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-secondary);
+}
+
+.file-sidebar-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.file-tree {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 0;
+  min-height: 0;
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  gap: 12px;
+  color: var(--text-tertiary);
+  font-size: 13px;
+}
+
+.tree-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--text-secondary);
+  transition: all 0.1s ease;
+  user-select: none;
+}
+
+.tree-item:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.tree-item.selected {
+  background: var(--accent-soft);
+  color: var(--accent-hover);
+}
+
+.tree-item-icon {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tree-item-icon svg {
+  width: 14px;
+  height: 14px;
+}
+
+.tree-item-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tree-item-arrow {
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-tertiary);
+  transition: transform 0.15s ease;
+}
+
+.tree-item-arrow.expanded {
+  transform: rotate(90deg);
+}
+
+.tree-children {
+  padding-left: 16px;
+}
+
+/* === Editor Area === */
+.file-editor-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--bg-base);
+  transition: background-color 0.3s ease;
+  min-width: 0;
+}
+
+/* === Tabs Bar === */
+.tabs-bar {
+  height: 38px;
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: stretch;
+  overflow-x: auto;
+  overflow-y: hidden;
+  transition: background-color 0.3s ease;
+  flex-shrink: 0;
+}
+
+.tabs-bar::-webkit-scrollbar {
+  height: 0;
+  display: none;
+}
+
+.tabs-list {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+}
+
+/* === Tab Item - Equal Width === */
+.tab {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  padding: 0 12px;
+  background: var(--bg-elevated);
+  border-right: 1px solid var(--border-subtle);
+  border-bottom: 1px solid var(--border-subtle);
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--text-secondary);
+  transition: all 0.15s ease;
+  flex: 1;
+  min-width: 0;
+  max-width: 180px;
+  position: relative;
+}
+
+.tab:last-child {
+  border-right: none;
+}
+
+.tab:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.tab.active {
+  background: var(--bg-base);
+  color: var(--text-primary);
+  border-bottom-color: var(--bg-base);
+}
+
+/* === Tab Name - Truncate === */
+.tab-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-right: 8px;
+}
+
+/* === Tab Close Button - Fixed Position === */
+.tab-close {
+  width: 20px;
+  height: 20px;
+  border: none;
+  background: transparent;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  flex-shrink: 0;
+  opacity: 0;
+  transition: all 0.15s;
+}
+
+.tab:hover .tab-close {
+  opacity: 1;
+}
+
+.tab.active .tab-close {
+  opacity: 0.9;
+}
+
+.tab.active:hover .tab-close {
+  opacity: 1;
+}
+
+.tab-close:hover {
+  background: var(--red-soft);
+  color: var(--red);
+}
+
+.tab.modified .tab-name::after {
+  content: '\25CF';
+  color: var(--orange);
+  font-size: 10px;
+  margin-left: 4px;
+}
+
+/* === Editor Container === */
+.editor-container {
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+  min-height: 0;
+}
+
+.welcome-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  gap: 16px;
+  animation: fadeIn 0.5s ease;
+}
+
+.welcome-screen h2 {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.welcome-screen p {
+  font-size: 14px;
+  color: var(--text-tertiary);
+}
+
+.shortcuts {
+  display: flex;
+  flex-direction: column;
+ gap: 12px;
+  margin-top: 24px;
+}
+
+.shortcut {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+/* === Status Bar === */
+.status-bar {
+  height: 24px;
+  background: var(--bg-surface);
+  border-top: 1px solid var(--border-subtle);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 12px;
+  font-size: 11.5px;
+  color: var(--text-tertiary);
+  transition: background-color 0.3s ease;
+  flex-shrink: 0;
+}
+
+.status-left,
+.status-right {
+  display: flex;
+  gap: 16px;
+}
+
+.status-item {
+  cursor: default;
+}
+
+/* === AI Button in Editor === */
+.ai-toolbar {
+  display: flex;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.ai-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: var(--accent-soft);
+  color: var(--accent-hover);
+  border: none;
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.ai-btn:hover {
+  background: var(--accent);
+  color: #fff;
+}
+
+.ai-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.ai-btn.loading {
+  opacity: 0.7;
+}
+
+/* === File Toolbar === */
+.file-toolbar {
+  display: flex;
+  gap: 8px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border-subtle);
+  background: var(--bg-surface);
+}
+
+.toolbar-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  color: var(--text-secondary);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.toolbar-btn:hover {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.toolbar-btn svg {
+  flex-shrink: 0;
+}
+/* === Context Menu === */
+.tree-context-menu {
+  position: fixed;
+  z-index: 1000;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  border-radius: 8px;
+  padding: 4px;
+  min-width: 140px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+}
+
+.tree-context-item {
+  padding: 6px 12px;
+  font-size: 12px;
+  color: var(--text-primary);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+.tree-context-item:hover {
+  background: var(--bg-hover);
+}
+
+.tree-context-item.danger:hover {
+  background: var(--red-soft);
+  color: var(--red);
+}
