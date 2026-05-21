@@ -1,4 +1,4 @@
-﻿/* ============================================================
+/* ============================================================
  * variables.css — CSS Custom Properties & Theme Overrides
  * 
  * Contains all design tokens: colors, borders, text, shadows,
@@ -6,7 +6,7 @@
  * first — all other files depend on these variables.
  * ============================================================ */
 
-/* === Dark Theme (Default) === */
+/* === Default Theme (follows system unless overridden) === */
 :root,
 [data-theme="dark"] {
   --bg-base: #0a0a0f;

@@ -1,9 +1,9 @@
-/**
+﻿/**
  * App Entry — 应用初始化入口
  * 绑定全局事件、初始化主题、注册页面路由
  */
 
-import { initTheme, toggleTheme } from './theme';
+import { initTheme, cycleTheme } from './theme';
 import { switchPage, registerPageInit, initializeActivePage } from './router';
 import { ipcClient } from '../services/ipc-client';
 
@@ -46,7 +46,7 @@ function bindTitleBarEvents(): void {
   document.getElementById('btn-min')?.addEventListener('click', () => ipcClient.window.minimize());
   document.getElementById('btn-max')?.addEventListener('click', () => ipcClient.window.maximize());
   document.getElementById('btn-close')?.addEventListener('click', () => ipcClient.window.close());
-  document.getElementById('btn-theme')?.addEventListener('click', toggleTheme);
+  document.getElementById('btn-theme')?.addEventListener('click', cycleTheme);
 }
 
 function bindNavEvents(): void {

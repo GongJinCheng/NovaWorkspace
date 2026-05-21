@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN" data-theme="dark">
 <head>
   <meta charset="UTF-8">
@@ -115,22 +115,23 @@
               <div class="stat-label">智能代码助手</div>
             </div>
           </div>
-          <div class="stat-card">
+          <div class="stat-card stat-card-action">
             <div class="stat-icon">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
             </div>
             <div class="stat-info">
-              <div class="stat-value">进行中</div>
-              <div class="stat-label">3 个项目</div>
+              <div class="stat-value">今日待办 <span id="home-todo-today" class="stat-highlight">0</span></div>
+              <div class="stat-label">逾期 <span id="home-todo-overdue">0</span> · 待处理 <span id="home-todo-pending">0</span></div>
             </div>
+            <button class="btn-ghost" id="btn-go-todo">去处理</button>
           </div>
-          <div class="stat-card">
+          <div class="stat-card stat-card-wide">
             <div class="stat-icon">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
             </div>
             <div class="stat-info">
-              <div class="stat-value">已完成</div>
-              <div class="stat-label">12 个任务</div>
+              <div class="stat-value">下一件待处理</div>
+              <div class="stat-label text-ellipsis" id="home-todo-next">暂无待办</div>
             </div>
           </div>
         </div>
@@ -367,102 +368,184 @@
           </div>
         </div>
       </div>
-
       <!-- Todo Page -->
       <div class="page" id="page-todo">
-        <div class="todo-container">
-          <div class="todo-dashboard">
-            <div class="todo-stat-ring-card">
-              <div class="todo-ring-wrap">
-                <svg class="todo-ring" viewBox="0 0 100 100">
-                  <circle class="todo-ring-bg" cx="50" cy="50" r="42"/>
-                  <circle class="todo-ring-fill" cx="50" cy="50" r="42" id="todo-ring-fill"/>
-                </svg>
-                <div class="todo-ring-label" id="todo-ring-label">0%</div>
+        <div class="todo-workstation">
+          <!-- Left Sidebar: Filters & Categories -->
+          <div class="todo-sidebar">
+            <div class="todo-sidebar-section">
+              <div class="todo-sidebar-title">智能筛选</div>
+              <ul class="todo-smart-filters">
+                <li class="todo-filter-item active" data-filter="all">
+                  <svg class="todo-filter-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="9" y1="9" x2="15" y2="9"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="15" y2="17"/></svg>
+                  <span class="todo-filter-name">全部任务</span>
+                  <span class="todo-filter-count" id="todo-sidebar-count-all">0</span>
+                </li>
+                <li class="todo-filter-item" data-filter="today">
+                  <svg class="todo-filter-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                  <span class="todo-filter-name">今天</span>
+                  <span class="todo-filter-count" id="todo-sidebar-count-today">0</span>
+                </li>
+                <li class="todo-filter-item" data-filter="upcoming">
+                  <svg class="todo-filter-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+                  <span class="todo-filter-name">即将到来</span>
+                  <span class="todo-filter-count" id="todo-sidebar-count-upcoming">0</span>
+                </li>
+                <li class="todo-filter-item" data-filter="overdue">
+                  <svg class="todo-filter-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                  <span class="todo-filter-name">已逾期</span>
+                  <span class="todo-filter-count" id="todo-sidebar-count-overdue">0</span>
+                </li>
+                <li class="todo-filter-item" data-filter="completed">
+                  <svg class="todo-filter-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                  <span class="todo-filter-name">已完成</span>
+                  <span class="todo-filter-count" id="todo-sidebar-count-completed">0</span>
+                </li>
+              </ul>
+            </div>
+            
+            <div class="todo-sidebar-section">
+              <div class="todo-sidebar-title-row">
+                <span class="todo-sidebar-title">分类管理</span>
+                <button class="todo-sidebar-add-cat-btn" id="todo-sidebar-add-cat" title="新建分类">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                </button>
               </div>
-              <div class="todo-ring-info">
-                <span class="todo-ring-title">今日完成率</span>
-                <span class="todo-ring-sub" id="todo-ring-sub">0/0 项</span>
+              <div class="todo-sidebar-categories" id="todo-sidebar-categories">
+                <!-- Dynamically rendered custom categories list -->
               </div>
-            </div>
-            <div class="todo-stat-card">
-              <div class="todo-stat-icon overdue"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
-              <div class="todo-stat-num" id="todo-num-overdue">0</div>
-              <div class="todo-stat-label">已逾期</div>
-            </div>
-            <div class="todo-stat-card">
-              <div class="todo-stat-icon today"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div>
-              <div class="todo-stat-num" id="todo-num-today">0</div>
-              <div class="todo-stat-label">今日待办</div>
-            </div>
-            <div class="todo-stat-card">
-              <div class="todo-stat-icon upcoming"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v10l4.5 4.5"/><circle cx="12" cy="12" r="10"/></svg></div>
-              <div class="todo-stat-num" id="todo-num-upcoming">0</div>
-              <div class="todo-stat-label">即将到期</div>
-            </div>
-            <div class="todo-stat-card">
-              <div class="todo-stat-icon done"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div>
-              <div class="todo-stat-num" id="todo-num-done">0</div>
-              <div class="todo-stat-label">已完成</div>
             </div>
           </div>
-          <div class="todo-quick-add">
-            <div class="todo-input-wrap">
-              <svg class="todo-input-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
-              <input type="text" id="todo-quick-input" placeholder="添加任务... 按 Enter 确认" autocomplete="off">
-              <div class="todo-inline-pri">
-                <span class="todo-pri-dot" data-pri="low" title="低优先级"></span>
-                <span class="todo-pri-dot active" data-pri="medium" title="中优先级"></span>
-                <span class="todo-pri-dot" data-pri="high" title="高优先级"></span>
-                <span class="todo-pri-dot" data-pri="urgent" title="紧急"></span>
+          
+          <!-- Middle Workspace: Main Content & Capture -->
+          <div class="todo-workspace">
+            <div class="todo-workspace-header">
+              <!-- Advanced Dashboard inside Workspace -->
+              <div class="todo-command-bar" id="todo-command-bar">
+                <div class="todo-command-ring-card">
+                  <div class="todo-ring-wrap">
+                    <svg class="todo-ring" viewBox="0 0 100 100">
+                      <circle class="todo-ring-bg" cx="50" cy="50" r="42"/>
+                      <circle class="todo-ring-fill" cx="50" cy="50" r="42" id="todo-ring-fill"/>
+                    </svg>
+                    <div class="todo-ring-label" id="todo-ring-label">0%</div>
+                  </div>
+                  <div class="todo-ring-info">
+                    <span class="todo-ring-title">今日完成率</span>
+                    <span class="todo-ring-sub" id="todo-ring-sub">0/0 项</span>
+                  </div>
+                </div>
+                <div class="todo-next-up-card">
+                  <div class="todo-next-up-label">下一步动作</div>
+                  <div class="todo-next-up-title" id="todo-next-up-title">暂无待办</div>
+                  <div class="todo-next-up-meta" id="todo-next-up-meta">当前没有需要处理的任务</div>
+                </div>
+                <div class="todo-command-metrics">
+                  <div class="todo-metric-chip overdue">
+                    <span class="todo-metric-num" id="todo-num-overdue">0</span>
+                    <span class="todo-metric-label">已逾期</span>
+                  </div>
+                  <div class="todo-metric-chip today">
+                    <span class="todo-metric-num" id="todo-num-today">0</span>
+                    <span class="todo-metric-label">今天</span>
+                  </div>
+                  <div class="todo-metric-chip tomorrow">
+                    <span class="todo-metric-num" id="todo-num-tomorrow">0</span>
+                    <span class="todo-metric-label">明天</span>
+                  </div>
+                  <div class="todo-metric-chip upcoming">
+                    <span class="todo-metric-num" id="todo-num-upcoming">0</span>
+                    <span class="todo-metric-label">即将到来</span>
+                  </div>
+                  <div class="todo-metric-chip done">
+                    <span class="todo-metric-num" id="todo-num-done">0</span>
+                    <span class="todo-metric-label">已完成</span>
+                  </div>
+                </div>
               </div>
-              <button class="todo-input-detail-btn" id="todo-btn-detail" title="更多选项">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/></svg>
+            </div>
+
+            <!-- Quick Capture Bar -->
+            <div class="todo-capture-bar">
+              <div class="todo-input-wrap">
+                <svg class="todo-input-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+                <input type="text" id="todo-quick-input" placeholder="添加待办任务并按下 Enter..." autocomplete="off">
+                <div class="todo-inline-pri">
+                  <span class="todo-pri-dot" data-pri="low" title="低优先级"></span>
+                  <span class="todo-pri-dot active" data-pri="medium" title="中优先级"></span>
+                  <span class="todo-pri-dot" data-pri="high" title="高优先级"></span>
+                  <span class="todo-pri-dot" data-pri="urgent" title="紧急"></span>
+                </div>
+                <button class="todo-input-detail-btn" id="todo-btn-detail" title="展开高级选项">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/></svg>
+                </button>
+              </div>
+              <div class="todo-inline-bar">
+                <div class="todo-cat-pills" id="todo-cat-pills">
+                  <!-- Dynamically rendered pills for category assignment when creating task -->
+                </div>
+                <div class="todo-quick-dates">
+                  <button class="todo-date-chip" data-due="30m">30分钟</button>
+                  <button class="todo-date-chip" data-due="1h">1小时</button>
+                  <button class="todo-date-chip" data-due="2h">2小时</button>
+                  <button class="todo-date-chip" data-due="today18">今天18:00</button>
+                  <button class="todo-date-chip" data-due="tomorrow9">明天9:00</button>
+                  <button class="todo-date-chip" data-due="weekend">周末</button>
+                </div>
+              </div>
+              <div class="todo-detail-panel" id="todo-detail-panel">
+                <div class="todo-detail-row">
+                  <label>截止日期和时间</label>
+                  <input type="datetime-local" id="todo-due-input" class="todo-input-dt">
+                </div>
+                <div class="todo-detail-row">
+                  <label>初始子任务（每行一个）</label>
+                  <textarea id="todo-subtasks-input" class="todo-textarea" rows="2" placeholder="输入子任务后换行即可输入下一个..."></textarea>
+                </div>
+              </div>
+            </div>
+
+            <!-- Workspace Navigation Toolbar -->
+            <div class="todo-toolbar">
+              <div class="todo-active-filter-label" id="todo-active-filter-label">所有任务</div>
+              <div class="todo-view-controls">
+                <button class="todo-view-btn active" data-view="timeline">时间轴看板</button>
+                <button class="todo-view-btn" data-view="list">经典列表</button>
+                <button class="todo-completed-toggle">显示已完成</button>
+              </div>
+            </div>
+
+            <!-- Scrollable Tasks Display Area -->
+            <div class="todo-task-area" id="todo-task-area"></div>
+            
+            <!-- Quick Timeline for Completed Items -->
+            <div class="todo-timeline" id="todo-timeline">
+              <div class="todo-timeline-header">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                <span>最近完成的任务</span>
+              </div>
+              <div class="todo-timeline-list" id="todo-timeline-list"></div>
+            </div>
+          </div>
+
+          <!-- Right Detail Drawer: Smooth slide-out panel for task detail inspection -->
+          <div class="todo-detail-drawer" id="todo-detail-drawer">
+            <div class="todo-drawer-header">
+              <span class="todo-drawer-title">任务详情</span>
+              <button class="todo-drawer-close" id="todo-drawer-close" title="关闭详情">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
               </button>
             </div>
-            <div class="todo-inline-bar">
-              <div class="todo-cat-pills" id="todo-cat-pills">
-                <span class="todo-cat-pill todo-cat-pill-add">+ 新分类</span>
-              </div>
-              <div class="todo-quick-dates">
-                <button class="todo-date-chip" data-due="30m">30分钟</button>
-                <button class="todo-date-chip" data-due="1h">1小时</button>
-                <button class="todo-date-chip" data-due="2h">2小时</button>
-                <button class="todo-date-chip" data-due="today18">今天18:00</button>
-                <button class="todo-date-chip" data-due="tomorrow9">明天9:00</button>
-                <button class="todo-date-chip" data-due="weekend">周末</button>
+            <div class="todo-drawer-content" id="todo-drawer-content">
+              <!-- Dynamically populated based on selectedTaskId -->
+              <div class="todo-drawer-empty">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.3"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                <p>选择待办任务以查看或编辑其详细信息</p>
               </div>
             </div>
-            <div class="todo-detail-panel" id="todo-detail-panel">
-              <div class="todo-detail-row">
-                <label>自定义截止时间</label>
-                <input type="datetime-local" id="todo-due-input" class="todo-input-dt">
-              </div>
-              <div class="todo-detail-row">
-                <label>子任务（每行一个）</label>
-                <textarea id="todo-subtasks-input" class="todo-textarea" rows="2" placeholder="子任务1&#10;子任务2"></textarea>
-              </div>
-            </div>
-          </div><div class="todo-filters">
-            <button class="todo-filter-btn active" data-filter="all">全部</button>
-            <button class="todo-filter-btn" data-filter="today">今天</button>
-            <button class="todo-filter-btn" data-filter="upcoming">即将到来</button>
-            <button class="todo-filter-btn" data-filter="overdue">已逾期</button>
-            <button class="todo-filter-btn" data-filter="completed">已完成</button>
-            <div class="todo-filter-spacer"></div>
-            <button class="todo-add-cat-btn" id="todo-btn-add-cat" title="添加分类">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/><line x1="12" y1="11" x2="12" y2="17"/><line x1="9" y1="14" x2="15" y2="14"/></svg>
-            </button>
-          </div>
-          <div class="todo-task-area" id="todo-task-area"></div>
-          <div class="todo-timeline" id="todo-timeline">
-            <div class="todo-timeline-header">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-              <span>最近完成</span>
-            </div>
-            <div class="todo-timeline-list" id="todo-timeline-list"></div>
           </div>
         </div>
+      </div>
       </div>
 
       <!-- Settings Page -->

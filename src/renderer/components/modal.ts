@@ -102,14 +102,16 @@ export function closeModal(overlay: HTMLElement): void {
 export function showInputPrompt(title: string, placeholder: string, defaultValue?: string): Promise<string | null> {
   return new Promise((resolve) => {
     let resolved = false;
+    let overlay: HTMLElement;
+
     const done = (value: string | null) => {
       if (resolved) return;
       resolved = true;
-      overlay.remove();
+      if (overlay) overlay.remove();
       resolve(value);
     };
 
-    const overlay = showModal({
+    overlay = showModal({
       title,
       content: '',
       inputField: { placeholder, defaultValue },
@@ -117,7 +119,7 @@ export function showInputPrompt(title: string, placeholder: string, defaultValue
         { label: '取消', type: 'secondary', onClick: () => done(null) },
         {
           label: '确定', type: 'primary', onClick: () => {
-            const input = overlay.querySelector('.modal-input') as HTMLInputElement | null;
+            const input = overlay?.querySelector('.modal-input') as HTMLInputElement | null;
             done(input?.value?.trim() ?? null);
           }
         },

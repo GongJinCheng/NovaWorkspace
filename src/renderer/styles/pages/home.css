@@ -197,3 +197,32 @@
   color: var(--text-tertiary);
   white-space: nowrap;
 }
+/* --- Todo summary cards --- */
+.stat-card-action { align-items: center; }
+.stat-card-action .btn-ghost {
+  margin-left: auto;
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border-default, rgba(255,255,255,0.08));
+  background: transparent;
+  color: var(--text-primary, #f0f0f5);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.stat-card-action .btn-ghost:hover {
+  background: var(--bg-hover, rgba(255,255,255,0.04));
+  border-color: rgba(255,255,255,0.16);
+}
+.stat-highlight {
+  margin-left: 6px;
+  color: #60a5fa;
+  font-weight: 800;
+}
+.stat-card-wide {
+  grid-column: span 2;
+}
+.text-ellipsis {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

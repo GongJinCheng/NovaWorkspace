@@ -16,6 +16,7 @@ export type Priority = 'low' | 'medium' | 'high' | 'urgent';
 export interface TodoTask {
   id: string;
   title: string;
+  description?: string;
   priority: Priority;
   categoryId: string;
   dueDate: string;
