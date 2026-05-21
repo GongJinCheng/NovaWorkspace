@@ -1,0 +1,227 @@
+﻿/* ============================================================
+ * layout.css — App Shell Layout
+ * 
+ * Titlebar, app container, sidebar, sidebar nav/footer,
+ * main content area, and page routing system.
+ * ============================================================ */
+
+/* === Titlebar === */
+.titlebar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  height: 38px;
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border-subtle);
+  -webkit-app-region: drag;
+  padding: 0 12px;
+  transition: background-color 0.3s ease;
+  flex-shrink: 0;
+}
+
+.titlebar-drag {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.app-logo {
+  width: 18px;
+  height: 18px;
+  background: linear-gradient(135deg, var(--accent), #a78bfa);
+  border-radius: 5px;
+}
+
+.app-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  letter-spacing: 0.3px;
+}
+
+.titlebar-controls {
+  display: flex;
+  -webkit-app-region: no-drag;
+}
+
+.ctrl-btn {
+  width: 36px;
+  height: 38px;
+  border: none;
+  background: transparent;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.ctrl-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-secondary);
+}
+
+.ctrl-btn.close:hover {
+  background: var(--red);
+  color: #fff;
+}
+
+.ctrl-btn.minimize:hover,
+.ctrl-btn.maximize:hover {
+  background: var(--bg-hover);
+  color: var(--text-secondary);
+}
+
+#btn-theme {
+  margin-right: 8px;
+}
+
+#btn-theme:hover {
+  color: var(--orange);
+}
+
+/* === Layout === */
+.app-container {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+  min-height: 0;
+}
+
+/* === Sidebar === */
+.sidebar {
+  width: 260px;
+  background: var(--bg-surface);
+  border-right: 1px solid var(--border-subtle);
+  display: flex;
+  flex-direction: column;
+  transition: background-color 0.3s ease;
+  flex-shrink: 0;
+}
+
+.sidebar-header {
+  padding: 16px 14px 8px;
+}
+
+.sidebar-nav {
+  flex: 1;
+  padding: 8px 10px;
+  overflow-y: auto;
+}
+
+.nav-group {
+  margin-bottom: 20px;
+}
+
+.nav-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  padding: 4px 10px 8px;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 10px;
+  border-radius: 8px;
+  color: var(--text-secondary);
+  text-decoration: none;
+  font-size: 13.5px;
+  font-weight: 500;
+  transition: all 0.15s ease;
+}
+
+.nav-item:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.nav-item.active {
+  background: var(--accent-soft);
+  color: var(--accent-hover);
+}
+
+.nav-item.active svg {
+  color: var(--accent-hover);
+}
+
+.nav-item svg {
+  flex-shrink: 0;
+  opacity: 0.7;
+}
+
+.sidebar-footer {
+  padding: 14px 16px;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent), #a78bfa);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.user-meta {
+  display: flex;
+  flex-direction: column;
+}
+
+.user-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.user-role {
+  font-size: 11px;
+  color: var(--text-tertiary);
+}
+
+/* === Main Content === */
+.main-content {
+  flex: 1;
+  overflow: hidden;
+  background: var(--bg-base);
+  transition: background-color 0.3s ease;
+  position: relative;
+  min-width: 0;
+}
+
+/* === Page System === */
+.page {
+  display: none;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  animation: fadeIn 0.3s ease;
+}
+
+.page.active {
+  display: flex;
+  flex-direction: column;
+}
+
+#page-home {
+  padding: 32px 36px;
+  overflow-y: auto;
+}

@@ -1,13 +1,22 @@
 {
   "name": "electron-file-manager",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "A file manager and note-taking app built with Electron",
-  "main": "main.js",
+  "main": "dist/main/index.js",
   "scripts": {
-    "start": "electron ."
+    "build:main": "node esbuild.main.mjs",
+    "build:preload": "node esbuild.preload.mjs",
+    "build:renderer": "node esbuild.renderer.mjs",
+    "build": "npm run build:main && npm run build:preload && npm run build:renderer",
+    "typecheck": "tsc --noEmit",
+    "start": "electron .",
+    "dev": "npm run build && npm run start"
   },
   "devDependencies": {
-    "electron": "^35.0.0"
+    "electron": "^35.0.0",
+    "typescript": "^5.7.0",
+    "esbuild": "^0.24.0",
+    "@types/node": "^22.0.0"
   },
   "dependencies": {
     "monaco-editor": "^0.52.0"

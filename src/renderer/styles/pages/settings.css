@@ -1,0 +1,41 @@
+﻿/* ============================================================
+ * pages/settings.css — Settings Page
+ * 
+ * Settings container, sections, form groups, and
+ * configuration status indicators.
+ * ============================================================ */
+
+/* === Settings Page === */
+.settings-container {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 32px;
+}
+
+.settings-container h2 {
+  font-size: 24px;
+  font-weight: 700;
+  margin-bottom: 32px;
+  color: var(--text-primary);
+}
+
+.settings-section {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 24px;
+}
+
+.settings-section h3 {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 20px;
+  color: var(--text-primary);
+}
+
+.settings-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}

@@ -1,1 +1,13 @@
-/node_modules
+node_modules/
+dist/
+*.js.map
+_p*.js
+_patch*.js
+_test.js
+do_patch.ps1
+# Temp/helper files from coding sessions
+_gen*.py
+_gen*.cjs
+_write*.mjs
+_test*.txt
+_tmp*.txt

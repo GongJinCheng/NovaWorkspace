@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN" data-theme="dark">
 <head>
   <meta charset="UTF-8">
@@ -6,7 +6,7 @@
   <title>Electron App</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="src/renderer/styles/index.css">
 </head>
 <body>
   <div class="titlebar">
@@ -54,6 +54,11 @@
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a4 4 0 0 1 4 4c0 1.95-1.4 3.58-3.25 3.93L12 22"/><path d="M12 2a4 4 0 0 0-4 4c0 1.95 1.4 3.58 3.25 3.93"/><path d="M12 2v20"/></svg>
             <span>AI 助手</span>
             <span class="badge beta">Beta</span>
+          </a>
+          <a href="#" class="nav-item" data-page="todo">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+            <span>待办中心</span>
+            <span class="todo-badge-count" id="todo-nav-badge"></span>
           </a>
         </div>
         <div class="nav-group">
@@ -195,7 +200,14 @@
                 <p>选择文件开始编辑</p>
               </div>
             </div>
-            <div class="status-bar" id="status-bar"></div>
+            <div class="status-bar" id="status-bar">
+              <div class="status-left">
+                <span class="status-item" id="status-cursor">Ln 1, Col 1</span>
+              </div>
+              <div class="status-right">
+                <span class="status-item" id="status-language">plaintext</span>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -356,6 +368,103 @@
         </div>
       </div>
 
+      <!-- Todo Page -->
+      <div class="page" id="page-todo">
+        <div class="todo-container">
+          <div class="todo-dashboard">
+            <div class="todo-stat-ring-card">
+              <div class="todo-ring-wrap">
+                <svg class="todo-ring" viewBox="0 0 100 100">
+                  <circle class="todo-ring-bg" cx="50" cy="50" r="42"/>
+                  <circle class="todo-ring-fill" cx="50" cy="50" r="42" id="todo-ring-fill"/>
+                </svg>
+                <div class="todo-ring-label" id="todo-ring-label">0%</div>
+              </div>
+              <div class="todo-ring-info">
+                <span class="todo-ring-title">今日完成率</span>
+                <span class="todo-ring-sub" id="todo-ring-sub">0/0 项</span>
+              </div>
+            </div>
+            <div class="todo-stat-card">
+              <div class="todo-stat-icon overdue"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
+              <div class="todo-stat-num" id="todo-num-overdue">0</div>
+              <div class="todo-stat-label">已逾期</div>
+            </div>
+            <div class="todo-stat-card">
+              <div class="todo-stat-icon today"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div>
+              <div class="todo-stat-num" id="todo-num-today">0</div>
+              <div class="todo-stat-label">今日待办</div>
+            </div>
+            <div class="todo-stat-card">
+              <div class="todo-stat-icon upcoming"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v10l4.5 4.5"/><circle cx="12" cy="12" r="10"/></svg></div>
+              <div class="todo-stat-num" id="todo-num-upcoming">0</div>
+              <div class="todo-stat-label">即将到期</div>
+            </div>
+            <div class="todo-stat-card">
+              <div class="todo-stat-icon done"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div>
+              <div class="todo-stat-num" id="todo-num-done">0</div>
+              <div class="todo-stat-label">已完成</div>
+            </div>
+          </div>
+          <div class="todo-quick-add">
+            <div class="todo-input-wrap">
+              <svg class="todo-input-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+              <input type="text" id="todo-quick-input" placeholder="添加任务... 按 Enter 确认" autocomplete="off">
+              <div class="todo-inline-pri">
+                <span class="todo-pri-dot" data-pri="low" title="低优先级"></span>
+                <span class="todo-pri-dot active" data-pri="medium" title="中优先级"></span>
+                <span class="todo-pri-dot" data-pri="high" title="高优先级"></span>
+                <span class="todo-pri-dot" data-pri="urgent" title="紧急"></span>
+              </div>
+              <button class="todo-input-detail-btn" id="todo-btn-detail" title="更多选项">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/></svg>
+              </button>
+            </div>
+            <div class="todo-inline-bar">
+              <div class="todo-cat-pills" id="todo-cat-pills">
+                <span class="todo-cat-pill todo-cat-pill-add">+ 新分类</span>
+              </div>
+              <div class="todo-quick-dates">
+                <button class="todo-date-chip" data-due="30m">30分钟</button>
+                <button class="todo-date-chip" data-due="1h">1小时</button>
+                <button class="todo-date-chip" data-due="2h">2小时</button>
+                <button class="todo-date-chip" data-due="today18">今天18:00</button>
+                <button class="todo-date-chip" data-due="tomorrow9">明天9:00</button>
+                <button class="todo-date-chip" data-due="weekend">周末</button>
+              </div>
+            </div>
+            <div class="todo-detail-panel" id="todo-detail-panel">
+              <div class="todo-detail-row">
+                <label>自定义截止时间</label>
+                <input type="datetime-local" id="todo-due-input" class="todo-input-dt">
+              </div>
+              <div class="todo-detail-row">
+                <label>子任务（每行一个）</label>
+                <textarea id="todo-subtasks-input" class="todo-textarea" rows="2" placeholder="子任务1&#10;子任务2"></textarea>
+              </div>
+            </div>
+          </div><div class="todo-filters">
+            <button class="todo-filter-btn active" data-filter="all">全部</button>
+            <button class="todo-filter-btn" data-filter="today">今天</button>
+            <button class="todo-filter-btn" data-filter="upcoming">即将到来</button>
+            <button class="todo-filter-btn" data-filter="overdue">已逾期</button>
+            <button class="todo-filter-btn" data-filter="completed">已完成</button>
+            <div class="todo-filter-spacer"></div>
+            <button class="todo-add-cat-btn" id="todo-btn-add-cat" title="添加分类">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/><line x1="12" y1="11" x2="12" y2="17"/><line x1="9" y1="14" x2="15" y2="14"/></svg>
+            </button>
+          </div>
+          <div class="todo-task-area" id="todo-task-area"></div>
+          <div class="todo-timeline" id="todo-timeline">
+            <div class="todo-timeline-header">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+              <span>最近完成</span>
+            </div>
+            <div class="todo-timeline-list" id="todo-timeline-list"></div>
+          </div>
+        </div>
+      </div>
+
       <!-- Settings Page -->
       <div class="page" id="page-settings">
         <div class="settings-container">
@@ -367,9 +476,6 @@
   </div>
 
   <script src="node_modules/monaco-editor/min/vs/loader.js"></script>
-  <script src="ai-service.js"></script>
-  <script src="file-tree.js"></script>
-  <script src="editor-manager.js"></script>
-  <script src="renderer.js"></script>
+  <script src="dist/renderer/index.js"></script>
 </body>
 </html>

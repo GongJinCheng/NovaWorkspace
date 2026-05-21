@@ -1,0 +1,16 @@
+﻿/* ============================================================
+ * index.css — Entry Point
+ * 
+ * Imports all modular CSS files in dependency order.
+ * Replace the monolithic styles.css import with this file.
+ * ============================================================ */
+
+@import './variables.css';
+@import './base.css';
+@import './layout.css';
+@import './components.css';
+@import './pages/home.css';
+@import './pages/files.css';
+@import './pages/ai.css';
+@import './pages/todo.css';
+@import './pages/settings.css';
