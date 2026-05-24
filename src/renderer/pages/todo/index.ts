@@ -76,9 +76,14 @@ async function loadData(): Promise<void> {
   }
 }
 
+function renderUI(): Promise<void> {
+  renderAll();
+  return Promise.resolve();
+}
+
 function renderAll(): void {
   renderCommandBar();
-  renderCategories(refreshAll);
+  renderCategories(() => renderUI(), refreshAll);
   renderTaskList(refreshAll, openDrawer);
   updateNavBadge();
   syncViewControls();
@@ -220,41 +225,41 @@ function renderDrawerContent(): void {
   const priColor = PRI_COLORS[task.priority] || PRI_COLORS.medium;
 
   content.innerHTML =
-    '<div class="drawer-field">' +
-      '<label>\u6807\u9898</label>' +
-      '<input type="text" id="drawer-task-title" class="drawer-input" value="' + esc(task.title) + '" />' +
+    '<div class="todo-drawer-field">' +
+      '<span class="todo-drawer-field-label">\u6807\u9898</span>' +
+      '<input type="text" id="drawer-task-title" class="todo-drawer-title-input" value="' + esc(task.title) + '" />' +
     '</div>' +
-    '<div class="drawer-field">' +
-      '<label>\u63CF\u8FF0</label>' +
-      '<textarea id="drawer-task-desc" class="drawer-textarea" placeholder="\u6DFB\u52A0\u63CF\u8FF0...">' + esc(task.description || '') + '</textarea>' +
+    '<div class="todo-drawer-field">' +
+      '<span class="todo-drawer-field-label">\u63CF\u8FF0</span>' +
+      '<textarea id="drawer-task-desc" class="todo-drawer-desc-textarea" placeholder="\u6DFB\u52A0\u63CF\u8FF0...">' + esc(task.description || '') + '</textarea>' +
     '</div>' +
-    '<div class="drawer-row">' +
-      '<div class="drawer-field">' +
-        '<label>\u5206\u7C7B</label>' +
-        '<select id="drawer-task-cat" class="drawer-select">' +
+    '<div class="todo-drawer-row">' +
+      '<div class="todo-drawer-field">' +
+        '<span class="todo-drawer-field-label">\u5206\u7C7B</span>' +
+        '<select id="drawer-task-cat" class="todo-drawer-select">' +
           '<option value="">\u65E0</option>' +
           store.data.categories.map(c => '<option value="' + c.id + '"' + (c.id === task.categoryId ? ' selected' : '') + '>' + esc(c.name) + '</option>').join('') +
         '</select>' +
       '</div>' +
-      '<div class="drawer-field">' +
-        '<label>\u4F18\u5148\u7EA7</label>' +
-        '<select id="drawer-task-pri" class="drawer-select">' +
+      '<div class="todo-drawer-field">' +
+        '<span class="todo-drawer-field-label">\u4F18\u5148\u7EA7</span>' +
+        '<select id="drawer-task-pri" class="todo-drawer-select">' +
           Object.entries(PRI_LABELS).map(([k, v]) => '<option value="' + k + '"' + (k === task.priority ? ' selected' : '') + '>' + v + '</option>').join('') +
         '</select>' +
       '</div>' +
     '</div>' +
-    '<div class="drawer-field">' +
-      '<label>\u622A\u6B62\u65E5\u671F</label>' +
-      '<input type="datetime-local" id="drawer-task-due" class="drawer-input" value="' + (task.dueDate ? new Date(task.dueDate).toISOString().slice(0, 16) : '') + '" />' +
+    '<div class="todo-drawer-field">' +
+      '<span class="todo-drawer-field-label">\u622A\u6B62\u65E5\u671F</span>' +
+      '<input type="datetime-local" id="drawer-task-due" class="todo-drawer-datetime" value="' + (task.dueDate ? new Date(task.dueDate).toISOString().slice(0, 16) : '') + '" />' +
     '</div>' +
-    '<div class="drawer-field">' +
-      '<label>\u5B50\u4EFB\u52A1</label>' +
-      '<div id="drawer-subtasks-list" class="drawer-subtasks-list">' +
+    '<div class="todo-drawer-field">' +
+      '<span class="todo-drawer-field-label">\u5B50\u4EFB\u52A1</span>' +
+      '<div id="drawer-subtasks-list" class="todo-drawer-subtasks">' +
         renderDrawerSubtasks(task) +
       '</div>' +
-      '<div class="drawer-add-subtask">' +
-        '<input type="text" id="drawer-new-subtask-input" class="drawer-input" placeholder="\u6DFB\u52A0\u5B50\u4EFB\u52A1..." />' +
-        '<button id="drawer-btn-add-subtask" class="drawer-btn-add">\u6DFB\u52A0</button>' +
+      '<div class="todo-drawer-add-subtask-row">' +
+        '<input type="text" id="drawer-new-subtask-input" class="todo-drawer-subtask-input" placeholder="\u6DFB\u52A0\u5B50\u4EFB\u52A1..." />' +
+        '<button id="drawer-btn-add-subtask" class="todo-drawer-add-subtask-btn">\u6DFB\u52A0</button>' +
       '</div>' +
     '</div>';
 
@@ -262,14 +267,14 @@ function renderDrawerContent(): void {
 }
 
 function renderDrawerSubtasks(task: TodoTask): string {
-  if (!task.subtasks || task.subtasks.length === 0) return '<div class="drawer-subtask-empty">\u6682\u65E0\u5B50\u4EFB\u52A1</div>';
+  if (!task.subtasks || task.subtasks.length === 0) return '<div class="todo-drawer-subtask-empty">\u6682\u65E0\u5B50\u4EFB\u52A1</div>';
   return task.subtasks.map(sub =>
     '<div class="todo-drawer-subtask-item" data-subtask-id="' + sub.id + '">' +
-      '<button class="todo-subtask-check ' + (sub.done ? 'checked' : '') + '" data-action="drawer-toggle-subtask">' +
+      '<button class="todo-drawer-subtask-check ' + (sub.done ? 'checked' : '') + '" data-action="drawer-toggle-subtask">' +
         (sub.done ? '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>' : '') +
       '</button>' +
-      '<input type="text" class="todo-subtask-edit-input ' + (sub.done ? 'done' : '') + '" data-action="drawer-edit-subtask" value="' + esc(sub.text) + '" />' +
-      '<button class="todo-subtask-delete-btn" data-action="drawer-delete-subtask" title="\u5220\u9664">' +
+      '<input type="text" class="todo-drawer-subtask-text ' + (sub.done ? 'done' : '') + '" data-action="drawer-edit-subtask" value="' + esc(sub.text) + '" />' +
+      '<button class="todo-drawer-subtask-delete" data-action="drawer-delete-subtask" title="\u5220\u9664">' +
         '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>' +
       '</button>' +
     '</div>'

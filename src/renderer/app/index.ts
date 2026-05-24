@@ -1,4 +1,4 @@
-﻿/**
+/**
  * App Entry - Application initialization entry
  * Binds global events, initializes theme, registers page routing.
  * Features: global search overlay (Ctrl+K)
@@ -28,6 +28,7 @@ async function initApp(): Promise<void> {
   setGreeting();
   registerPageInits();
   initializeActivePage();
+  initSidebarCollapse();
   console.log('[App] \u521D\u59CB\u5316\u5B8C\u6210');
 }
 
@@ -257,6 +258,29 @@ function loadAIStats(): void {
 
 function registerPageInits(): void {
   // Pages are initialized lazily when first visited
+}
+
+
+// --- Sidebar Collapse (with localStorage persistence) ---
+function initSidebarCollapse(): void {
+  const sidebar = document.querySelector('.sidebar');
+  const btn = document.getElementById('btn-collapse-sidebar');
+  if (!sidebar || !btn) return;
+  const saved = localStorage.getItem('sidebar-collapsed');
+  if (saved === 'true') { sidebar.classList.add('collapsed'); updateIcon(true); }
+  btn.addEventListener('click', () => {
+    const collapsed = sidebar.classList.toggle('collapsed');
+    localStorage.setItem('sidebar-collapsed', String(collapsed));
+    updateIcon(collapsed);
+  });
+  function updateIcon(c: boolean) {
+    const svg = btn!.querySelector('svg');
+    if (!svg) return;
+    svg.innerHTML = c
+      ? '<path d="m13 17 5-5-5-5"/><path d="m6 17 5-5-5-5"/>'
+      : '<path d="m11 17-5-5 5-5"/><path d="m18 17-5-5 5-5"/>';
+    btn!.setAttribute('title', c ? '展开侧边栏' : '收起侧边栏');
+  }
 }
 
 // Start app when DOM is ready

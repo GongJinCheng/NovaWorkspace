@@ -1,18 +1,75 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN" data-theme="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Electron App</title>
+  <title>Nova</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="src/renderer/styles/index.css">
+<style>
+    .sidebar.collapsed .search-box { padding: 8px 10px; justify-content: center; }
+    .sidebar.collapsed .search-box span, .sidebar.collapsed .search-box kbd { display: none; }
+    .sidebar.collapsed .nav-label { display: none; }
+    .sidebar.collapsed .nav-item { justify-content: center; padding: 9px; gap: 0; }
+    .sidebar.collapsed .nav-item span, .sidebar.collapsed .nav-item .badge { display: none; }
+    .sidebar.collapsed .nav-item svg { opacity: 0.8; }
+    .sidebar.collapsed .user-meta, .sidebar.collapsed .sidebar-footer { display: none; }
+    .sidebar.collapsed .sidebar-nav { padding: 8px 6px; }
+    .sidebar.collapsed .sidebar-header { padding: 12px 10px; }
+    .sidebar.collapsed .nav-item { position: relative; }
+    .sidebar.collapsed .nav-item:hover::after {
+      content: attr(data-tooltip); position: absolute; left: 52px; top: 50%;
+      transform: translateY(-50%); background: var(--bg-elevated);
+      border: 1px solid var(--border-subtle); border-radius: 6px;
+      padding: 6px 10px; font-size: 12px; font-weight: 500;
+      color: var(--text-primary); white-space: nowrap; z-index: 100;
+      pointer-events: none; box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+      animation: fadeIn 0.1s ease;
+    }
+    .sidebar { transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1); }
+    
+    .files-top-bar {
+      display: flex; align-items: center; gap: 8px; padding: 8px 12px;
+      border-bottom: 1px solid var(--border-subtle); background: var(--bg-surface); flex-shrink: 0;
+    }
+    .breadcrumb-bar {
+      display: flex; align-items: center; gap: 2px; padding: 0 8px; flex: 0 1 auto; overflow: hidden;
+    }
+    .breadcrumb-item {
+      font-size: 12px; color: var(--text-tertiary); cursor: pointer; padding: 3px 8px;
+      border-radius: 4px; white-space: nowrap; transition: all 0.15s ease;
+    }
+    .breadcrumb-item:hover { color: var(--text-primary); background: var(--bg-hover); }
+    .breadcrumb-item.active { color: var(--text-primary); font-weight: 600; }
+    .breadcrumb-separator { color: var(--text-tertiary); margin: 0 2px; font-size: 10px; }
+    .files-search-box {
+      display: flex; align-items: center; gap: 8px; padding: 6px 12px;
+      background: var(--bg-elevated); border: 1px solid var(--border-subtle);
+      border-radius: 8px; margin: 0 8px; transition: all 0.15s ease; flex: 0 1 200px;
+    }
+    .files-search-box:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+    .files-search-box svg { color: var(--text-tertiary); flex-shrink: 0; }
+    .files-search-box input {
+      border: none; background: transparent; color: var(--text-primary);
+      font-family: inherit; font-size: 13px; outline: none; width: 100%;
+    }
+    .files-search-box input::placeholder { color: var(--text-tertiary); }
+    .files-search-box kbd {
+      font-family: inherit; font-size: 10px; padding: 2px 5px;
+      background: var(--bg-surface); border: 1px solid var(--border-subtle);
+      border-radius: 3px; color: var(--text-tertiary); flex-shrink: 0;
+    }
+  </style>
 </head>
 <body>
   <div class="titlebar">
     <div class="titlebar-drag">
       <span class="app-logo"></span>
-      <span class="app-title">Electron App</span>
+      <span class="app-title">Nova</span>
+        <button class="sidebar-collapse-btn" id="btn-collapse-sidebar" title="收起侧边栏">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m11 17-5-5 5-5"/><path d="m18 17-5-5 5-5"/></svg>
+        </button>
     </div>
     <div class="titlebar-controls">
       <button class="ctrl-btn" id="btn-theme" title="切换主题">
@@ -55,20 +112,20 @@
       <nav class="sidebar-nav">
         <div class="nav-group">
           <div class="nav-label">主要</div>
-          <a href="#" class="nav-item active" data-page="home">
+          <a href="#" class="nav-item active" data-page="home" data-tooltip="首页">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
             <span>首页</span>
           </a>
-          <a href="#" class="nav-item" data-page="files">
+          <a href="#" class="nav-item" data-page="files" data-tooltip="文件管理">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
             <span>文件管理</span>
           </a>
-          <a href="#" class="nav-item" data-page="ai">
+          <a href="#" class="nav-item" data-page="ai" data-tooltip="AI 助手">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a4 4 0 0 1 4 4c0 1.95-1.4 3.58-3.25 3.93L12 22"/><path d="M12 2a4 4 0 0 0-4 4c0 1.95 1.4 3.58 3.25 3.93"/><path d="M12 2v20"/></svg>
             <span>AI 助手</span>
             <span class="badge beta">Beta</span>
           </a>
-          <a href="#" class="nav-item" data-page="todo">
+          <a href="#" class="nav-item" data-page="todo" data-tooltip="待办中心">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
             <span>待办中心</span>
             <span class="todo-badge-count" id="todo-nav-badge"></span>
@@ -76,7 +133,7 @@
         </div>
         <div class="nav-group">
           <div class="nav-label">工具</div>
-          <a href="#" class="nav-item" data-page="settings">
+          <a href="#" class="nav-item" data-page="settings" data-tooltip="设置">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
             <span>设置</span>
           </a>
@@ -619,7 +676,7 @@
             <div class="settings-row">
               <div class="settings-row-info">
                 <span class="settings-row-label">版本</span>
-                <span class="settings-row-desc">Electron FileManager v<span id="settings-version">2.0.0</span></span>
+                <span class="settings-row-desc">Nova v<span id="settings-version">2.0.0</span></span>
               </div>
             </div>
             <div class="settings-row">

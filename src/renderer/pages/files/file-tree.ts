@@ -353,4 +353,42 @@ export class FileTree {
     d.textContent = str;
     return d.innerHTML;
   }
+
+  navigateToFolder(folderPath: string): void {
+    this.store?.setSelectedFolder(folderPath);
+    this.render();
+    if (this.onFolderSelect) this.onFolderSelect(folderPath);
+  }
+
+  searchAndHighlight(query: string): void {
+    const items = this.treeEl.querySelectorAll('.tree-item');
+    items.forEach(item => {
+      const nameEl = item.querySelector('.tree-name');
+      const name = nameEl?.textContent?.toLowerCase() || '';
+      if (name.includes(query)) {
+        (item as HTMLElement).style.display = '';
+        (item as HTMLElement).classList.add('search-match');
+      } else {
+        (item as HTMLElement).style.display = 'none';
+        (item as HTMLElement).classList.remove('search-match');
+      }
+    });
+    // Expand parent folders of matches
+    const visible = this.treeEl.querySelectorAll('.tree-item[style*="display: ""], .tree-item:not([style])');
+    visible.forEach(item => {
+      let parent = (item as HTMLElement).parentElement?.closest('.tree-folder');
+      while (parent) {
+        parent.classList.add('expanded');
+        parent = parent.parentElement?.closest('.tree-folder');
+      }
+    });
+  }
+
+  clearSearchHighlight(): void {
+    this.treeEl.querySelectorAll('.tree-item').forEach(item => {
+      (item as HTMLElement).style.display = '';
+      (item as HTMLElement).classList.remove('search-match');
+    });
+  }
+
 }

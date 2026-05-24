@@ -1,11 +1,27 @@
-import { BrowserWindow } from 'electron';
+import { BrowserWindow, nativeImage } from 'electron';
 import { APP_CONSTANTS } from '@shared/constants/app';
 import { getPreloadPath, getIndexPath } from '../utils/paths';
+import { join } from 'path';
 
 let mainWindow: BrowserWindow | null = null;
 
+function loadAppIcon(): Electron.NativeImage | undefined {
+  try {
+    const pngPath = join(__dirname, '../../assets/nova-icon.png');
+    return nativeImage.createFromPath(pngPath);
+  } catch {
+    return undefined;
+  }
+}
+
+const appIcon = loadAppIcon();
+
+const APP_TITLE = 'Nova';
+
 export function createMainWindow(): BrowserWindow {
   mainWindow = new BrowserWindow({
+    icon: appIcon,
+    title: APP_TITLE,
     width: APP_CONSTANTS.WINDOW.WIDTH,
     height: APP_CONSTANTS.WINDOW.HEIGHT,
     minWidth: APP_CONSTANTS.WINDOW.MIN_WIDTH,

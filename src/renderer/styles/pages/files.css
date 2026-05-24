@@ -246,6 +246,20 @@
   color: var(--red);
 }
 
+/* === Preview Tab (VSCode-style italic, replaceable) === */
+.tab.preview .tab-name {
+  font-style: italic;
+  color: var(--text-tertiary);
+}
+
+.tab.preview {
+  opacity: 0.85;
+}
+
+.tab.preview.active {
+  opacity: 1;
+}
+
 .tab.modified .tab-name::after {
   content: '\25CF';
   color: var(--orange);

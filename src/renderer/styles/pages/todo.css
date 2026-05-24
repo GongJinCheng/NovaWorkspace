@@ -1120,6 +1120,13 @@
 }
 
 /* Subtasks in Drawer */
+.todo-drawer-subtask-empty {
+  text-align: center;
+  padding: 16px;
+  color: var(--text-tertiary, #666);
+  font-size: 13px;
+}
+
 .todo-drawer-subtasks {
   display: flex;
   flex-direction: column;

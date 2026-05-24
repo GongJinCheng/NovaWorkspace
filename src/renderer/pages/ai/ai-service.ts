@@ -3,6 +3,10 @@
  * Exported as singleton
  */
 
+import { Logger } from '../../../shared/utils/logger';
+
+const aiLog = new Logger('AIService');
+
 export interface ChatMessage {
   role: 'system' | 'user' | 'assistant';
   content: string;
@@ -30,18 +34,42 @@ class AIService {
   getBaseUrl(): string { return this.baseUrl; }
   getApiKey(): string { return this.apiKey; }
 
-  async chat(messages: ChatMessage[], options: { model?: string; temperature?: number; max_tokens?: number } = {}): Promise<string> {
+  async chat(messages: ChatMessage[], options: { model?: string; temperature?: number; max_tokens?: number; signal?: AbortSignal; timeout?: number } = {}): Promise<string> {
     if (!this.isConfigured()) throw new Error('请先配置 AI API Key');
+    aiLog.debug('Starting chat request');
     const url = this.baseUrl + '/chat/completions';
     const body = { model: options.model || this.model, messages, temperature: options.temperature || 0.7, max_tokens: options.max_tokens || 4096, stream: false };
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + this.apiKey },
-      body: JSON.stringify(body),
-    });
-    if (!response.ok) { const error = await response.json().catch(() => ({})); throw new Error(error.error?.message || 'API 请求失败: ' + response.status); }
-    const data = await response.json();
-    return data.choices[0].message.content;
+
+    const controller = new AbortController();
+    const signal = options.signal || controller.signal;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const timeoutMs = options.timeout || 30000;
+
+    if (timeoutMs > 0) {
+      timer = setTimeout(() => controller.abort(), timeoutMs);
+    }
+
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + this.apiKey },
+        body: JSON.stringify(body),
+        signal,
+      });
+      if (timer) clearTimeout(timer);
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({}));
+        const apiErr = error.error?.message || 'API 请求失败: ' + response.status;
+      aiLog.error('Chat request failed: ' + apiErr);
+      throw new Error(apiErr);
+      }
+      const data = await response.json();
+      return data.choices[0].message.content;
+    } catch (err: any) {
+      if (timer) clearTimeout(timer);
+      if (err.name === 'AbortError') { aiLog.warn('Request aborted or timed out'); throw new Error('请求超时或已取消'); }
+      throw err;
+    }
   }
 
   async chatStream(messages: ChatMessage[], options: { model?: string; temperature?: number; max_tokens?: number } = {}, onChunk: (text: string) => void): Promise<string> {
@@ -78,8 +106,8 @@ class AIService {
     return fullText;
   }
 
-  async formatMarkdown(content: string): Promise<string> {
-    return this.chat([{ role: 'system', content: 'Format and clean up the following Markdown. Keep content, only fix formatting. Output the cleaned content only.' }, { role: 'user', content }], { temperature: 0.3 });
+  async formatMarkdown(content: string, signal?: AbortSignal): Promise<string> {
+    return this.chat([{ role: 'system', content: 'Format and clean up the following Markdown. Keep content, only fix formatting. Output the cleaned content only.' }, { role: 'user', content }], { temperature: 0.3, signal, timeout: 25000 });
   }
 
   async explainCode(code: string): Promise<string> {

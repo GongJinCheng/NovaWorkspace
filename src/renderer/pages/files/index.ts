@@ -8,6 +8,7 @@ import { FilesStore } from './files-store';
 import { ipcClient } from '../../services/ipc-client';
 import { registerPageInit, PageId } from '../../app/router';
 import { showInputPrompt } from '../../components/modal';
+import { aiService } from '../ai/ai-service';
 
 const store = new FilesStore();
 let fileTree: FileTree | null = null;
@@ -62,6 +63,50 @@ async function handleNewFolder(): Promise<void> {
   }
 }
 
+
+function showToast(message: string, type: 'success' | 'error' | 'info' = 'info'): void {
+  const existing = document.querySelector('.toast');
+  if (existing) existing.remove();
+  const toast = document.createElement('div');
+  toast.className = 'toast ' + type;
+  toast.textContent = message;
+  document.body.appendChild(toast);
+  setTimeout(() => toast.remove(), 3500);
+}
+
+
+function updateBreadcrumb(folderPath: string | null): void {
+  const breadcrumb = document.getElementById('files-breadcrumb');
+  if (!breadcrumb) return;
+  const root = store.getWorkspaceRoot();
+  if (!root || !folderPath) {
+    breadcrumb.innerHTML = '<span class="breadcrumb-item active">工作区</span>';
+    return;
+  }
+  const parts = folderPath.replace(root, '').split(/[\/]/).filter(Boolean);
+  let html = '<span class="breadcrumb-item" data-path="' + root + '">工作区</span>';
+  let accum = root;
+  for (const part of parts) {
+    accum = accum + (accum.endsWith('/') || accum.endsWith('\\') ? '' : '/') + part;
+    html += '<span class="breadcrumb-separator">/</span>';
+    html += '<span class="breadcrumb-item" data-path="' + accum + '">' + escHTML(part) + '</span>';
+  }
+  breadcrumb.innerHTML = html;
+  // Click to navigate
+  breadcrumb.querySelectorAll('.breadcrumb-item').forEach(item => {
+    item.addEventListener('click', () => {
+      const path = (item as HTMLElement).dataset.path || '';
+      fileTree?.navigateToFolder(path);
+    });
+  });
+}
+
+function escHTML(s: string): string {
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+
 function bindFilesToolbar(): void {
   document.getElementById('btn-open-folder')?.addEventListener('click', () => {
     console.debug('[Files] open-folder click');
@@ -75,8 +120,7 @@ function bindFilesToolbar(): void {
   document.getElementById('btn-new-folder')?.addEventListener('click', () => handleNewFolder());
   document.getElementById('btn-ai-format-toolbar')?.addEventListener('click', async () => {
     console.debug('[Files] AI format toolbar click');
-    const aiService = (window as any).aiService;
-    if (!aiService?.isConfigured?.()) { alert('\u8BF7\u5148\u914D\u7F6E AI'); return; }
+    if (!aiService.isConfigured()) { alert('\u8BF7\u5148\u914D\u7F6E AI'); return; }
     const activePath = store.getActiveFilePath();
     if (!activePath || !editorManager) { alert('\u8BF7\u5148\u6253\u5F00\u4E00\u4E2A\u6587\u4EF6'); return; }
     const editorData = editorManager.getEditorByPath(activePath);
@@ -167,6 +211,7 @@ async function initFilesPage(): Promise<void> {
 
   fileTree.onFolderSelect = (folderPath) => {
     store.setSelectedFolder(folderPath);
+    updateBreadcrumb(folderPath);
   };
 
   fileTree.onFileRenamed = (oldPath, newPath, isDir) => {
@@ -227,6 +272,31 @@ async function initFilesPage(): Promise<void> {
 
   // Initialize drag-and-drop
   initDragDrop();
+
+// --- File Search ---
+let searchTimeout: ReturnType<typeof setTimeout> | null = null;
+const searchInput = document.getElementById('files-search-input');
+if (searchInput) {
+  searchInput.addEventListener('input', () => {
+    if (searchTimeout) clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(() => {
+      const query = (searchInput as HTMLInputElement).value.trim().toLowerCase();
+      if (!query) {
+        fileTree?.clearSearchHighlight();
+        return;
+      }
+      fileTree?.searchAndHighlight(query);
+    }, 200);
+  });
+  // Ctrl+P shortcut
+  document.addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'p') {
+      e.preventDefault();
+      searchInput.focus();
+    }
+  });
+}
+
 
   console.log('[Files] page initialized');
 }

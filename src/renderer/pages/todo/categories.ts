@@ -3,16 +3,16 @@
  */
 
 import { ipcClient } from '../../services/ipc-client';
-import { getStore, setSelectedCatId, nextCatColor } from './stores/todo.store';
+import { getStore, setSelectedCatId, setFilter, nextCatColor } from './stores/todo.store';
 import { showInputPrompt, showModal } from '../../components/modal';
 import type { TodoCategory } from '@shared/types/todo';
 
-export function renderCategories(onRefresh: () => Promise<void>): void {
-  renderSidebar(onRefresh);
+export function renderCategories(onFilterRefresh: () => Promise<void>, onFullRefresh: () => Promise<void>): void {
+  renderSidebar(onFilterRefresh, onFullRefresh);
   renderQuickAddPills();
 }
 
-function renderSidebar(onRefresh: () => Promise<void>): void {
+function renderSidebar(onFilterRefresh: () => Promise<void>, onFullRefresh: () => Promise<void>): void {
   const sidebarCategories = document.getElementById('todo-sidebar-categories');
   if (!sidebarCategories) return;
 
@@ -42,7 +42,7 @@ function renderSidebar(onRefresh: () => Promise<void>): void {
   }
 
   sidebarCategories.innerHTML = html;
-  bindSidebarEvents(sidebarCategories, onRefresh);
+  bindSidebarEvents(sidebarCategories, onFilterRefresh, onFullRefresh);
 }
 
 function renderQuickAddPills(): void {
@@ -93,7 +93,7 @@ function setCountSafe(id: string, count: number): void {
   if (el) el.textContent = String(count);
 }
 
-function bindSidebarEvents(container: HTMLElement, onRefresh: () => Promise<void>): void {
+function bindSidebarEvents(container: HTMLElement, onFilterRefresh: () => Promise<void>, onFullRefresh: () => Promise<void>): void {
   container.addEventListener('click', async (e) => {
     const target = e.target as HTMLElement;
 
@@ -114,7 +114,7 @@ function bindSidebarEvents(container: HTMLElement, onRefresh: () => Promise<void
                 if (store.selectedCatId === catId) {
                   setSelectedCatId('');
                 }
-                await onRefresh(); 
+                await onFullRefresh(); 
               } 
             },
           ],
@@ -128,20 +128,32 @@ function bindSidebarEvents(container: HTMLElement, onRefresh: () => Promise<void
     if (catItem) {
       const catId = catItem.dataset.catId || '';
       const store = getStore();
-      setSelectedCatId(store.selectedCatId === catId ? '' : catId);
-      
+      const newCatId = store.selectedCatId === catId ? '' : catId;
+      setSelectedCatId(newCatId);
+
+      // Clear smart filter and update UI when switching to category
+      if (newCatId) {
+        setFilter('all');
+        const pageTodo = container.closest('#page-todo');
+        if (pageTodo) {
+          pageTodo.querySelectorAll('.todo-filter-item').forEach((b: Element) => {
+            b.classList.toggle('active', b.getAttribute('data-filter') === 'all');
+          });
+        }
+      }
+
       // Update label in workstation workspace
       const activeFilterLabel = document.getElementById('todo-active-filter-label');
       if (activeFilterLabel) {
-        if (store.selectedCatId) {
-          const cat = store.data.categories.find(c => c.id === store.selectedCatId);
+        if (newCatId) {
+          const cat = store.data.categories.find(c => c.id === newCatId);
           activeFilterLabel.textContent = cat ? `分类: ${cat.name}` : '全部任务';
         } else {
           activeFilterLabel.textContent = '全部任务';
         }
       }
 
-      await onRefresh();
+      onFilterRefresh();
     }
   });
 }

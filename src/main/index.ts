@@ -1,3 +1,7 @@
+import { createLogger } from './utils/logger';
+
+const mainLog = createLogger('Main');
+
 import { setupAppLifecycle } from './bootstrap/app-lifecycle';
 import { registerAllHandlers } from './ipc';
 

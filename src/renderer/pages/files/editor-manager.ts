@@ -1,16 +1,44 @@
 ﻿/**
  * EditorManager - Monaco Editor Manager
  * Manages Monaco editor instances, tab rendering, and editor lifecycle.
- * Supports VSCode-style tabs: scroll overflow, right-click context menu, middle-click close.
+ * Supports VSCode-style tabs: preview tabs, pinned tabs, scroll overflow,
+ * right-click context menu, middle-click close.
  */
 import { ipcClient } from '../../services/ipc-client';
 import type { FilesStore } from './files-store';
 
+
+interface MonacoEditor {
+  create(container: HTMLElement, options: Record<string, unknown>): MonacoEditorInstance;
+  defineTheme(name: string, config: Record<string, unknown>): void;
+}
+
+interface MonacoEditorInstance {
+  setModel(model: MonacoModel | null): void;
+  getModel(): MonacoModel | null;
+  layout(): void;
+  getPosition(): { lineNumber: number; column: number } | null;
+}
+
+interface MonacoModel {
+  getValue(): string;
+  setValue(value: string): void;
+  getLanguageId(): string;
+  dispose(): void;
+  getFullModelRange(): { startLineNumber: number; startColumn: number; endLineNumber: number; endColumn: number };
+  pushEditOperations(before: unknown[], operations: unknown[], fn: (() => null) | null): void;
+}
+
+interface MonacoStatic {
+  editor: MonacoEditor;
+}
+
 interface EditorTab {
   filePath: string;
   fileName: string;
-  model: any;
-  viewState: any;
+  model: MonacoModel;
+  viewState: unknown;
+  isPreview: boolean;
 }
 
 declare global {
@@ -26,8 +54,9 @@ export class EditorManager {
   private editors = new Map<string, EditorTab>();
   private tabElements = new Map<string, HTMLElement>();
   private activeEditorPath: string | null = null;
-  private monaco: any = null;
-  private editor: any = null;
+  private previewPath: string | null = null;
+  private monaco: MonacoStatic | null = null;
+  private editor: MonacoEditorInstance | null = null;
   private store: FilesStore | null = null;
   private _closeTabCtxMenu: (() => void) | null = null;
 
@@ -62,12 +91,12 @@ export class EditorManager {
         window.require.config({ paths: { vs: monacoPath } });
         window.require(
           ['vs/editor/editor.main'],
-          (m: any) => {
+          (m: MonacoStatic) => {
             this.monaco = m;
             this.createEditor();
             resolve();
           },
-          (err: any) => {
+          (err: Error) => {
             console.error('[EditorManager] Monaco load failed:', err);
             reject(err);
           }
@@ -151,6 +180,7 @@ export class EditorManager {
 
   async openFile(filePath: string, fileName: string): Promise<void> {
     try {
+      // File already open — just switch to it
       if (this.editors.has(filePath)) {
         this.switchToTab(filePath);
         return;
@@ -169,39 +199,116 @@ export class EditorManager {
       const language = this.detectLanguage(fileName);
       const model = this.monaco.editor.createModel(content, language);
 
-      this.editor.setModel(model);
+      // Check if we can replace the current preview tab
+      const previewTab = this.previewPath ? this.editors.get(this.previewPath) : null;
+      const previewEl = this.previewPath ? this.tabElements.get(this.previewPath) : null;
 
+      if (previewTab && previewEl && this.previewPath) {
+        const oldPath = this.previewPath;
+
+        // Dispose old model
+        try {
+          previewTab.model.dispose();
+        } catch (e) {
+          console.warn('[EditorManager] preview model dispose failed:', e);
+        }
+
+        // Update tab data
+        previewTab.filePath = filePath;
+        previewTab.fileName = fileName;
+        previewTab.model = model;
+        previewTab.viewState = null;
+        previewTab.isPreview = true;
+
+        // Update maps
+        this.editors.delete(oldPath);
+        this.editors.set(filePath, previewTab);
+        this.tabElements.delete(oldPath);
+        this.tabElements.set(filePath, previewEl);
+
+        // Update DOM
+        previewEl.dataset.path = filePath;
+        const nameSpan = previewEl.querySelector('.tab-name');
+        if (nameSpan) nameSpan.textContent = fileName;
+        previewEl.classList.add('preview');
+
+        // Update store
+        this.store?.closeFile(oldPath);
+        this.store?.openFile(filePath);
+        this.store?.setActive(filePath);
+
+        // Set editor model
+        this.editor.setModel(model);
+        this.activeEditorPath = filePath;
+        this.previewPath = filePath;
+
+        // Content change: auto-pin on edit
+        model.onDidChangeContent(() => {
+          const tab = this.editors.get(filePath);
+          if (tab?.isPreview) {
+            this.pinTab(filePath);
+          }
+          const tabEl = this.tabElements.get(filePath);
+          tabEl?.classList.add('modified');
+          this.store?.markDirty(filePath);
+        });
+
+        // Update active states
+        this.tabElements.forEach((el, key) => {
+          el.classList.toggle('active', key === filePath);
+        });
+
+        this.updateStatusBar();
+        setTimeout(() => this.editor?.layout(), 50);
+        return;
+      }
+
+      // No preview to replace — create a new preview tab
+      const tab: EditorTab = { filePath, fileName, model, viewState: null, isPreview: true };
+      this.editors.set(filePath, tab);
+      this.activeEditorPath = filePath;
+      this.previewPath = filePath;
+      this.createTab(filePath, fileName, true);
+      this.store?.openFile(filePath);
+      this.store?.setActive(filePath);
+
+      // Content change: auto-pin on edit
       model.onDidChangeContent(() => {
+        const t = this.editors.get(filePath);
+        if (t?.isPreview) {
+          this.pinTab(filePath);
+        }
         const tabEl = this.tabElements.get(filePath);
         tabEl?.classList.add('modified');
         this.store?.markDirty(filePath);
       });
 
-      const tab: EditorTab = { filePath, fileName, model, viewState: null };
-      this.editors.set(filePath, tab);
-      this.activeEditorPath = filePath;
-      this.createTab(filePath, fileName);
-      this.store?.openFile(filePath);
       this.updateStatusBar();
     } catch (err) {
       console.error('[EditorManager] openFile failed:', err);
     }
   }
 
-  private createTab(filePath: string, fileName: string): void {
+  private createTab(filePath: string, fileName: string, isPreview: boolean): void {
     const tab = document.createElement('div');
-    tab.className = 'tab active';
+    tab.className = 'tab active' + (isPreview ? ' preview' : '');
     tab.dataset.path = filePath;
     tab.innerHTML =
       '<span class="tab-name">' + this.escHTML(fileName) + '</span>' +
-      '<button class="tab-close" title="关闭">' +
+      '<button class="tab-close" title="\u5173\u95ED">' +
         '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>' +
       '</button>';
 
-    // Left-click to switch
+    // Single-click to switch
     tab.addEventListener('click', (e) => {
       if ((e.target as HTMLElement).closest('.tab-close')) return;
       this.switchToTab(filePath);
+    });
+
+    // Double-click to pin
+    tab.addEventListener('dblclick', (e) => {
+      if ((e.target as HTMLElement).closest('.tab-close')) return;
+      this.pinTab(filePath);
     });
 
     // Close button
@@ -224,9 +331,29 @@ export class EditorManager {
       this.showTabContextMenu(e, filePath);
     });
 
+    // Deactivate other tabs
     this.tabsList.querySelectorAll('.tab').forEach((el) => el.classList.remove('active'));
     this.tabsList.appendChild(tab);
     this.tabElements.set(filePath, tab);
+  }
+
+  // --- Pin / Unpin ---
+
+  pinTab(filePath: string): void {
+    const tab = this.editors.get(filePath);
+    if (!tab || !tab.isPreview) return;
+
+    tab.isPreview = false;
+    const tabEl = this.tabElements.get(filePath);
+    tabEl?.classList.remove('preview');
+
+    // Update store
+    this.store?.pinFile(filePath);
+
+    // Clear previewPath if this was the preview
+    if (this.previewPath === filePath) {
+      this.previewPath = null;
+    }
   }
 
   // --- Tab Context Menu ---
@@ -238,12 +365,22 @@ export class EditorManager {
     menu.style.left = e.clientX + 'px';
     menu.style.top = e.clientY + 'px';
 
-    const items = [
+    const tab = this.editors.get(filePath);
+    const isPreview = tab?.isPreview ?? false;
+
+    const items: { label: string; action: () => void }[] = [];
+
+    // Show "固定标签" only for preview tabs
+    if (isPreview) {
+      items.push({ label: '\u56FA\u5B9A\u6807\u7B7E', action: () => this.pinTab(filePath) });
+    }
+
+    items.push(
       { label: '\u5173\u95ED', action: () => this.closeTab(filePath) },
       { label: '\u5173\u95ED\u5176\u4ED6', action: () => this.closeOtherTabs(filePath) },
       { label: '\u5173\u95ED\u6240\u6709', action: () => this.closeAllTabs() },
       { label: '\u5173\u95ED\u5DF2\u4FDD\u5B58', action: () => this.closeSavedTabs() },
-    ];
+    );
 
     for (const item of items) {
       const el = document.createElement('div');
@@ -323,6 +460,11 @@ export class EditorManager {
       console.warn('[EditorManager] model dispose failed:', error);
     }
 
+    // Clear previewPath if closing the preview tab
+    if (this.previewPath === filePath) {
+      this.previewPath = null;
+    }
+
     this.editors.delete(filePath);
     this.store?.clearDirty(filePath);
     this.removeTabElement(filePath);
@@ -359,6 +501,10 @@ export class EditorManager {
 
     if (this.activeEditorPath === oldPath) {
       this.activeEditorPath = newPath;
+    }
+
+    if (this.previewPath === oldPath) {
+      this.previewPath = newPath;
     }
 
     this.store?.renameFile(oldPath, newPath);

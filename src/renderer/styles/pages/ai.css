@@ -282,6 +282,15 @@
   border: none;
 }
 
+.ai-sidebar.collapsed {
+  width: 0;
+  min-width: 0;
+  overflow: hidden;
+  opacity: 0;
+  border: none;
+  padding: 0;
+}
+
 .ai-sidebar-section {
   padding: 16px;
   border-bottom: 1px solid var(--border-subtle);

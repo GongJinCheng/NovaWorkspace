@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Files store - single source of truth for file manager runtime state.
  *
  * Owns:
@@ -189,5 +189,25 @@ export class FilesStore {
     }
     // Auto-save on every state change
     this.saveState();
+  }
+
+  // --- Favorites ---
+  private favorites: Set<string> = new Set();
+
+  toggleFavorite(filePath: string): boolean {
+    if (this.favorites.has(filePath)) {
+      this.favorites.delete(filePath);
+      return false;
+    }
+    this.favorites.add(filePath);
+    return true;
+  }
+
+  isFavorite(filePath: string): boolean {
+    return this.favorites.has(filePath);
+  }
+
+  getFavorites(): string[] {
+    return Array.from(this.favorites);
   }
 }

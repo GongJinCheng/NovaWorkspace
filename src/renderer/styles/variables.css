@@ -33,6 +33,37 @@
   --blue: #60a5fa;
   --blue-soft: rgba(96,165,250,0.12);
   --red: #ef4444;
+
+  /* === Deep Workspace Tokens === */
+  --glass-bg: rgba(17, 17, 24, 0.7);
+  --glass-border: rgba(255,255,255,0.08);
+  --glass-blur: 12px;
+
+  --shadow-elevation-1: 0 1px 2px rgba(0,0,0,0.12);
+  --shadow-elevation-2: 0 4px 12px rgba(0,0,0,0.16);
+  --shadow-elevation-3: 0 8px 32px rgba(0,0,0,0.24);
+  --shadow-glow: 0 0 20px rgba(99,102,241,0.15);
+
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
+
+  --transition-fast: 0.12s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-base: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-slow: 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+  --font-weight-extrabold: 800;
+
+  --line-height-tight: 1.2;
+  --line-height-base: 1.5;
+  --line-height-relaxed: 1.7;
+
   --red-soft: rgba(239,68,68,0.12);
 }
 

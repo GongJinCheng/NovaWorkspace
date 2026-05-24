@@ -195,6 +195,84 @@
   color: var(--text-tertiary);
 }
 
+
+/* === Sidebar Collapse System === */
+.sidebar-collapse-btn {
+  width: 28px;
+  height: 28px;
+  border: none;
+  background: transparent;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+  -webkit-app-region: no-drag;
+  margin-left: 4px;
+}
+.sidebar-collapse-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+/* Collapsed sidebar: icon-only */
+.sidebar.collapsed {
+  width: 56px;
+  overflow: hidden;
+}
+.sidebar.collapsed .sidebar-header { padding: 12px 10px; }
+.sidebar.collapsed .search-box { padding: 8px 10px; justify-content: center; }
+.sidebar.collapsed .search-box span,
+.sidebar.collapsed .search-box kbd { display: none; }
+.sidebar.collapsed .nav-label { display: none; }
+.sidebar.collapsed .nav-item { justify-content: center; padding: 9px; gap: 0; }
+.sidebar.collapsed .nav-item span,
+.sidebar.collapsed .nav-item .badge { display: none; }
+.sidebar.collapsed .nav-item svg { opacity: 0.8; }
+.sidebar.collapsed .user-meta,
+.sidebar.collapsed .sidebar-footer { display: none; }
+.sidebar.collapsed .sidebar-nav { padding: 8px 6px; }
+
+/* Tooltip on hover for collapsed nav items */
+.sidebar.collapsed .nav-item { position: relative; }
+.sidebar.collapsed .nav-item:hover::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  left: 52px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-primary);
+  white-space: nowrap;
+  z-index: 100;
+  pointer-events: none;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+  animation: fadeIn 0.1s ease;
+}
+
+/* Transition */
+.sidebar {
+  transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.sidebar .nav-item span,
+.sidebar .nav-item .badge,
+.sidebar .nav-label,
+.sidebar .search-box span,
+.sidebar .search-box kbd {
+  transition: opacity 0.15s ease;
+}
+.main-content {
+  transition: margin-left 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+
 /* === Main Content === */
 .main-content {
   flex: 1;

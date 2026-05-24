@@ -169,7 +169,7 @@ function initChatInput(): void {
 // Sidebar toggle
 
 function initSidebarToggle(): void {
-  const toggleBtn = document.getElementById('btn-toggle-ai-sidebar');
+  const toggleBtn = document.getElementById('btn-ai-toggle-panel');
   const sidebar = document.getElementById('ai-sidebar');
   if (!toggleBtn || !sidebar) return;
 

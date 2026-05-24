@@ -97,7 +97,17 @@
 .icon-btn:active {
   background: var(--accent-soft);
   color: var(--accent);
+  transform: scale(0.92);
 }
+
+/* Skeleton loading */
+.skeleton {
+  background: linear-gradient(90deg, var(--bg-elevated) 25%, var(--bg-hover) 50%, var(--bg-elevated) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: var(--radius-sm);
+}
+
 
 .icon-btn.loading {
   opacity: 0.6;
@@ -180,7 +190,21 @@
 .stat-card:hover {
   border-color: var(--border-default);
   transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+  box-shadow: var(--shadow-elevation-3), var(--shadow-glow);
+}
+
+/* Glass card variant */
+.glass-card {
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  transition: all var(--transition-base);
+}
+.glass-card:hover {
+  border-color: var(--border-default);
+  box-shadow: var(--shadow-elevation-2);
 }
 
 .stat-icon {
