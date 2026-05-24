@@ -1,4 +1,4 @@
-﻿/**
+/**
  * App Entry — 应用初始化入口
  * 绑定全局事件、初始化主题、注册页面路由
  */
@@ -33,13 +33,31 @@ async function initApp(): Promise<void> {
   // 5. 加载 AI 统计
   loadAIStats();
 
-  // 6. 初始化页面模块（延迟加载）
+  // 6. 设置问候语
+  setGreeting();
+
+  // 7. 初始化页面模块（延迟加载）
   registerPageInits();
 
-  // 7. Initialize whichever page is currently active
+  // 8. Initialize whichever page is currently active
   initializeActivePage();
 
   console.log('[App] 初始化完成');
+}
+
+function setGreeting(): void {
+  const el = document.getElementById('home-greeting');
+  if (!el) return;
+  const hour = new Date().getHours();
+  let greeting = '你好';
+  if (hour < 6) greeting = '夜深了';
+  else if (hour < 9) greeting = '早上好';
+  else if (hour < 12) greeting = '上午好';
+  else if (hour < 14) greeting = '中午好';
+  else if (hour < 18) greeting = '下午好';
+  else if (hour < 22) greeting = '晚上好';
+  else greeting = '夜深了';
+  el.textContent = greeting + ' 👋';
 }
 
 function bindTitleBarEvents(): void {
@@ -57,10 +75,6 @@ function bindNavEvents(): void {
       if (page) switchPage(page as any);
     });
   });
-
-  // Home page cards
-  document.getElementById('card-file-manager')?.addEventListener('click', () => switchPage('files'));
-  document.getElementById('card-ai-assist')?.addEventListener('click', () => switchPage('ai'));
 }
 
 function bindKeyboardShortcuts(): void {

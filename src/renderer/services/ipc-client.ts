@@ -2,7 +2,7 @@
  * IPC Client - Type-safe renderer to main communication
  */
 import type { ElectronAPI } from '../../shared/types/ipc';
-import type { FileEntry, DialogResult } from '../../shared/types/file';
+import type { FileEntry, DialogResult, RecentProject } from '../../shared/types/file';
 import type { TodoData, TodoTask, TodoCategory, CreateTaskInput, UpdateTaskInput } from '../../shared/types/todo';
 
 const api = (): ElectronAPI => window.electronAPI;
@@ -33,5 +33,11 @@ export const ipcClient = {
     addCategory: (category: Omit<TodoCategory, 'id'>): Promise<TodoCategory> => api().todo.addCategory(category),
     deleteCategory: (categoryId: string): Promise<boolean> => api().todo.deleteCategory(categoryId),
     checkReminders: (): Promise<TodoTask[]> => api().todo.checkReminders(),
+  },
+  recent: {
+    get: (): Promise<RecentProject[]> => api().recent.get(),
+    add: (project: RecentProject): Promise<RecentProject[]> => api().recent.add(project),
+    remove: (projectPath: string): Promise<RecentProject[]> => api().recent.remove(projectPath),
+    clear: (): Promise<RecentProject[]> => api().recent.clear(),
   },
 };

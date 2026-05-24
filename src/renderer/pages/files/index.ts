@@ -20,11 +20,11 @@ async function handleNewFile(): Promise<void> {
   console.debug('[Files] new-file click');
   const dir = getTargetDir();
   if (!dir) {
-    alert('Please open a folder first');
+    alert('请先打开一个文件夹');
     return;
   }
 
-  const name = await showInputPrompt('New File', 'Enter file name');
+  const name = await showInputPrompt('New File', '输入文件名');
   if (!name?.trim()) return;
 
   try {
@@ -36,7 +36,7 @@ async function handleNewFile(): Promise<void> {
     }
   } catch (err) {
     console.error('[Files] Create file failed:', err);
-    alert('Create file failed: ' + (err instanceof Error ? err.message : String(err)));
+    alert('创建文件失败: ' + (err instanceof Error ? err.message : String(err)));
   }
 }
 
@@ -44,11 +44,11 @@ async function handleNewFolder(): Promise<void> {
   console.debug('[Files] new-folder click');
   const dir = getTargetDir();
   if (!dir) {
-    alert('Please open a folder first');
+    alert('请先打开一个文件夹');
     return;
   }
 
-  const name = await showInputPrompt('New Folder', 'Enter folder name');
+  const name = await showInputPrompt('New Folder', '输入文件夹名');
   if (!name?.trim()) return;
 
   try {
@@ -57,7 +57,7 @@ async function handleNewFolder(): Promise<void> {
     await fileTree?.render();
   } catch (err) {
     console.error('[Files] Create directory failed:', err);
-    alert('Create folder failed: ' + (err instanceof Error ? err.message : String(err)));
+    alert('创建文件夹失败: ' + (err instanceof Error ? err.message : String(err)));
   }
 }
 
@@ -75,13 +75,13 @@ function bindFilesToolbar(): void {
   document.getElementById('btn-ai-format-toolbar')?.addEventListener('click', async () => {
     console.debug('[Files] AI format toolbar click');
     const aiService = (window as any).aiService;
-    if (!aiService?.isConfigured?.()) { alert('Please configure AI first'); return; }
+    if (!aiService?.isConfigured?.()) { alert('请先配置 AI'); return; }
     const activePath = store.getActiveFilePath();
-    if (!activePath || !editorManager) { alert('Please open a file first'); return; }
+    if (!activePath || !editorManager) { alert('请先打开一个文件'); return; }
     const editorData = editorManager.getEditorByPath(activePath);
     if (!editorData) return;
     const content = editorData.model.getValue();
-    if (!content.trim()) { alert('File is empty'); return; }
+    if (!content.trim()) { alert('文件内容为空'); return; }
 
     const btn = document.getElementById('btn-ai-format-toolbar') as HTMLButtonElement | null;
     const originalHTML = btn?.innerHTML || '';
@@ -96,7 +96,7 @@ function bindFilesToolbar(): void {
       }, 2000);
     } catch (err) {
       console.error('[Files] AI format failed:', err);
-      alert('AI format failed: ' + (err instanceof Error ? err.message : String(err)));
+      alert('AI 格式化失败: ' + (err instanceof Error ? err.message : String(err)));
       if (btn) { btn.disabled = false; btn.innerHTML = originalHTML; btn.classList.remove('loading'); }
     }
   });

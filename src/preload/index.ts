@@ -29,6 +29,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
     deleteCategory: (categoryId: string) => ipcRenderer.invoke(IPC_CHANNELS.TODO.DELETE_CATEGORY, categoryId),
     checkReminders: () => ipcRenderer.invoke(IPC_CHANNELS.TODO.CHECK_REMINDERS),
   },
+  recent: {
+    get: () => ipcRenderer.invoke(IPC_CHANNELS.RECENT.GET),
+    add: (project) => ipcRenderer.invoke(IPC_CHANNELS.RECENT.ADD, project),
+    remove: (projectPath: string) => ipcRenderer.invoke(IPC_CHANNELS.RECENT.REMOVE, projectPath),
+    clear: () => ipcRenderer.invoke(IPC_CHANNELS.RECENT.CLEAR),
+  },
 } satisfies ElectronAPI);
 
 declare global {

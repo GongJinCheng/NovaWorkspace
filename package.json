@@ -3,6 +3,8 @@
   "version": "2.0.0",
   "description": "A file manager and note-taking app built with Electron",
   "main": "dist/main/index.js",
+  "author": "GongJinCheng",
+  "license": "MIT",
   "scripts": {
     "build:main": "node esbuild.main.mjs",
     "build:preload": "node esbuild.preload.mjs",
@@ -10,13 +12,50 @@
     "build": "npm run build:main && npm run build:preload && npm run build:renderer",
     "typecheck": "tsc --noEmit",
     "start": "electron .",
-    "dev": "npm run build && npm run start"
+    "dev": "npm run build && npm run start",
+    "package": "npm run build && electron-builder --win",
+    "package:dir": "npm run build && electron-builder --win --dir"
+  },
+  "build": {
+    "appId": "com.gongjincheng.file-manager",
+    "productName": "Electron FileManager",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "index.html",
+      "src/renderer/styles/**/*",
+      "node_modules/monaco-editor/**/*",
+      "package.json"
+    ],
+    "extraResources": [],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        },
+        {
+          "target": "portable",
+          "arch": ["x64"]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    },
+    "asar": true
   },
   "devDependencies": {
+    "@types/node": "^22.0.0",
     "electron": "^35.0.0",
-    "typescript": "^5.7.0",
+    "electron-builder": "^26.8.1",
     "esbuild": "^0.24.0",
-    "@types/node": "^22.0.0"
+    "typescript": "^5.7.0"
   },
   "dependencies": {
     "monaco-editor": "^0.52.0"

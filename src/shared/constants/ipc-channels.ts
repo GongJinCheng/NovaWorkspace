@@ -29,6 +29,12 @@ export const IPC_CHANNELS = {
     DELETE_CATEGORY: 'todo:delete-category',
     CHECK_REMINDERS: 'todo:check-reminders',
   },
+  RECENT: {
+    GET: 'recent:get',
+    ADD: 'recent:add',
+    REMOVE: 'recent:remove',
+    CLEAR: 'recent:clear',
+  },
 } as const;
 
 export type IpcChannel = typeof IPC_CHANNELS;

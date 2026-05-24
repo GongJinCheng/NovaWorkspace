@@ -31,7 +31,7 @@ class AIService {
   getApiKey(): string { return this.apiKey; }
 
   async chat(messages: ChatMessage[], options: { model?: string; temperature?: number; max_tokens?: number } = {}): Promise<string> {
-    if (!this.isConfigured()) throw new Error('Please configure AI API Key');
+    if (!this.isConfigured()) throw new Error('请先配置 AI API Key');
     const url = this.baseUrl + '/chat/completions';
     const body = { model: options.model || this.model, messages, temperature: options.temperature || 0.7, max_tokens: options.max_tokens || 4096, stream: false };
     const response = await fetch(url, {
@@ -39,13 +39,13 @@ class AIService {
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + this.apiKey },
       body: JSON.stringify(body),
     });
-    if (!response.ok) { const error = await response.json().catch(() => ({})); throw new Error(error.error?.message || 'API request failed: ' + response.status); }
+    if (!response.ok) { const error = await response.json().catch(() => ({})); throw new Error(error.error?.message || 'API 请求失败: ' + response.status); }
     const data = await response.json();
     return data.choices[0].message.content;
   }
 
   async chatStream(messages: ChatMessage[], options: { model?: string; temperature?: number; max_tokens?: number } = {}, onChunk: (text: string) => void): Promise<string> {
-    if (!this.isConfigured()) throw new Error('Please configure AI API Key');
+    if (!this.isConfigured()) throw new Error('请先配置 AI API Key');
     const url = this.baseUrl + '/chat/completions';
     const body = { model: options.model || this.model, messages, temperature: options.temperature || 0.7, max_tokens: options.max_tokens || 4096, stream: true };
     const response = await fetch(url, {
@@ -53,7 +53,7 @@ class AIService {
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + this.apiKey },
       body: JSON.stringify(body),
     });
-    if (!response.ok) throw new Error('API request failed: ' + response.status);
+    if (!response.ok) throw new Error('API 请求失败: ' + response.status);
     const reader = response.body!.getReader();
     const decoder = new TextDecoder();
     let buffer = '';
@@ -95,10 +95,10 @@ class AIService {
   }
 
   async fetchModels(): Promise<string[]> {
-    if (!this.apiKey || !this.baseUrl) throw new Error('Please fill in API Key and Base URL first');
+    if (!this.apiKey || !this.baseUrl) throw new Error('请先填写 API Key 和 Base URL');
     const url = this.baseUrl + '/models';
     const response = await fetch(url, { headers: { 'Authorization': 'Bearer ' + this.apiKey } });
-    if (!response.ok) throw new Error('Failed to fetch models: ' + response.status);
+    if (!response.ok) throw new Error('获取模型列表失败: ' + response.status);
     const data = await response.json();
     if (data.data && Array.isArray(data.data)) return data.data.map((m: any) => m.id).sort();
     return [];

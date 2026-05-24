@@ -1,228 +1,378 @@
-﻿/* ============================================================
- * pages/home.css — Home Page
- * 
- * Content header, stats grid, section layout, cards grid,
- * card hover effects, and recent files section.
+/* ============================================================
+ * pages/home.css — Home Page (Workbench Redesign)
+ * Hero greeting, quick-action cards, stats, recent projects
  * ============================================================ */
 
-/* === Home Page === */
-.content-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 32px;
-  animation: fadeInUp 0.5s ease;
+/* === Home Page Container === */
+#page-home {
+  padding: 0;
+  overflow-y: auto;
 }
 
-.content-header h1 {
-  font-size: 26px;
+.home-page {
+  padding: 28px 32px 40px;
+  max-width: 1100px;
+  animation: fadeInUp 0.4s ease;
+}
+
+/* === Hero Section === */
+.home-hero {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-bottom: 28px;
+  animation: fadeInUp 0.4s ease;
+}
+
+.home-greeting {
+  font-size: 28px;
   font-weight: 800;
   letter-spacing: -0.5px;
   margin-bottom: 4px;
 }
 
-.subtitle {
+.home-subtitle {
   font-size: 14px;
   color: var(--text-secondary);
 }
 
-/* === Stats Grid === */
-.stats-grid {
+.home-hero-actions {
+  display: flex;
+  gap: 10px;
+}
+
+/* === Quick Action Cards === */
+.home-quick-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 14px;
-  margin-bottom: 36px;
-  animation: fadeInUp 0.5s ease 0.1s both;
+  margin-bottom: 28px;
+  animation: fadeInUp 0.4s ease 0.08s both;
 }
 
-/* === Section === */
-.section {
-  animation: fadeInUp 0.5s ease 0.2s both;
-}
-
-.section-header {
+.home-quick-card {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  margin-bottom: 16px;
-}
-
-.section-header h2 {
-  font-size: 16px;
-  font-weight: 700;
-}
-
-/* === Cards Grid === */
-.cards-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
   gap: 14px;
-}
-
-.card {
+  padding: 18px 20px;
   background: var(--bg-surface);
   border: 1px solid var(--border-subtle);
   border-radius: 14px;
-  padding: 22px;
-  transition: all 0.25s ease;
   cursor: pointer;
-  position: relative;
-  overflow: hidden;
+  transition: all 0.25s ease;
+  text-align: left;
+  font-family: inherit;
+  color: inherit;
 }
 
-.card::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 2px;
-  background: linear-gradient(90deg, var(--accent), #a78bfa);
-  opacity: 0;
-  transition: opacity 0.25s ease;
-}
-
-.card:hover {
+.home-quick-card:hover {
   border-color: var(--border-default);
-  transform: translateY(-3px);
-  box-shadow: 0 12px 32px rgba(0,0,0,0.25);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.15);
 }
 
-.card:hover::before {
-  opacity: 1;
-}
-
-.card-icon {
-  font-size: 28px;
-  margin-bottom: 14px;
-}
-
-.card h3 {
-  font-size: 15px;
-  font-weight: 700;
-  margin-bottom: 6px;
-}
-
-.card p {
-  font-size: 13px;
-  color: var(--text-secondary);
-  line-height: 1.55;
-  margin-bottom: 16px;
-}
-
-.card-footer {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.card-arrow {
-  font-size: 16px;
-  color: var(--text-tertiary);
-  transition: all 0.2s ease;
-}
-
-.card:hover .card-arrow {
+.home-quick-card:hover .home-quick-arrow {
   color: var(--accent);
   transform: translateX(3px);
 }
 
-/* === Recent Section === */
-.recent-section {
-  margin-top: 32px;
-  padding: 0 24px 24px;
+.home-quick-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 }
 
-.recent-section h3 {
-  font-size: 18px;
-  font-weight: 600;
+.home-quick-icon-blue {
+  background: rgba(59,130,246,0.12);
+  color: #60a5fa;
+}
+
+.home-quick-icon-purple {
+  background: rgba(139,92,246,0.12);
+  color: #a78bfa;
+}
+
+.home-quick-icon-green {
+  background: rgba(16,185,129,0.12);
+  color: #34d399;
+}
+
+[data-theme="light"] .home-quick-icon-blue {
+  background: rgba(59,130,246,0.1);
+  color: #3b82f6;
+}
+
+[data-theme="light"] .home-quick-icon-purple {
+  background: rgba(139,92,246,0.1);
+  color: #8b5cf6;
+}
+
+[data-theme="light"] .home-quick-icon-green {
+  background: rgba(16,185,129,0.1);
+  color: #10b981;
+}
+
+.home-quick-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.home-quick-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.home-quick-desc {
+  font-size: 12px;
+  color: var(--text-tertiary);
+}
+
+.home-quick-arrow {
+  flex-shrink: 0;
+  color: var(--text-tertiary);
+  transition: all 0.2s ease;
+}
+
+/* === Two Column Layout === */
+.home-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  animation: fadeInUp 0.4s ease 0.15s both;
+}
+
+.home-section {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: 16px;
+  padding: 22px 24px;
+}
+
+.home-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 18px;
+}
+
+.home-section-header h2 {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.link-btn {
+  background: none;
+  border: none;
+  color: var(--text-tertiary);
+  font-family: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+  transition: all 0.15s;
+}
+
+.link-btn:hover {
+  color: var(--red);
+  background: var(--red-soft);
+}
+
+/* === Stats Grid === */
+.home-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
   margin-bottom: 16px;
 }
 
-.recent-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.recent-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px 16px;
-  background: var(--bg-surface);
-  border: 1px solid var(--border-subtle);
-  border-radius: 12px;
-  transition: all 0.2s ease;
-  cursor: pointer;
-}
-
-.recent-item:hover {
+.home-stat-card {
+  padding: 14px 16px;
   background: var(--bg-elevated);
+  border-radius: 10px;
+  border: 1px solid var(--border-subtle);
+  transition: all 0.2s ease;
+}
+
+.home-stat-card:hover {
   border-color: var(--border-default);
 }
 
-.recent-icon {
-  width: 36px;
-  height: 36px;
+.home-stat-value {
+  font-size: 24px;
+  font-weight: 800;
+  color: var(--text-primary);
+  letter-spacing: -0.5px;
+  margin-bottom: 2px;
+}
+
+.home-stat-label {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  font-weight: 500;
+}
+
+.home-stat-warning .home-stat-value { color: var(--red); }
+.home-stat-info .home-stat-value { color: var(--blue); }
+.home-stat-success .home-stat-value { color: var(--green); }
+
+/* === Next Task === */
+.home-next-task {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  background: var(--bg-elevated);
+  border-radius: 10px;
+  border: 1px solid var(--border-subtle);
+}
+
+.home-next-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--accent);
+  background: var(--accent-soft);
+  padding: 2px 8px;
+  border-radius: 6px;
+  flex-shrink: 0;
+}
+
+.home-next-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+
+/* === Recent Projects === */
+.home-recent-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 340px;
+  overflow-y: auto;
+}
+
+.home-recent-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  border: 1px solid transparent;
+}
+
+.home-recent-item:hover {
+  background: var(--bg-hover);
+  border-color: var(--border-subtle);
+}
+
+.home-recent-icon {
+  width: 34px;
+  height: 34px;
   background: var(--accent-soft);
   border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
   color: var(--accent);
+  flex-shrink: 0;
 }
 
-.recent-info {
+.home-recent-info {
   flex: 1;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
 }
 
-.recent-name {
-  font-size: 14px;
+.home-recent-name {
+  font-size: 13px;
   font-weight: 600;
   color: var(--text-primary);
-}
-
-.recent-path {
-  font-size: 12px;
-  color: var(--text-secondary);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.recent-time {
-  font-size: 12px;
+.home-recent-path {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.home-recent-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.home-recent-time {
+  font-size: 11px;
   color: var(--text-tertiary);
   white-space: nowrap;
 }
-/* --- Todo summary cards --- */
-.stat-card-action { align-items: center; }
-.stat-card-action .btn-ghost {
-  margin-left: auto;
-  padding: 6px 10px;
-  border-radius: 8px;
-  border: 1px solid var(--border-default, rgba(255,255,255,0.08));
+
+.home-recent-remove {
+  width: 24px;
+  height: 24px;
+  border: none;
   background: transparent;
-  color: var(--text-primary, #f0f0f5);
+  color: var(--text-tertiary);
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  opacity: 0;
   transition: all 0.15s;
 }
-.stat-card-action .btn-ghost:hover {
-  background: var(--bg-hover, rgba(255,255,255,0.04));
-  border-color: rgba(255,255,255,0.16);
+
+.home-recent-item:hover .home-recent-remove {
+  opacity: 1;
 }
-.stat-highlight {
-  margin-left: 6px;
-  color: #60a5fa;
-  font-weight: 800;
+
+.home-recent-remove:hover {
+  background: var(--red-soft);
+  color: var(--red);
 }
-.stat-card-wide {
-  grid-column: span 2;
+
+/* === Empty State === */
+.home-recent-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  gap: 12px;
+  color: var(--text-tertiary);
 }
-.text-ellipsis {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+
+.home-recent-empty p {
+  font-size: 13px;
+  margin-bottom: 4px;
+}
+
+/* === Responsive === */
+@media (max-width: 900px) {
+  .home-quick-grid { grid-template-columns: 1fr; }
+  .home-columns { grid-template-columns: 1fr; }
+  .home-hero { flex-direction: column; align-items: flex-start; gap: 16px; }
 }

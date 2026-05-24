@@ -425,3 +425,35 @@
   background: var(--red-soft);
   color: var(--red);
 }
+
+
+/* === File Search Bar === */
+.file-search-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border-subtle);
+  background: var(--bg-surface);
+  flex-shrink: 0;
+}
+
+.file-search-bar svg {
+  color: var(--text-tertiary);
+  flex-shrink: 0;
+}
+
+.file-search-input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: 12.5px;
+  outline: none;
+  padding: 2px 0;
+}
+
+.file-search-input::placeholder {
+  color: var(--text-tertiary);
+}

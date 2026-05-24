@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN" data-theme="dark">
 <head>
   <meta charset="UTF-8">
@@ -83,81 +83,95 @@
     <main class="main-content">
       <!-- Home Page -->
       <div class="page active" id="page-home">
-        <div class="content-header">
-          <div>
-            <h1>早上好 👋</h1>
-            <p class="subtitle">准备好开始今天的工作了吗？</p>
+        <div class="home-page">
+          <!-- 问候与操作 -->
+          <div class="home-hero">
+            <div class="home-hero-left">
+              <h1 class="home-greeting" id="home-greeting">你好 👋</h1>
+              <p class="home-subtitle">准备好开始今天的工作了吗？</p>
+            </div>
+            <div class="home-hero-actions">
+              <button class="btn-primary" id="btn-new-project">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                打开项目
+              </button>
+            </div>
           </div>
-          <div class="header-actions">
-            <button class="btn-primary" id="btn-open-folder">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
-              打开文件夹
+
+          <!-- 快捷入口 -->
+          <div class="home-quick-grid">
+            <button class="home-quick-card" id="btn-go-files">
+              <div class="home-quick-icon home-quick-icon-blue">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+              </div>
+              <div class="home-quick-info">
+                <span class="home-quick-title">文件管理</span>
+                <span class="home-quick-desc">浏览、编辑和管理项目文件</span>
+              </div>
+              <svg class="home-quick-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+            </button>
+            <button class="home-quick-card" id="btn-go-ai">
+              <div class="home-quick-icon home-quick-icon-purple">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a4 4 0 0 1 4 4c0 1.95-1.4 3.58-3.25 3.93L12 22"/><path d="M12 2a4 4 0 0 0-4 4c0 1.95 1.4 3.58 3.25 3.93"/><path d="M12 2v20"/></svg>
+              </div>
+              <div class="home-quick-info">
+                <span class="home-quick-title">AI 助手</span>
+                <span class="home-quick-desc">智能代码分析与对话</span>
+              </div>
+              <svg class="home-quick-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+            </button>
+            <button class="home-quick-card" id="btn-go-todo">
+              <div class="home-quick-icon home-quick-icon-green">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+              </div>
+              <div class="home-quick-info">
+                <span class="home-quick-title">待办中心</span>
+                <span class="home-quick-desc">管理任务和待办事项</span>
+              </div>
+              <svg class="home-quick-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
             </button>
           </div>
-        </div>
 
-        <div class="stats-grid">
-          <div class="stat-card" id="card-file-manager">
-            <div class="stat-icon">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+          <!-- 两栏布局：待办概览 + 最近项目 -->
+          <div class="home-columns">
+            <!-- 待办概览 -->
+            <div class="home-section">
+              <div class="home-section-header">
+                <h2>待办概览</h2>
+              </div>
+              <div class="home-stats-grid">
+                <div class="home-stat-card">
+                  <div class="home-stat-value" id="home-todo-pending">0</div>
+                  <div class="home-stat-label">待处理</div>
+                </div>
+                <div class="home-stat-card home-stat-warning">
+                  <div class="home-stat-value" id="home-todo-overdue">0</div>
+                  <div class="home-stat-label">已逾期</div>
+                </div>
+                <div class="home-stat-card home-stat-info">
+                  <div class="home-stat-value" id="home-todo-today">0</div>
+                  <div class="home-stat-label">今日待办</div>
+                </div>
+                <div class="home-stat-card home-stat-success">
+                  <div class="home-stat-value" id="home-todo-completed">0</div>
+                  <div class="home-stat-label">已完成</div>
+                </div>
+              </div>
+              <div class="home-next-task">
+                <span class="home-next-label">下一件</span>
+                <span class="home-next-title" id="home-todo-next">暂无待办</span>
+              </div>
             </div>
-            <div class="stat-info">
-              <div class="stat-value">文件管理</div>
-              <div class="stat-label">管理项目文件</div>
-            </div>
-          </div>
-          <div class="stat-card" id="card-ai-assist">
-            <div class="stat-icon">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" stroke-width="2"><path d="M12 2a4 4 0 0 1 4 4c0 1.95-1.4 3.58-3.25 3.93L12 22"/><path d="M12 2a4 4 0 0 0-4 4c0 1.95 1.4 3.58 3.25 3.93"/><path d="M12 2v20"/></svg>
-            </div>
-            <div class="stat-info">
-              <div class="stat-value">AI 助手</div>
-              <div class="stat-label">智能代码助手</div>
-            </div>
-          </div>
-          <div class="stat-card stat-card-action">
-            <div class="stat-icon">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-            </div>
-            <div class="stat-info">
-              <div class="stat-value">今日待办 <span id="home-todo-today" class="stat-highlight">0</span></div>
-              <div class="stat-label">逾期 <span id="home-todo-overdue">0</span> · 待处理 <span id="home-todo-pending">0</span></div>
-            </div>
-            <button class="btn-ghost" id="btn-go-todo">去处理</button>
-          </div>
-          <div class="stat-card stat-card-wide">
-            <div class="stat-icon">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
-            </div>
-            <div class="stat-info">
-              <div class="stat-value">下一件待处理</div>
-              <div class="stat-label text-ellipsis" id="home-todo-next">暂无待办</div>
-            </div>
-          </div>
-        </div>
 
-        <div class="recent-section">
-          <h3>最近项目</h3>
-          <div class="recent-list">
-            <div class="recent-item">
-              <div class="recent-icon">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
+            <!-- 最近项目 -->
+            <div class="home-section">
+              <div class="home-section-header">
+                <h2>最近项目</h2>
+                <button class="link-btn" id="btn-clear-recent" style="display:none">清空历史</button>
               </div>
-              <div class="recent-info">
-                <div class="recent-name">project-a</div>
-                <div class="recent-path">D:\projects\project-a</div>
+              <div class="home-recent-list" id="home-recent-list">
+                <!-- 由 JS 动态渲染 -->
               </div>
-              <div class="recent-time">2 小时前</div>
-            </div>
-            <div class="recent-item">
-              <div class="recent-icon">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
-              </div>
-              <div class="recent-info">
-                <div class="recent-name">project-b</div>
-                <div class="recent-path">D:\projects\project-b</div>
-              </div>
-              <div class="recent-time">昨天</div>
             </div>
           </div>
         </div>
@@ -215,154 +229,137 @@
 
       <!-- AI Assistant Page -->
       <div class="page" id="page-ai">
-        <div class="ai-page">
-          <div class="ai-hero">
-            <div class="ai-hero-content">
-              <div class="ai-hero-left">
-                <div class="ai-hero-icon">
-                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a4 4 0 0 1 4 4c0 1.95-1.4 3.58-3.25 3.93L12 22"/><path d="M12 2a4 4 0 0 0-4 4c0 1.95 1.4 3.58 3.25 3.93"/><path d="M12 2v20"/></svg>
+        <div class="ai-layout">
+          <!-- Chat 主区域 -->
+          <div class="ai-chat-area">
+            <div class="ai-chat-header">
+              <div class="ai-chat-title">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a4 4 0 0 1 4 4c0 1.95-1.4 3.58-3.25 3.93L12 22"/><path d="M12 2a4 4 0 0 0-4 4c0 1.95 1.4 3.58 3.25 3.93"/><path d="M12 2v20"/></svg>
+                <span>AI 助手</span>
+                <span class="badge beta">Beta</span>
+              </div>
+              <div class="ai-chat-actions">
+                <div class="ai-status-chip" id="ai-status-chip">
+                  <span class="ai-dot"></span>
+                  <span class="ai-status-text">未配置</span>
                 </div>
-                <div>
-                  <h2>AI 助手</h2>
-                  <p>智能代码助手，提升开发效率</p>
+                <button class="icon-btn" id="btn-ai-clear" title="清空对话">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                </button>
+                <button class="icon-btn" id="btn-ai-toggle-panel" title="工具面板">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="15" y1="3" x2="15" y2="21"/></svg>
+                </button>
+              </div>
+            </div>
+            <div class="ai-chat-messages" id="ai-chat-messages">
+              <div class="ai-chat-welcome">
+                <div class="ai-chat-welcome-icon">
+                  <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2a4 4 0 0 1 4 4c0 1.95-1.4 3.58-3.25 3.93L12 22"/><path d="M12 2a4 4 0 0 0-4 4c0 1.95 1.4 3.58 3.25 3.93"/><path d="M12 2v20"/></svg>
+                </div>
+                <h3>AI 助手</h3>
+                <p>我可以帮你分析代码、翻译文档、回答问题。</p>
+                <div class="ai-chat-suggestions">
+                  <button class="ai-suggestion" data-msg="帮我解释一下这段代码">解释代码</button>
+                  <button class="ai-suggestion" data-msg="将以下内容翻译成英文">翻译内容</button>
+                  <button class="ai-suggestion" data-msg="总结一下这段内容的要点">内容摘要</button>
                 </div>
               </div>
-              <div class="ai-status-chip" id="ai-status-chip">
-                <span class="ai-dot"></span>
-                <span class="ai-status-text">未配置</span>
+            </div>
+            <div class="ai-chat-input-area">
+              <div class="ai-chat-input-wrap">
+                <textarea id="ai-chat-input" class="ai-chat-input" placeholder="输入消息... (Shift+Enter 换行)" rows="1"></textarea>
+                <button class="ai-chat-send" id="btn-ai-send" title="发送">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                </button>
               </div>
+              <div class="ai-chat-hint">Enter 发送 · Shift+Enter 换行</div>
             </div>
           </div>
 
-          <div class="ai-stats-grid">
-            <div class="ai-stat-card">
-              <div class="ai-stat-icon tokens">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
-              </div>
-              <div class="ai-stat-info">
-                <div class="ai-stat-value" id="ai-tokens">0</div>
-                <div class="ai-stat-label">Tokens 使用</div>
-              </div>
-            </div>
-            <div class="ai-stat-card">
-              <div class="ai-stat-icon requests">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
-              </div>
-              <div class="ai-stat-info">
-                <div class="ai-stat-value" id="ai-requests">0</div>
-                <div class="ai-stat-label">请求次数</div>
-              </div>
-            </div>
-            <div class="ai-stat-card">
-              <div class="ai-stat-icon model">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 6v6m8.66-15l-5.2 3m-6.92 4l-5.2 3m14.14 0l-5.2-3m-6.92-4l-5.2-3"/></svg>
-              </div>
-              <div class="ai-stat-info">
-                <div class="ai-stat-value" id="ai-model-display">-</div>
-                <div class="ai-stat-label">当前模型</div>
-              </div>
-            </div>
-          </div>
-
-          <div class="ai-content-grid">
-            <div class="ai-section">
-              <div class="ai-section-header">
-                <h3>AI 工具</h3>
-                <span class="ai-section-badge">4 个工具</span>
-              </div>
-              <div class="ai-tools-grid">
-                <button class="ai-tool-card" id="btn-ai-format" disabled>
-                  <div class="ai-tool-icon format">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-                  </div>
-                  <div class="ai-tool-info">
-                    <div class="ai-tool-name">Markdown 整理</div>
-                    <div class="ai-tool-desc">智能格式化文档结构</div>
-                  </div>
-                  <div class="ai-tool-arrow">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
-                  </div>
-                </button>
-                <button class="ai-tool-card" id="btn-ai-explain" disabled>
-                  <div class="ai-tool-icon explain">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-                  </div>
-                  <div class="ai-tool-info">
-                    <div class="ai-tool-name">代码解释</div>
-                    <div class="ai-tool-desc">解释代码逻辑和功能</div>
-                  </div>
-                  <div class="ai-tool-arrow">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
-                  </div>
-                </button>
-                <button class="ai-tool-card" id="btn-ai-summarize" disabled>
-                  <div class="ai-tool-icon summarize">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
-                  </div>
-                  <div class="ai-tool-info">
-                    <div class="ai-tool-name">内容摘要</div>
-                    <div class="ai-tool-desc">生成简洁的文档摘要</div>
-                  </div>
-                  <div class="ai-tool-arrow">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
-                  </div>
-                </button>
-                <button class="ai-tool-card" id="btn-ai-translate" disabled>
-                  <div class="ai-tool-icon translate">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m5 8 6 6"/><path d="m4 14 6-6 2-3"/><path d="M2 5h12"/><path d="M7 2h1"/><path d="m22 22-5-10-5 10"/><path d="M14 18h6"/></svg>
-                  </div>
-                  <div class="ai-tool-info">
-                    <div class="ai-tool-name">翻译</div>
-                    <div class="ai-tool-desc">翻译成其他语言</div>
-                  </div>
-                  <div class="ai-tool-arrow">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
-                  </div>
-                </button>
-              </div>
+          <!-- 工具侧边栏 -->
+          <div class="ai-sidebar" id="ai-sidebar">
+            <div class="ai-sidebar-section">
+              <div class="ai-sidebar-title">AI 工具</div>
+              <button class="ai-tool-card" id="btn-ai-format" disabled>
+                <div class="ai-tool-icon format">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                </div>
+                <div class="ai-tool-info">
+                  <div class="ai-tool-name">Markdown 整理</div>
+                  <div class="ai-tool-desc">格式化文档</div>
+                </div>
+              </button>
+              <button class="ai-tool-card" id="btn-ai-explain" disabled>
+                <div class="ai-tool-icon explain">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                </div>
+                <div class="ai-tool-info">
+                  <div class="ai-tool-name">代码解释</div>
+                  <div class="ai-tool-desc">解释代码逻辑</div>
+                </div>
+              </button>
+              <button class="ai-tool-card" id="btn-ai-summarize" disabled>
+                <div class="ai-tool-icon summarize">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+                </div>
+                <div class="ai-tool-info">
+                  <div class="ai-tool-name">内容摘要</div>
+                  <div class="ai-tool-desc">生成文档摘要</div>
+                </div>
+              </button>
+              <button class="ai-tool-card" id="btn-ai-translate" disabled>
+                <div class="ai-tool-icon translate">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m5 8 6 6"/><path d="m4 14 6-6 2-3"/><path d="M2 5h12"/><path d="M7 2h1"/><path d="m22 22-5-10-5 10"/><path d="M14 18h6"/></svg>
+                </div>
+                <div class="ai-tool-info">
+                  <div class="ai-tool-name">翻译</div>
+                  <div class="ai-tool-desc">翻译成其他语言</div>
+                </div>
+              </button>
             </div>
 
-            <div class="ai-section">
-              <div class="ai-section-header">
-                <h3>API 配置</h3>
-                <span class="ai-section-badge">连接设置</span>
+            <div class="ai-sidebar-section">
+              <div class="ai-sidebar-title" id="ai-config-toggle" style="cursor:pointer">
+                API 配置
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
               </div>
-              <div class="ai-config-card">
-                <div class="ai-config-body">
-                  <div class="ai-field">
-                    <label>Base URL</label>
-                    <input type="text" id="ai-base-url" placeholder="https://api.openai.com/v1" class="ai-input">
-                  </div>
-                  <div class="ai-field">
-                    <label>API Key</label>
-                    <div class="ai-input-wrap">
-                      <input type="password" id="ai-api-key" placeholder="sk-..." class="ai-input">
-                      <button class="ai-eye" id="btn-toggle-key">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-                      </button>
-                    </div>
-                  </div>
-                  <div class="ai-field">
-                    <label>模型</label>
-                    <div class="ai-model-row">
-                      <select id="ai-model-select" class="ai-input ai-select">
-                        <option value="">-- 获取模型列表 --</option>
-                      </select>
-                      <button class="ai-fetch" id="btn-fetch-models">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
-                        获取模型
-                      </button>
-                    </div>
-                  </div>
-                  <div class="ai-btns">
-                    <button class="ai-save" id="btn-save-ai">
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
-                      保存配置
+              <div class="ai-config-body" id="ai-config-body">
+                <div class="ai-field">
+                  <label>Base URL</label>
+                  <input type="text" id="ai-base-url" placeholder="https://api.openai.com/v1" class="ai-input">
+                </div>
+                <div class="ai-field">
+                  <label>API Key</label>
+                  <div class="ai-input-wrap">
+                    <input type="password" id="ai-api-key" placeholder="sk-..." class="ai-input">
+                    <button class="ai-eye" id="btn-toggle-key">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
                     </button>
-                    <button class="ai-test" id="btn-test-ai">测试连接</button>
                   </div>
-                  <div class="ai-msg" id="ai-msg"></div>
                 </div>
+                <div class="ai-field">
+                  <label>模型</label>
+                  <div class="ai-model-row">
+                    <select id="ai-model-select" class="ai-input ai-select">
+                      <option value="">-- 获取模型列表 --</option>
+                    </select>
+                    <button class="ai-fetch" id="btn-fetch-models">获取</button>
+                  </div>
+                </div>
+                <div class="ai-btns">
+                  <button class="ai-save" id="btn-save-ai">保存</button>
+                  <button class="ai-test" id="btn-test-ai">测试</button>
+                </div>
+                <div class="ai-msg" id="ai-msg"></div>
+              </div>
+            </div>
+
+            <div class="ai-sidebar-section">
+              <div class="ai-sidebar-title">统计</div>
+              <div class="ai-mini-stats">
+                <div class="ai-mini-stat"><span class="ai-mini-val" id="ai-tokens">0</span><span class="ai-mini-lbl">Tokens</span></div>
+                <div class="ai-mini-stat"><span class="ai-mini-val" id="ai-requests">0</span><span class="ai-mini-lbl">请求</span></div>
+                <div class="ai-mini-stat"><span class="ai-mini-val" id="ai-model-display">-</span><span class="ai-mini-lbl">模型</span></div>
               </div>
             </div>
           </div>
@@ -549,9 +546,76 @@
 
       <!-- Settings Page -->
       <div class="page" id="page-settings">
-        <div class="settings-container">
-          <h2>设置</h2>
-          <p>设置页面开发中...</p>
+        <div class="settings-page">
+          <div class="settings-header">
+            <h1>设置</h1>
+            <p class="settings-subtitle">自定义你的工作台</p>
+          </div>
+
+          <div class="settings-section">
+            <div class="settings-section-header">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/></svg>
+              <h3>外观</h3>
+            </div>
+            <div class="settings-row">
+              <div class="settings-row-info">
+                <span class="settings-row-label">主题模式</span>
+                <span class="settings-row-desc">选择应用的配色方案</span>
+              </div>
+              <div class="settings-radio-group">
+                <label class="settings-radio">
+                  <input type="radio" name="theme-mode" value="light">
+                  <span class="settings-radio-label">浅色</span>
+                </label>
+                <label class="settings-radio">
+                  <input type="radio" name="theme-mode" value="dark">
+                  <span class="settings-radio-label">深色</span>
+                </label>
+                <label class="settings-radio">
+                  <input type="radio" name="theme-mode" value="system">
+                  <span class="settings-radio-label">跟随系统</span>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <div class="settings-section">
+            <div class="settings-section-header">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+              <h3>编辑器</h3>
+            </div>
+            <div class="settings-row">
+              <div class="settings-row-info">
+                <span class="settings-row-label">快捷键</span>
+                <span class="settings-row-desc">常用操作的键盘快捷键</span>
+              </div>
+              <div class="settings-shortcuts">
+                <div class="settings-shortcut"><kbd>Ctrl+S</kbd><span>保存文件</span></div>
+                <div class="settings-shortcut"><kbd>Ctrl+O</kbd><span>打开文件夹</span></div>
+                <div class="settings-shortcut"><kbd>Ctrl+N</kbd><span>新建文件</span></div>
+                <div class="settings-shortcut"><kbd>Ctrl+W</kbd><span>关闭标签页</span></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="settings-section">
+            <div class="settings-section-header">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+              <h3>关于</h3>
+            </div>
+            <div class="settings-row">
+              <div class="settings-row-info">
+                <span class="settings-row-label">版本</span>
+                <span class="settings-row-desc">Electron FileManager v<span id="settings-version">2.0.0</span></span>
+              </div>
+            </div>
+            <div class="settings-row">
+              <div class="settings-row-info">
+                <span class="settings-row-label">技术栈</span>
+                <span class="settings-row-desc">Electron 35 · TypeScript · Monaco Editor · esbuild</span>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </main>

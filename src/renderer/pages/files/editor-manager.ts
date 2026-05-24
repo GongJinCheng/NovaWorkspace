@@ -204,7 +204,7 @@ export class EditorManager {
 
     const closeBtn = document.createElement('button');
     closeBtn.className = 'tab-close';
-    closeBtn.title = 'Close';
+    closeBtn.title = '关闭';
     closeBtn.textContent = 'x';
 
     tab.appendChild(nameSpan);
@@ -263,7 +263,7 @@ export class EditorManager {
     }
 
     if (!options?.force && this.store?.isDirty(filePath)) {
-      const shouldClose = window.confirm('File has unsaved changes. Close anyway?');
+      const shouldClose = window.confirm('文件有未保存的更改，确定关闭吗？');
       if (!shouldClose) return;
     }
 
@@ -345,7 +345,7 @@ export class EditorManager {
   }
 
   private showWelcomeScreen(): void {
-    this.container.innerHTML = '<div class="empty-state"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.3"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg><p>Select a file to start editing</p></div>';
+    this.container.innerHTML = '<div class="empty-state"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.3"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg><p>选择一个文件开始编辑</p></div>';
     this.editor = null;
     this.monaco = null;
   }

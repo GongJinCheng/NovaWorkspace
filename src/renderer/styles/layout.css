@@ -220,8 +220,3 @@
   display: flex;
   flex-direction: column;
 }
-
-#page-home {
-  padding: 32px 36px;
-  overflow-y: auto;
-}

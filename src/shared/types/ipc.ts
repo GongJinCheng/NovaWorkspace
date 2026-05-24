@@ -2,7 +2,7 @@
  * Type-safe IPC interface definition
  * Defines the API exposed to renderer via preload (contextBridge)
  */
-import type { FileEntry, DialogResult } from './file';
+import type { FileEntry, DialogResult, RecentProject } from './file';
 import type { TodoData, TodoTask, TodoCategory, CreateTaskInput, UpdateTaskInput } from './todo';
 
 export interface ElectronAPI {
@@ -31,5 +31,11 @@ export interface ElectronAPI {
     addCategory(category: Omit<TodoCategory, 'id'>): Promise<TodoCategory>;
     deleteCategory(categoryId: string): Promise<boolean>;
     checkReminders(): Promise<TodoTask[]>;
+  };
+  recent: {
+    get(): Promise<RecentProject[]>;
+    add(project: RecentProject): Promise<RecentProject[]>;
+    remove(projectPath: string): Promise<RecentProject[]>;
+    clear(): Promise<RecentProject[]>;
   };
 }

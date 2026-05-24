@@ -1,41 +1,159 @@
-﻿/* ============================================================
+/* ============================================================
  * pages/settings.css — Settings Page
- * 
- * Settings container, sections, form groups, and
- * configuration status indicators.
+ * Theme selection, keyboard shortcuts, about section
  * ============================================================ */
 
 /* === Settings Page === */
-.settings-container {
-  max-width: 600px;
-  margin: 0 auto;
-  padding: 32px;
+.settings-page {
+  padding: 28px 32px 40px;
+  max-width: 700px;
+  overflow-y: auto;
+  height: 100%;
+  animation: fadeInUp 0.4s ease;
 }
 
-.settings-container h2 {
-  font-size: 24px;
-  font-weight: 700;
-  margin-bottom: 32px;
-  color: var(--text-primary);
+.settings-header {
+  margin-bottom: 28px;
 }
 
+.settings-header h1 {
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  margin-bottom: 4px;
+}
+
+.settings-subtitle {
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+/* === Section === */
 .settings-section {
   background: var(--bg-surface);
   border: 1px solid var(--border-subtle);
-  border-radius: 12px;
-  padding: 24px;
-  margin-bottom: 24px;
+  border-radius: 14px;
+  padding: 20px 22px;
+  margin-bottom: 16px;
 }
 
-.settings-section h3 {
-  font-size: 16px;
-  font-weight: 600;
-  margin-bottom: 20px;
+.settings-section-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 18px;
   color: var(--text-primary);
 }
 
-.settings-form {
+.settings-section-header h3 {
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.settings-section-header svg {
+  color: var(--accent);
+  flex-shrink: 0;
+}
+
+/* === Row === */
+.settings-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 12px 0;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.settings-row:first-of-type {
+  border-top: none;
+  padding-top: 0;
+}
+
+.settings-row-info {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 2px;
+}
+
+.settings-row-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.settings-row-desc {
+  font-size: 12.5px;
+  color: var(--text-tertiary);
+}
+
+/* === Radio Group === */
+.settings-radio-group {
+  display: flex;
+  gap: 4px;
+  background: var(--bg-elevated);
+  border-radius: 10px;
+  padding: 3px;
+  border: 1px solid var(--border-subtle);
+}
+
+.settings-radio {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+.settings-radio input[type="radio"] {
+  display: none;
+}
+
+.settings-radio-label {
+  padding: 6px 14px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  border-radius: 8px;
+  transition: all 0.15s ease;
+}
+
+.settings-radio input[type="radio"]:checked + .settings-radio-label {
+  background: var(--accent);
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(99,102,241,0.25);
+}
+
+.settings-radio-label:hover {
+  color: var(--text-primary);
+}
+
+/* === Shortcuts === */
+.settings-shortcuts {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.settings-shortcut {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.settings-shortcut kbd {
+  font-family: inherit;
+  font-size: 11px;
+  padding: 3px 8px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: 5px;
+  color: var(--text-primary);
+  min-width: 70px;
+  text-align: center;
+}
+
+/* === Responsive === */
+@media (max-width: 600px) {
+  .settings-page { padding: 20px 16px; }
+  .settings-row { flex-direction: column; gap: 10px; }
 }
