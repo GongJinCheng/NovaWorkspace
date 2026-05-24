@@ -1,5 +1,5 @@
-/* ============================================================
- * pages/ai.css — AI Assistant Page (Chat + Tools Redesign)
+﻿/* ============================================================
+ * pages/ai.css 鈥?AI Assistant Page (Chat + Tools Redesign)
  * Chat layout, message bubbles, tool cards, config panel
  * ============================================================ */
 
@@ -680,4 +680,20 @@
   .ai-sidebar { width: 0; overflow: hidden; opacity: 0; border: none; }
   .ai-sidebar.force-show { width: 260px; opacity: 1; border-left: 1px solid var(--border-subtle); }
   .ai-msg-bubble { max-width: 95%; }
+}
+
+/* === AI Streaming Cursor === */
+.ai-msg-assistant.streaming {
+  position: relative;
+}
+
+.ai-msg-assistant.streaming::after {
+  content: '\25CA';
+  animation: ai-blink 0.8s step-end infinite;
+  color: var(--accent);
+  margin-left: 2px;
+}
+
+@keyframes ai-blink {
+  50% { opacity: 0; }
 }

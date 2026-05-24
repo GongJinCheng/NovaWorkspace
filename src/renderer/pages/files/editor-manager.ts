@@ -1,6 +1,7 @@
-/**
+﻿/**
  * EditorManager - Monaco Editor Manager
  * Manages Monaco editor instances, tab rendering, and editor lifecycle.
+ * Supports VSCode-style tabs: scroll overflow, right-click context menu, middle-click close.
  */
 import { ipcClient } from '../../services/ipc-client';
 import type { FilesStore } from './files-store';
@@ -28,6 +29,7 @@ export class EditorManager {
   private monaco: any = null;
   private editor: any = null;
   private store: FilesStore | null = null;
+  private _closeTabCtxMenu: (() => void) | null = null;
 
   constructor(container: HTMLElement, tabsList: HTMLElement) {
     this.container = container;
@@ -175,63 +177,108 @@ export class EditorManager {
         this.store?.markDirty(filePath);
       });
 
-      setTimeout(() => this.editor?.layout(), 50);
-
       const tab: EditorTab = { filePath, fileName, model, viewState: null };
       this.editors.set(filePath, tab);
       this.activeEditorPath = filePath;
-
-      this.createTabElement(filePath, fileName);
+      this.createTab(filePath, fileName);
       this.store?.openFile(filePath);
       this.updateStatusBar();
     } catch (err) {
-      console.error('[EditorManager] openFile failed:', filePath, err);
+      console.error('[EditorManager] openFile failed:', err);
     }
   }
 
-  private createTabElement(filePath: string, fileName: string): void {
-    const existing = this.tabElements.get(filePath);
-    existing?.remove();
-    this.tabElements.delete(filePath);
-
+  private createTab(filePath: string, fileName: string): void {
     const tab = document.createElement('div');
     tab.className = 'tab active';
     tab.dataset.path = filePath;
+    tab.innerHTML =
+      '<span class="tab-name">' + this.escHTML(fileName) + '</span>' +
+      '<button class="tab-close" title="关闭">' +
+        '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>' +
+      '</button>';
 
-    const nameSpan = document.createElement('span');
-    nameSpan.className = 'tab-name';
-    nameSpan.textContent = fileName;
-
-    const closeBtn = document.createElement('button');
-    closeBtn.className = 'tab-close';
-    closeBtn.title = '关闭';
-    closeBtn.textContent = 'x';
-
-    tab.appendChild(nameSpan);
-    tab.appendChild(closeBtn);
-
+    // Left-click to switch
     tab.addEventListener('click', (e) => {
-      if (!(e.target as HTMLElement).closest('.tab-close')) {
-        this.switchToTab(filePath);
-      }
+      if ((e.target as HTMLElement).closest('.tab-close')) return;
+      this.switchToTab(filePath);
     });
 
-    tab.addEventListener('auxclick', (e) => {
+    // Close button
+    tab.querySelector('.tab-close')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.closeTab(filePath);
+    });
+
+    // Middle-click to close
+    tab.addEventListener('mousedown', (e) => {
       if (e.button === 1) {
         e.preventDefault();
         this.closeTab(filePath);
       }
     });
 
-    closeBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      this.closeTab(filePath);
+    // Right-click context menu
+    tab.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      this.showTabContextMenu(e, filePath);
     });
 
     this.tabsList.querySelectorAll('.tab').forEach((el) => el.classList.remove('active'));
     this.tabsList.appendChild(tab);
     this.tabElements.set(filePath, tab);
   }
+
+  // --- Tab Context Menu ---
+
+  private showTabContextMenu(e: MouseEvent, filePath: string): void {
+    this.removeTabContextMenu();
+    const menu = document.createElement('div');
+    menu.className = 'tab-context-menu';
+    menu.style.left = e.clientX + 'px';
+    menu.style.top = e.clientY + 'px';
+
+    const items = [
+      { label: '\u5173\u95ED', action: () => this.closeTab(filePath) },
+      { label: '\u5173\u95ED\u5176\u4ED6', action: () => this.closeOtherTabs(filePath) },
+      { label: '\u5173\u95ED\u6240\u6709', action: () => this.closeAllTabs() },
+      { label: '\u5173\u95ED\u5DF2\u4FDD\u5B58', action: () => this.closeSavedTabs() },
+    ];
+
+    for (const item of items) {
+      const el = document.createElement('div');
+      el.className = 'tab-context-item';
+      el.textContent = item.label;
+      el.addEventListener('click', () => { this.removeTabContextMenu(); item.action(); });
+      menu.appendChild(el);
+    }
+
+    document.body.appendChild(menu);
+    setTimeout(() => {
+      document.addEventListener('click', this._closeTabCtxMenu = () => this.removeTabContextMenu(), { once: true });
+    }, 0);
+  }
+
+  private removeTabContextMenu(): void {
+    document.querySelectorAll('.tab-context-menu').forEach(el => el.remove());
+  }
+
+  private closeOtherTabs(keepPath: string): void {
+    const paths = Array.from(this.editors.keys()).filter(p => p !== keepPath);
+    for (const p of paths) this.closeTab(p, { force: true });
+  }
+
+  private closeAllTabs(): void {
+    const paths = Array.from(this.editors.keys());
+    for (const p of paths) this.closeTab(p, { force: true });
+  }
+
+  private closeSavedTabs(): void {
+    const paths = Array.from(this.editors.keys()).filter(p => !this.store?.isDirty(p));
+    for (const p of paths) this.closeTab(p, { force: true });
+  }
+
+  // --- Tab Switching ---
 
   switchToTab(filePath: string): void {
     const tab = this.editors.get(filePath);
@@ -263,7 +310,7 @@ export class EditorManager {
     }
 
     if (!options?.force && this.store?.isDirty(filePath)) {
-      const shouldClose = window.confirm('文件有未保存的更改，确定关闭吗？');
+      const shouldClose = window.confirm('\u6587\u4EF6\u6709\u672A\u4FDD\u5B58\u7684\u66F4\u6539\uFF0C\u786E\u5B9A\u5173\u95ED\u5417\uFF1F');
       if (!shouldClose) return;
     }
 
@@ -345,7 +392,7 @@ export class EditorManager {
   }
 
   private showWelcomeScreen(): void {
-    this.container.innerHTML = '<div class="empty-state"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.3"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg><p>选择一个文件开始编辑</p></div>';
+    this.container.innerHTML = '<div class="empty-state"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.3"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg><p>\u9009\u62E9\u4E00\u4E2A\u6587\u4EF6\u5F00\u59CB\u7F16\u8F91</p></div>';
     this.editor = null;
     this.monaco = null;
   }
@@ -383,5 +430,11 @@ export class EditorManager {
       cpp: 'cpp',
     };
     return map[ext] ?? 'plaintext';
+  }
+
+  private escHTML(str: string): string {
+    const d = document.createElement('div');
+    d.textContent = str;
+    return d.innerHTML;
   }
 }

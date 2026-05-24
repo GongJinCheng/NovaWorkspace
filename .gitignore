@@ -32,3 +32,4 @@ pnpm-debug.log*
 
 # Electron / misc generated
 package-lock.json
+release/

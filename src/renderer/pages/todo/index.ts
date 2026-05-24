@@ -1,6 +1,7 @@
 ﻿/**
  * Todo Page - Entry and Detail Drawer Coordinator
  * Handles filters, view modes, sliding details drawer, auto-saves, and subtask managers.
+ * Performance: debounced refresh to avoid lag on rapid interactions.
  */
 
 import { ipcClient } from '../../services/ipc-client';
@@ -12,6 +13,8 @@ import {
   setShowCompletedInMain,
   setSelectedCatId,
   setSelectedTaskId,
+  PRI_COLORS,
+  PRI_LABELS,
   type FilterType,
   type ViewMode,
 } from './stores/todo.store';
@@ -24,6 +27,7 @@ import { registerPageInit } from '../../app/router';
 import type { TodoTask } from '@shared/types/todo';
 
 let initialized = false;
+let refreshTimer: ReturnType<typeof setTimeout> | null = null;
 
 async function initTodoPage(): Promise<void> {
   if (initialized) return;
@@ -50,9 +54,7 @@ async function initTodoPage(): Promise<void> {
       const target = e.target as HTMLElement;
       const drawer = document.getElementById('todo-detail-drawer');
       if (drawer && drawer.classList.contains('active')) {
-        // Don't close if click is inside the drawer
         if (drawer.contains(target)) return;
-        // Don't close if click is on a task card (that opens a different task's details)
         if (target.closest('.todo-task-card')) return;
         closeDrawer();
       }
@@ -81,16 +83,32 @@ function renderAll(): void {
   updateNavBadge();
   syncViewControls();
 
-  // If a task is currently selected, re-render drawer details to keep it updated
   const store = getStore();
   if (store.selectedTaskId) {
     renderDrawerContent();
   }
 }
 
+/**
+ * Full refresh: reload data from IPC then re-render.
+ * Used for explicit refresh actions (not rapid interactions).
+ */
 async function refreshAll(): Promise<void> {
   await loadData();
   renderAll();
+}
+
+/**
+ * Debounced refresh: batches rapid interactions into a single refresh.
+ * Prevents lag when toggling multiple tasks/subtasks quickly.
+ */
+export function debouncedRefresh(): void {
+  if (refreshTimer) clearTimeout(refreshTimer);
+  refreshTimer = setTimeout(async () => {
+    refreshTimer = null;
+    await loadData();
+    renderAll();
+  }, 200);
 }
 
 function bindFilterEvents(): void {
@@ -104,20 +122,18 @@ function bindFilterEvents(): void {
       container.querySelectorAll('.todo-filter-item').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
 
-      // Update active filter title label in main area
       const activeFilterLabel = document.getElementById('todo-active-filter-label');
       if (activeFilterLabel) {
         const filterLabels: Record<string, string> = {
-          all: '全部任务',
-          today: '今天的待办',
-          upcoming: '即将到来的任务',
-          overdue: '已逾期的待办',
-          completed: '已完成的任务',
+          all: '\u5168\u90E8\u4EFB\u52A1',
+          today: '\u4ECA\u5929\u7684\u5F85\u529E',
+          upcoming: '\u5373\u5C06\u5230\u6765\u7684\u4EFB\u52A1',
+          overdue: '\u5DF2\u903E\u671F\u7684\u5F85\u529E',
+          completed: '\u5DF2\u5B8C\u6210\u7684\u4EFB\u52A1',
         };
-        activeFilterLabel.textContent = filterLabels[btn.dataset.filter] || '全部任务';
+        activeFilterLabel.textContent = filterLabels[btn.dataset.filter] || '\u5168\u90E8\u4EFB\u52A1';
       }
 
-      // Reset category selection when smart filter is clicked
       setSelectedCatId('');
       container.querySelectorAll('.todo-sidebar-cat-item').forEach(c => c.classList.remove('active'));
 
@@ -159,67 +175,32 @@ function syncViewControls(): void {
   const toggleCompletedBtn = container.querySelector('.todo-completed-toggle') as HTMLElement | null;
   if (toggleCompletedBtn) {
     toggleCompletedBtn.classList.toggle('active', store.showCompletedInMain);
-    toggleCompletedBtn.textContent = store.showCompletedInMain ? '隐藏已完成' : '显示已完成';
   }
 }
 
 function updateNavBadge(): void {
-  const store = getStore();
-  const pending = store.data.tasks.filter(t => !t.completed).length;
   const badge = document.getElementById('todo-nav-badge');
-  if (badge) {
-    badge.textContent = pending > 0 ? String(pending) : '';
-    badge.style.display = pending > 0 ? 'inline-block' : 'none';
-  }
+  if (!badge) return;
+  const stats = getStore().data.tasks;
+  const pending = stats.filter(t => !t.completed).length;
+  badge.textContent = pending > 0 ? String(pending) : '';
 }
 
-/* ============================================================
- * Right Details Drawer Controller
- * ============================================================ */
+// Drawer
 
-export function openDrawer(taskId: string): void {
+function openDrawer(taskId: string): void {
   setSelectedTaskId(taskId);
-  
   const drawer = document.getElementById('todo-detail-drawer');
-  if (drawer) {
-    drawer.classList.add('active');
-  }
-
+  if (!drawer) return;
+  drawer.classList.add('active');
   renderDrawerContent();
-  
-  // Highlight card as selected immediately in list/board view
-  const area = document.getElementById('todo-task-area');
-  if (area) {
-    area.querySelectorAll('.todo-task-card').forEach(card => {
-      const id = (card as HTMLElement).dataset.id;
-      card.classList.toggle('selected', id === taskId);
-    });
-  }
 }
 
-export function closeDrawer(): void {
+function closeDrawer(): void {
   setSelectedTaskId('');
-  
   const drawer = document.getElementById('todo-detail-drawer');
-  if (drawer) {
-    drawer.classList.remove('active');
-  }
-
-  const content = document.getElementById('todo-drawer-content');
-  if (content) {
-    content.innerHTML = `
-      <div class="todo-drawer-empty">
-        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.3"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-        <p>选择待办任务以查看或编辑其详细信息</p>
-      </div>
-    `;
-  }
-
-  // Remove select border on active task cards
-  const area = document.getElementById('todo-task-area');
-  if (area) {
-    area.querySelectorAll('.todo-task-card').forEach(card => card.classList.remove('selected'));
-  }
+  if (!drawer) return;
+  drawer.classList.remove('active');
 }
 
 function renderDrawerContent(): void {
@@ -229,110 +210,73 @@ function renderDrawerContent(): void {
   const store = getStore();
   const task = store.data.tasks.find(t => t.id === store.selectedTaskId);
   if (!task) {
-    closeDrawer();
+    content.innerHTML = '<div class="todo-drawer-empty">' +
+      '<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.3"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>' +
+      '<p>\u9009\u62E9\u5F85\u529E\u4EFB\u52A1\u4EE5\u67E5\u770B\u6216\u7F16\u8F91\u5176\u8BE6\u7EC6\u4FE1\u606F</p></div>';
     return;
   }
 
-  // Format categories options
-  let catOptions = '<option value="">未分类</option>';
-  for (const cat of store.data.categories) {
-    catOptions += `<option value="${cat.id}"${cat.id === task.categoryId ? ' selected' : ''}>${esc(cat.name)}</option>`;
-  }
+  const cat = store.data.categories.find(c => c.id === task.categoryId);
+  const priColor = PRI_COLORS[task.priority] || PRI_COLORS.medium;
 
-  // Format priority options
-  const priorities = ['low', 'medium', 'high', 'urgent'];
-  const priorityLabels: Record<string, string> = { low: '低', medium: '中', high: '高', urgent: '紧急' };
-  let priOptions = '';
-  for (const pri of priorities) {
-    priOptions += `<option value="${pri}"${pri === task.priority ? ' selected' : ''}>${priorityLabels[pri]}</option>`;
-  }
+  content.innerHTML =
+    '<div class="drawer-field">' +
+      '<label>\u6807\u9898</label>' +
+      '<input type="text" id="drawer-task-title" class="drawer-input" value="' + esc(task.title) + '" />' +
+    '</div>' +
+    '<div class="drawer-field">' +
+      '<label>\u63CF\u8FF0</label>' +
+      '<textarea id="drawer-task-desc" class="drawer-textarea" placeholder="\u6DFB\u52A0\u63CF\u8FF0...">' + esc(task.description || '') + '</textarea>' +
+    '</div>' +
+    '<div class="drawer-row">' +
+      '<div class="drawer-field">' +
+        '<label>\u5206\u7C7B</label>' +
+        '<select id="drawer-task-cat" class="drawer-select">' +
+          '<option value="">\u65E0</option>' +
+          store.data.categories.map(c => '<option value="' + c.id + '"' + (c.id === task.categoryId ? ' selected' : '') + '>' + esc(c.name) + '</option>').join('') +
+        '</select>' +
+      '</div>' +
+      '<div class="drawer-field">' +
+        '<label>\u4F18\u5148\u7EA7</label>' +
+        '<select id="drawer-task-pri" class="drawer-select">' +
+          Object.entries(PRI_LABELS).map(([k, v]) => '<option value="' + k + '"' + (k === task.priority ? ' selected' : '') + '>' + v + '</option>').join('') +
+        '</select>' +
+      '</div>' +
+    '</div>' +
+    '<div class="drawer-field">' +
+      '<label>\u622A\u6B62\u65E5\u671F</label>' +
+      '<input type="datetime-local" id="drawer-task-due" class="drawer-input" value="' + (task.dueDate ? new Date(task.dueDate).toISOString().slice(0, 16) : '') + '" />' +
+    '</div>' +
+    '<div class="drawer-field">' +
+      '<label>\u5B50\u4EFB\u52A1</label>' +
+      '<div id="drawer-subtasks-list" class="drawer-subtasks-list">' +
+        renderDrawerSubtasks(task) +
+      '</div>' +
+      '<div class="drawer-add-subtask">' +
+        '<input type="text" id="drawer-new-subtask-input" class="drawer-input" placeholder="\u6DFB\u52A0\u5B50\u4EFB\u52A1..." />' +
+        '<button id="drawer-btn-add-subtask" class="drawer-btn-add">\u6DFB\u52A0</button>' +
+      '</div>' +
+    '</div>';
 
-  // Format date for local input
-  let formattedDue = '';
-  if (task.dueDate) {
-    const d = new Date(task.dueDate);
-    const pad = (num: number) => String(num).padStart(2, '0');
-    formattedDue = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-  }
-
-  content.innerHTML = `
-    <!-- Title Edit Field -->
-    <div class="todo-drawer-field">
-      <label class="todo-drawer-field-label">任务名称</label>
-      <input type="text" class="todo-drawer-title-input" id="drawer-task-title" value="${esc(task.title)}" placeholder="输入任务名称...">
-    </div>
-
-    <!-- Description Edit Field -->
-    <div class="todo-drawer-field">
-      <label class="todo-drawer-field-label">详细描述 (Notes)</label>
-      <textarea class="todo-drawer-desc-textarea" id="drawer-task-desc" placeholder="点击添加任务的说明或备注，失焦后自动保存...">${esc(task.description || '')}</textarea>
-    </div>
-
-    <!-- Category & Priority Row -->
-    <div class="todo-drawer-row">
-      <div class="todo-drawer-field">
-        <label class="todo-drawer-field-label">所属分类</label>
-        <select class="todo-drawer-select" id="drawer-task-cat">
-          ${catOptions}
-        </select>
-      </div>
-      <div class="todo-drawer-field">
-        <label class="todo-drawer-field-label">优先级</label>
-        <select class="todo-drawer-select" id="drawer-task-pri">
-          ${priOptions}
-        </select>
-      </div>
-    </div>
-
-    <!-- Due Date Field -->
-    <div class="todo-drawer-field">
-      <label class="todo-drawer-field-label">截止时间</label>
-      <input type="datetime-local" class="todo-drawer-datetime" id="drawer-task-due" value="${formattedDue}">
-    </div>
-
-    <!-- Subtasks checklist field -->
-    <div class="todo-drawer-field">
-      <label class="todo-drawer-field-label">子任务进度</label>
-      <div class="todo-drawer-subtasks" id="drawer-subtasks-list">
-        <!-- Rendered dynamically -->
-      </div>
-      <div class="todo-drawer-add-subtask-row" style="margin-top: 8px;">
-        <input type="text" class="todo-drawer-subtask-input" id="drawer-new-subtask-input" placeholder="输入子任务后回车或点击添加...">
-        <button class="todo-drawer-add-subtask-btn" id="drawer-btn-add-subtask">添加</button>
-      </div>
-    </div>
-  `;
-
-  bindDrawerInputEvents(task.id);
-  renderDrawerSubtasks(task);
+  bindDrawerEvents(task.id);
 }
 
-function renderDrawerSubtasks(task: TodoTask): void {
-  const container = document.getElementById('drawer-subtasks-list');
-  if (!container) return;
-
-  let html = '';
-  const subtasks = task.subtasks || [];
-  for (const sub of subtasks) {
-    html += `
-      <div class="todo-drawer-subtask-item${sub.done ? ' done' : ''}" data-subtask-id="${sub.id}">
-        <input type="checkbox" class="todo-drawer-subtask-check" ${sub.done ? 'checked' : ''} data-action="drawer-toggle-subtask">
-        <input type="text" class="todo-drawer-subtask-text" value="${esc(sub.text)}" data-action="drawer-edit-subtask" placeholder="编辑子任务...">
-        <button class="todo-drawer-subtask-delete" data-action="drawer-delete-subtask" title="删除子任务">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-        </button>
-      </div>
-    `;
-  }
-
-  if (subtasks.length === 0) {
-    html = '<div style="font-size:12px;color:var(--text-tertiary);font-style:italic;padding:4px 0;">无子任务，在下方快速创建清单</div>';
-  }
-
-  container.innerHTML = html;
+function renderDrawerSubtasks(task: TodoTask): string {
+  if (!task.subtasks || task.subtasks.length === 0) return '<div class="drawer-subtask-empty">\u6682\u65E0\u5B50\u4EFB\u52A1</div>';
+  return task.subtasks.map(sub =>
+    '<div class="todo-drawer-subtask-item" data-subtask-id="' + sub.id + '">' +
+      '<button class="todo-subtask-check ' + (sub.done ? 'checked' : '') + '" data-action="drawer-toggle-subtask">' +
+        (sub.done ? '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>' : '') +
+      '</button>' +
+      '<input type="text" class="todo-subtask-edit-input ' + (sub.done ? 'done' : '') + '" data-action="drawer-edit-subtask" value="' + esc(sub.text) + '" />' +
+      '<button class="todo-subtask-delete-btn" data-action="drawer-delete-subtask" title="\u5220\u9664">' +
+        '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>' +
+      '</button>' +
+    '</div>'
+  ).join('');
 }
 
-function bindDrawerInputEvents(taskId: string): void {
+function bindDrawerEvents(taskId: string): void {
   const titleInput = document.getElementById('drawer-task-title') as HTMLInputElement;
   const descTextarea = document.getElementById('drawer-task-desc') as HTMLTextAreaElement;
   const catSelect = document.getElementById('drawer-task-cat') as HTMLSelectElement;
@@ -395,8 +339,6 @@ function bindDrawerInputEvents(taskId: string): void {
       addSubtaskInput.value = '';
       await refreshAll();
       renderDrawerContent();
-      
-      // Auto focus back on new subtask input for fast workflows
       document.getElementById('drawer-new-subtask-input')?.focus();
     }
   };
@@ -424,7 +366,6 @@ function bindDrawerInputEvents(taskId: string): void {
     const task = store.data.tasks.find(t => t.id === taskId);
     if (!task) return;
 
-    // Toggle subtask checkbox
     if (target.closest('[data-action="drawer-toggle-subtask"]')) {
       const subtasks = task.subtasks.map(s => s.id === subtaskId ? { ...s, done: !s.done } : s);
       await ipcClient.todo.updateTask(taskId, { subtasks });
@@ -433,7 +374,6 @@ function bindDrawerInputEvents(taskId: string): void {
       return;
     }
 
-    // Delete subtask
     if (target.closest('[data-action="drawer-delete-subtask"]')) {
       const subtasks = task.subtasks.filter(s => s.id !== subtaskId);
       await ipcClient.todo.updateTask(taskId, { subtasks });
@@ -457,9 +397,7 @@ function bindDrawerInputEvents(taskId: string): void {
         if (task) {
           const subtasks = task.subtasks.map(s => s.id === subtaskId ? { ...s, text: val } : s);
           await ipcClient.todo.updateTask(taskId, { subtasks });
-          await refreshAll();
-          
-          // Re-render subtask texts only without replacing full content to maintain edit focus
+          debouncedRefresh();
           const updatedTask = getStore().data.tasks.find(t => t.id === taskId);
           if (updatedTask) renderDrawerSubtasks(updatedTask);
         }

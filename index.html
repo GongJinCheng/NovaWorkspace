@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN" data-theme="dark">
 <head>
   <meta charset="UTF-8">
@@ -31,6 +31,19 @@
   </div>
 
   <div class="app-container">
+    <!-- Global Search Overlay -->
+    <div class="global-search-overlay" id="global-search-overlay">
+      <div class="global-search-backdrop"></div>
+      <div class="global-search-dialog">
+        <div class="global-search-header">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          <input type="text" id="global-search-input" placeholder="搜索文件、页面或操作..." autocomplete="off" />
+          <kbd>Esc</kbd>
+        </div>
+        <div class="global-search-results" id="global-search-results"></div>
+      </div>
+    </div>
+
     <aside class="sidebar">
       <div class="sidebar-header">
         <div class="search-box">

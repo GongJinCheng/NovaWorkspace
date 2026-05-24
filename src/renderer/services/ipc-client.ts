@@ -40,4 +40,4 @@ export const ipcClient = {
     remove: (projectPath: string): Promise<RecentProject[]> => api().recent.remove(projectPath),
     clear: (): Promise<RecentProject[]> => api().recent.clear(),
   },
-};
+}; 

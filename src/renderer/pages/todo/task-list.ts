@@ -1,6 +1,6 @@
-/**
- * Task List - 计划看板与列表渲染
- * 支持时间轴与列表视图、卡片详情点击、以及子任务状态同步
+﻿/**
+ * Task List - Optimized with optimistic updates
+ * Supports timeline and list views, card detail click, subtask state sync.
  */
 
 import { ipcClient } from '../../services/ipc-client';
@@ -48,7 +48,7 @@ function renderPlanboard(area: HTMLElement, onRefresh: () => Promise<void>, onSe
     }
 
     if (bucketTasks.length === 0) {
-      html += '<div class="todo-bucket-empty">暂无任务</div>';
+      html += '<div class="todo-bucket-empty">\u6682\u65E0\u4EFB\u52A1</div>';
     }
 
     html += '</div></div>';
@@ -69,7 +69,7 @@ function renderListView(area: HTMLElement, onRefresh: () => Promise<void>, onSel
 
   let html = '<div class="todo-group">' +
     '<div class="todo-group-header">' +
-      '<span class="todo-group-label">当前任务</span>' +
+      '<span class="todo-group-label">\u5F53\u524D\u4EFB\u52A1</span>' +
       '<span class="todo-group-count">' + tasks.length + '</span>' +
     '</div>';
 
@@ -100,7 +100,7 @@ function renderTaskCard(task: TodoTask) {
         '</button>' +
         '<span class="todo-task-title ' + (task.completed ? 'strike' : '') + '" data-action="inline-edit" data-id="' + task.id + '">' + esc(task.title) + '</span>' +
         '<div class="todo-task-actions">' +
-          '<button class="todo-action-btn" data-action="delete" data-id="' + task.id + '" title="删除">' +
+          '<button class="todo-action-btn" data-action="delete" data-id="' + task.id + '" title="\u5220\u9664">' +
             '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>' +
           '</button>' +
         '</div>' +
@@ -109,7 +109,7 @@ function renderTaskCard(task: TodoTask) {
         (dueInfo ? '<span class="todo-due-badge ' + dueInfo.cls + '">' + dueInfo.text + '</span>' : '') +
         (cat ? '<span class="todo-cat-tag" style="color:' + cat.color + '">' + esc(cat.name) + '</span>' : '') +
         '<span class="todo-pri-tag" style="color:' + priColor + '">' + PRI_LABELS[task.priority] + '</span>' +
-        (subtasksTotal > 0 ? '<span class="todo-subtask-count" data-action="toggle-subtasks" data-id="' + task.id + '" title="展开子任务">' + subtasksDone + '/' + subtasksTotal + '</span>' : '') +
+        (subtasksTotal > 0 ? '<span class="todo-subtask-count" data-action="toggle-subtasks" data-id="' + task.id + '" title="\u5C55\u5F00\u5B50\u4EFB\u52A1">' + subtasksDone + '/' + subtasksTotal + '</span>' : '') +
       '</div>' +
       (subtasksTotal > 0 ? renderSubtasks(task) : '') +
     '</div>' +
@@ -117,30 +117,34 @@ function renderTaskCard(task: TodoTask) {
 }
 
 function renderSubtasks(task: TodoTask) {
+  if (!task.subtasks || task.subtasks.length === 0) return '';
   let html = '<div class="todo-subtasks" data-subtasks-of="' + task.id + '">';
   for (const sub of task.subtasks) {
-    html += '<label class="todo-subtask-item">' +
-      '<input type="checkbox" class="todo-subtask-check" data-action="toggle-subtask" data-task-id="' + task.id + '" data-subtask-id="' + sub.id + '"' + (sub.done ? ' checked' : '') + '>' +
-      '<span class="todo-subtask-text' + (sub.done ? ' done' : '') + '">' + esc(sub.text) + '</span>' +
-    '</label>';
+    html += '<div class="todo-subtask-item ' + (sub.done ? 'done' : '') + '">' +
+      '<button class="todo-subtask-check ' + (sub.done ? 'checked' : '') + '" data-action="toggle-subtask" data-id="' + task.id + '" data-subtask-id="' + sub.id + '">' +
+        (sub.done ? '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>' : '') +
+      '</button>' +
+      '<span class="todo-subtask-text ' + (sub.done ? 'strike' : '') + '">' + esc(sub.text) + '</span>' +
+    '</div>';
   }
   html += '</div>';
   return html;
 }
 
-function bucketId(bucket: string) {
-  if (bucket === '已逾期') return 'overdue';
-  if (bucket === '今天') return 'today';
-  if (bucket === '明天') return 'tomorrow';
-  if (bucket === '本周') return 'week';
-  return 'later';
+function bucketId(bucket: string): string {
+  const map: Record<string, string> = {
+    '\u5DF2\u903E\u671F': 'overdue',
+    '\u4ECA\u5929': 'today',
+    '\u660E\u5929': 'tomorrow',
+    '\u672C\u5468': 'week',
+    '\u66F4\u540E': 'later',
+  };
+  return map[bucket] || bucket;
 }
 
-function bindTaskEvents(area: HTMLElement, onRefresh: () => Promise<void>, onSelectTask?: (id: string) => void) {
-  area.addEventListener('click', async (e: MouseEvent) => {
+function bindTaskEvents(area: HTMLElement, onRefresh: () => Promise<void>, onSelectTask?: (id: string) => void): void {
+  area.addEventListener('click', async (e) => {
     const target = e.target as HTMLElement;
-
-    // Check if clicked inside a specific action button/checkbox
     const actionBtn = target.closest('[data-action]') as HTMLElement | null;
     if (actionBtn) {
       e.stopPropagation();
@@ -152,13 +156,37 @@ function bindTaskEvents(area: HTMLElement, onRefresh: () => Promise<void>, onSel
         const store = getStore();
         const task = store.data.tasks.find(t => t.id === id);
         if (task) {
+          const newCompleted = !task.completed;
           const card = actionBtn.closest('.todo-task-card');
-          if (card && !task.completed) {
-            card.classList.add('completing');
-            await new Promise(r => setTimeout(r, 220));
+
+          // Optimistic: update UI immediately
+          if (card) {
+            if (newCompleted) {
+              card.classList.add('completing');
+              setTimeout(() => { card.classList.add('completed'); card.classList.remove('completing'); }, 220);
+            } else {
+              card.classList.remove('completed');
+            }
+            actionBtn.classList.toggle('checked', newCompleted);
+            const checkSvg = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>';
+            actionBtn.innerHTML = newCompleted ? checkSvg : '';
+            const titleEl = card.querySelector('.todo-task-title');
+            titleEl?.classList.toggle('strike', newCompleted);
           }
-          await ipcClient.todo.updateTask(id, { completed: !task.completed, completedAt: !task.completed ? new Date().toISOString() : undefined });
-          await onRefresh();
+
+          // Optimistic: update local store
+          task.completed = newCompleted;
+          task.completedAt = newCompleted ? new Date().toISOString() : undefined;
+
+          // Background save
+          try {
+            await ipcClient.todo.updateTask(id, { completed: newCompleted, completedAt: task.completedAt });
+          } catch (err) {
+            console.error('[Todo] Toggle failed, rolling back:', err);
+            task.completed = !newCompleted;
+            task.completedAt = newCompleted ? undefined : task.completedAt;
+            await onRefresh();
+          }
         }
       } else if (action === 'delete') {
         await ipcClient.todo.deleteTask(id);
@@ -167,17 +195,39 @@ function bindTaskEvents(area: HTMLElement, onRefresh: () => Promise<void>, onSel
         const subtasksEl = area.querySelector('[data-subtasks-of="' + id + '"]') as HTMLElement | null;
         if (subtasksEl) subtasksEl.classList.toggle('show');
       } else if (action === 'toggle-subtask') {
-        const taskId = actionBtn.dataset.taskId;
+        const taskId = actionBtn.dataset.taskId || actionBtn.dataset.id;
         const subtaskId = actionBtn.dataset.subtaskId;
         if (taskId && subtaskId) {
           const store = getStore();
           const task = store.data.tasks.find(t => t.id === taskId);
           const subtask = task?.subtasks?.find(s => s.id === subtaskId);
           if (task && subtask) {
-            await ipcClient.todo.updateTask(taskId, {
-              subtasks: task.subtasks.map(s => s.id === subtaskId ? { ...s, done: !s.done } : s)
-            });
-            await onRefresh();
+            // Optimistic: update local
+            subtask.done = !subtask.done;
+            const subtaskEl = actionBtn.closest('.todo-subtask-item');
+            if (subtaskEl) {
+              subtaskEl.classList.toggle('done', subtask.done);
+              actionBtn.classList.toggle('checked', subtask.done);
+              const checkSvg = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>';
+              actionBtn.innerHTML = subtask.done ? checkSvg : '';
+              const textEl = subtaskEl.querySelector('.todo-subtask-text');
+              textEl?.classList.toggle('strike', subtask.done);
+            }
+            // Update parent count
+            const parentCard = actionBtn.closest('.todo-task-card');
+            const countEl = parentCard?.querySelector('.todo-subtask-count');
+            if (countEl && task.subtasks) {
+              const done = task.subtasks.filter(s => s.done).length;
+              countEl.textContent = done + '/' + task.subtasks.length;
+            }
+
+            try {
+              await ipcClient.todo.updateTask(taskId, { subtasks: task.subtasks });
+            } catch (err) {
+              console.error('[Todo] Subtask toggle failed, rolling back:', err);
+              subtask.done = !subtask.done;
+              await onRefresh();
+            }
           }
         }
       } else if (action === 'inline-edit') {
@@ -219,11 +269,11 @@ function startInlineEdit(titleEl: HTMLElement, onRefresh: () => Promise<void>) {
   const commit = async () => {
     const next = input.value.trim();
     if (next && next !== task.title) {
+      // Optimistic: update local store immediately
+      task.title = next;
       await ipcClient.todo.updateTask(id, { title: next });
-      await onRefresh();
-    } else {
-      await onRefresh();
     }
+    await onRefresh();
   };
 
   input.addEventListener('keydown', async (e) => {
@@ -244,24 +294,24 @@ function formatDueDate(dueDate: string) {
   const abs = Math.abs(diff);
 
   if (diff < 0) {
-    if (abs < 60000) return { text: '刚刚逾期', cls: 'overdue' };
-    if (abs < 3600000) return { text: '逾期 ' + Math.round(abs / 60000) + ' 分钟', cls: 'overdue' };
-    if (abs < 86400000) return { text: '逾期 ' + Math.round(abs / 3600000) + ' 小时', cls: 'overdue' };
-    return { text: '逾期 ' + Math.round(abs / 86400000) + ' 天', cls: 'overdue' };
+    if (abs < 60000) return { text: '\u521A\u521A\u903E\u671F', cls: 'overdue' };
+    if (abs < 3600000) return { text: '\u903E\u671F ' + Math.round(abs / 60000) + ' \u5206\u949F', cls: 'overdue' };
+    if (abs < 86400000) return { text: '\u903E\u671F ' + Math.round(abs / 3600000) + ' \u5C0F\u65F6', cls: 'overdue' };
+    return { text: '\u903E\u671F ' + Math.round(abs / 86400000) + ' \u5929', cls: 'overdue' };
   }
-  if (diff < 60000) return { text: '不到 1 分钟', cls: 'soon' };
-  if (diff < 3600000) return { text: Math.round(diff / 60000) + ' 分钟后', cls: 'soon' };
-  if (diff < 86400000) return { text: Math.round(diff / 3600000) + ' 小时后', cls: '' };
-  return { text: Math.round(diff / 86400000) + ' 天后', cls: '' };
+  if (diff < 60000) return { text: '\u4E0D\u5230 1 \u5206\u949F', cls: 'soon' };
+  if (diff < 3600000) return { text: Math.round(diff / 60000) + ' \u5206\u949F\u540E', cls: 'soon' };
+  if (diff < 86400000) return { text: Math.round(diff / 3600000) + ' \u5C0F\u65F6\u540E', cls: '' };
+  return { text: Math.round(diff / 86400000) + ' \u5929\u540E', cls: '' };
 }
 
 function renderEmptyState(filter: string) {
   const messages: Record<string, string> = {
-    all: '还没有任务，添加一个吧！',
-    today: '今天没有待办任务',
-    upcoming: '暂无即将到来的任务',
-    overdue: '太棒了！没有逾期任务',
-    completed: '还没有完成的任务',
+    all: '\u8FD8\u6CA1\u6709\u4EFB\u52A1\uFF0C\u6DFB\u52A0\u4E00\u4E2A\u5427\uFF01',
+    today: '\u4ECA\u5929\u6CA1\u6709\u5F85\u529E\u4EFB\u52A1',
+    upcoming: '\u6682\u65E0\u5373\u5C06\u5230\u6765\u7684\u4EFB\u52A1',
+    overdue: '\u592A\u68D2\u4E86\uFF01\u6CA1\u6709\u903E\u671F\u4EFB\u52A1',
+    completed: '\u8FD8\u6CA1\u6709\u5B8C\u6210\u7684\u4EFB\u52A1',
   };
   return '<div class="todo-empty-state">' +
     '<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.3"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>' +

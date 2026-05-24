@@ -1,5 +1,6 @@
-/**
+﻿/**
  * FileTree - File tree browser component with search
+ * Features: distinct file/folder icons, AI analysis integration
  */
 import { ipcClient } from '../../services/ipc-client';
 import { showInputPrompt } from '../../components/modal';
@@ -33,12 +34,11 @@ export class FileTree {
     const parent = this.container.parentElement;
     if (!parent) return;
 
-    // Create search bar above file tree
     const searchDiv = document.createElement('div');
     searchDiv.className = 'file-search-bar';
     searchDiv.innerHTML =
       '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>' +
-      '<input type="text" placeholder="搜索文件..." class="file-search-input" />';
+      '<input type="text" placeholder="\u641C\u7D22\u6587\u4EF6..." class="file-search-input" />';
     parent.insertBefore(searchDiv, this.container);
 
     this.searchInput = searchDiv.querySelector('.file-search-input') as HTMLInputElement;
@@ -84,7 +84,6 @@ export class FileTree {
     this.expandedDirs.add(root);
     this.onFolderSelect?.(root);
 
-    // Record as recent project
     try {
       const name = root.split(/[/\\]/).pop() || root;
       await ipcClient.recent.add({ name, path: root, lastOpened: new Date().toISOString() });
@@ -95,7 +94,6 @@ export class FileTree {
     await this.render();
   }
 
-  /** Open a specific project path (used by recent projects) */
   async openProjectPath(projectPath: string): Promise<void> {
     this.rootPath = projectPath;
     this.selectedPath = null;
@@ -111,7 +109,7 @@ export class FileTree {
       this.container.innerHTML =
         '<div class="empty-state">' +
         '<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.3"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>' +
-        '<p>打开文件夹开始使用</p>' +
+        '<p>\u6253\u5F00\u6587\u4EF6\u5939\u5F00\u59CB\u4F7F\u7528</p>' +
         '</div>';
       return;
     }
@@ -132,67 +130,86 @@ export class FileTree {
     });
 
     for (const entry of entries) {
-      // Apply search filter
       if (this.searchTerm && !entry.name.toLowerCase().includes(this.searchTerm)) {
-        // If searching and name doesn't match, skip files but still recurse dirs
         if (!entry.isDirectory) continue;
       }
 
-      const isExpanded = this.expandedDirs.has(entry.path);
-      const isSelected = this.selectedPath === entry.path;
+      const fullPath = dirPath + (dirPath.endsWith('\\') || dirPath.endsWith('/') ? '' : '\\') + entry.name;
+      const isExpanded = this.expandedDirs.has(fullPath);
+      const isSelected = this.selectedPath === fullPath;
+
       const item = document.createElement('div');
       item.className = 'tree-item' + (isSelected ? ' selected' : '');
       item.style.paddingLeft = (12 + depth * 16) + 'px';
+
       if (entry.isDirectory) {
-        item.innerHTML =
-          '<span class="tree-item-arrow ' + (isExpanded ? 'expanded' : '') + '">' +
-          '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></span>' +
-          '<span class="tree-item-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg></span>' +
-          '<span class="tree-item-name">' + this.esc(entry.name) + '</span>';
-        item.addEventListener('click', (e) => {
-          e.stopPropagation();
-          this.selectFolder(entry.path, item);
-          this.toggleDir(entry.path);
-        });
-        item.addEventListener('contextmenu', (e) => {
-          e.preventDefault();
-          this.selectFolder(entry.path, item);
-          this.showContextMenu(e, entry.path, entry.name, true);
-        });
+        const arrowSvg = '<span class="tree-item-arrow' + (isExpanded ? ' expanded' : '') + '">' +
+          '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>' +
+          '</span>';
+        const folderIcon = isExpanded
+          ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none" opacity="0.7"><path d="M2 6a2 2 0 0 1 2-2h5l2 2h9a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6z"/></svg>'
+          : '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" opacity="0.6"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>';
+
+        item.innerHTML = arrowSvg + '<span class="tree-item-icon">' + folderIcon + '</span><span class="tree-item-name">' + this.esc(entry.name) + '</span>';
+
+        item.addEventListener('click', () => this.toggleDir(fullPath));
+        item.addEventListener('contextmenu', (e) => { e.preventDefault(); this.showContextMenu(e, fullPath, entry.name, true); });
+
         parentEl.appendChild(item);
-        if (isExpanded || this.searchTerm) {
-          await this.renderDir(entry.path, parentEl, depth + 1);
+
+        if (isExpanded) {
+          const childContainer = document.createElement('div');
+          childContainer.className = 'tree-children';
+          parentEl.appendChild(childContainer);
+          await this.renderDir(fullPath, childContainer, depth + 1);
         }
       } else {
-        item.innerHTML =
-          '<span class="tree-item-arrow" style="visibility:hidden"><svg width="12" height="12" viewBox="0 0 24 24"></svg></span>' +
-          '<span class="tree-item-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg></span>' +
-          '<span class="tree-item-name">' + this.esc(entry.name) + '</span>';
-        item.addEventListener('click', (e) => {
-          e.stopPropagation();
-          this.selectFile(entry.path, entry.name, item);
-        });
-        item.addEventListener('contextmenu', (e) => {
-          e.preventDefault();
-          this.selectFile(entry.path, entry.name, item);
-          this.showContextMenu(e, entry.path, entry.name, false);
-        });
+        const fileIcon = this.getFileIcon(entry.name);
+        item.innerHTML = '<span class="tree-item-icon">' + fileIcon + '</span><span class="tree-item-name">' + this.esc(entry.name) + '</span>';
+
+        item.addEventListener('click', () => this.selectFile(fullPath, entry.name, item));
+        item.addEventListener('contextmenu', (e) => { e.preventDefault(); this.showContextMenu(e, fullPath, entry.name, false); });
+
         parentEl.appendChild(item);
       }
     }
+  }
 
-    // Show "no results" when searching and nothing found
-    if (this.searchTerm && parentEl.children.length === 0 && depth === 0) {
-      const empty = document.createElement('div');
-      empty.className = 'empty-state';
-      empty.innerHTML = '<svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.25"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg><p>未找到匹配文件</p>';
-      parentEl.appendChild(empty);
+  private getFileIcon(fileName: string): string {
+    const ext = fileName.split('.').pop()?.toLowerCase() || '';
+    const iconMap: Record<string, string> = {
+      ts: '#3178c6', tsx: '#3178c6',
+      js: '#f7df1e', jsx: '#61dafb',
+      json: '#fbbf24', md: '#60a5fa',
+      html: '#f97316', css: '#8b5cf6',
+      py: '#34d399', rs: '#fb923c',
+      go: '#60a5fa', java: '#ef4444',
+      c: '#6b7280', cpp: '#6b7280',
+      yml: '#f472b6', yaml: '#f472b6',
+      xml: '#a78bfa', txt: '#9ca3af',
+      sh: '#34d399', bat: '#6b7280',
+      vue: '#34d399', svelte: '#f97316',
+      png: '#f472b6', jpg: '#f472b6', gif: '#f472b6', svg: '#fbbf24',
+      pdf: '#ef4444', doc: '#3178c6', docx: '#3178c6',
+    };
+
+    const color = iconMap[ext];
+    if (color) {
+      return '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="' + color + '" stroke-width="2" opacity="0.8"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>';
     }
+
+    return '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" opacity="0.5"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>';
   }
 
   private async toggleDir(dirPath: string): Promise<void> {
-    if (this.expandedDirs.has(dirPath)) this.expandedDirs.delete(dirPath);
-    else this.expandedDirs.add(dirPath);
+    if (this.expandedDirs.has(dirPath)) {
+      this.expandedDirs.delete(dirPath);
+    } else {
+      this.expandedDirs.add(dirPath);
+    }
+    this.selectedPath = dirPath;
+    this.selectedIsDir = true;
+    this.onFolderSelect?.(dirPath);
     await this.render();
   }
 
@@ -221,15 +238,16 @@ export class FileTree {
     menu.style.top = e.clientY + 'px';
 
     if (isDir) {
-      menu.appendChild(this.createContextItem('新建文件', () => this.handleContextNewFile(itemPath)));
-      menu.appendChild(this.createContextItem('新建文件夹', () => this.handleContextNewFolder(itemPath)));
+      menu.appendChild(this.createContextItem('\u65B0\u5EFA\u6587\u4EF6', () => this.handleContextNewFile(itemPath)));
+      menu.appendChild(this.createContextItem('\u65B0\u5EFA\u6587\u4EF6\u5939', () => this.handleContextNewFolder(itemPath)));
     }
-    menu.appendChild(this.createContextItem('复制路径', () => this.handleCopyPath(itemPath)));
+    menu.appendChild(this.createContextItem('\u590D\u5236\u8DEF\u5F84', () => this.handleCopyPath(itemPath)));
     if (!isDir) {
-      menu.appendChild(this.createContextItem('打开', () => this.onFileSelect?.(itemPath, itemName)));
+      menu.appendChild(this.createContextItem('\u6253\u5F00', () => this.onFileSelect?.(itemPath, itemName)));
+      menu.appendChild(this.createContextItem('AI \u5206\u6790', () => this.handleAIAnalysis(itemPath)));
     }
-    menu.appendChild(this.createContextItem('重命名', () => this.renameItem(itemPath, itemName, isDir)));
-    menu.appendChild(this.createContextItem('删除', () => this.deleteItem(itemPath, itemName, isDir), true));
+    menu.appendChild(this.createContextItem('\u91CD\u547D\u540D', () => this.renameItem(itemPath, itemName, isDir)));
+    menu.appendChild(this.createContextItem('\u5220\u9664', () => this.deleteItem(itemPath, itemName, isDir), true));
 
     document.body.appendChild(menu);
     setTimeout(() => {
@@ -259,49 +277,67 @@ export class FileTree {
     }
   }
 
+  private async handleAIAnalysis(filePath: string): Promise<void> {
+    try {
+      const content = await ipcClient.fs.readFile(filePath);
+      const { switchPage } = await import('../../app/router');
+      switchPage('ai');
+      setTimeout(() => {
+        const aiInput = document.getElementById('ai-chat-input') as HTMLTextAreaElement;
+        if (aiInput) {
+          aiInput.value = '\u8BF7\u5206\u6790\u4EE5\u4E0B\u6587\u4EF6\u5185\u5BB9\uFF1A\n\n```\n' + content.slice(0, 3000) + '\n```';
+          const sendBtn = document.getElementById('btn-ai-send');
+          sendBtn?.click();
+        }
+      }, 300);
+    } catch (err) {
+      console.error('[FileTree] AI analysis failed:', err);
+    }
+  }
+
   private async handleContextNewFile(dirPath: string): Promise<void> {
-    const name = await showInputPrompt('新建文件', '输入文件名');
+    const name = await showInputPrompt('\u65B0\u5EFA\u6587\u4EF6', '\u8F93\u5165\u6587\u4EF6\u540D');
     if (!name?.trim()) return;
     try {
       const filePath = await ipcClient.fs.createFile(dirPath, name.trim());
       await this.render();
       this.onFileSelect?.(filePath, name.trim());
     } catch (err) {
-      alert('创建文件失败: ' + (err instanceof Error ? err.message : String(err)));
+      alert('\u521B\u5EFA\u6587\u4EF6\u5931\u8D25: ' + (err instanceof Error ? err.message : String(err)));
     }
   }
 
   private async handleContextNewFolder(dirPath: string): Promise<void> {
-    const name = await showInputPrompt('新建文件夹', '输入文件夹名');
+    const name = await showInputPrompt('\u65B0\u5EFA\u6587\u4EF6\u5939', '\u8F93\u5165\u6587\u4EF6\u5939\u540D');
     if (!name?.trim()) return;
     try {
       await ipcClient.fs.createDirectory(dirPath, name.trim());
       await this.render();
     } catch (err) {
-      alert('创建文件夹失败: ' + (err instanceof Error ? err.message : String(err)));
+      alert('\u521B\u5EFA\u6587\u4EF6\u5939\u5931\u8D25: ' + (err instanceof Error ? err.message : String(err)));
     }
   }
 
   private async renameItem(itemPath: string, oldName: string, isDir: boolean): Promise<void> {
-    const newName = await showInputPrompt('重命名', '输入新名称', oldName);
+    const newName = await showInputPrompt('\u91CD\u547D\u540D', '\u8F93\u5165\u65B0\u540D\u79F0', oldName);
     if (!newName?.trim() || newName.trim() === oldName) return;
     try {
       const newPath = await ipcClient.fs.renameItem(itemPath, newName.trim());
       await this.render();
       this.onFileRenamed?.(itemPath, newPath, isDir);
     } catch (err) {
-      alert('重命名失败: ' + (err instanceof Error ? err.message : String(err)));
+      alert('\u91CD\u547D\u540D\u5931\u8D25: ' + (err instanceof Error ? err.message : String(err)));
     }
   }
 
   private async deleteItem(itemPath: string, itemName: string, isDir: boolean): Promise<void> {
-    if (!confirm('确定要删除' + (isDir ? '文件夹' : '文件') + ' "' + itemName + '" 吗？')) return;
+    if (!confirm('\u786E\u5B9A\u8981\u5220\u9664' + (isDir ? '\u6587\u4EF6\u5939' : '\u6587\u4EF6') + ' "' + itemName + '" \u5417\uFF1F')) return;
     try {
       await ipcClient.fs.deleteItem(itemPath);
       await this.render();
       this.onFileDeleted?.(itemPath, isDir);
     } catch (err) {
-      alert('删除失败: ' + (err instanceof Error ? err.message : String(err)));
+      alert('\u5220\u9664\u5931\u8D25: ' + (err instanceof Error ? err.message : String(err)));
     }
   }
 

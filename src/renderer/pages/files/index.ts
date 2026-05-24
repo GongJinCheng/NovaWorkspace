@@ -1,5 +1,6 @@
-/**
+﻿/**
  * Files Page - orchestrates file tree, editor tabs, and file operations.
+ * Features: drag-and-drop, state persistence restore.
  */
 import { FileTree } from './file-tree';
 import { EditorManager } from './editor-manager';
@@ -20,11 +21,11 @@ async function handleNewFile(): Promise<void> {
   console.debug('[Files] new-file click');
   const dir = getTargetDir();
   if (!dir) {
-    alert('请先打开一个文件夹');
+    alert('\u8BF7\u5148\u6253\u5F00\u4E00\u4E2A\u6587\u4EF6\u5939');
     return;
   }
 
-  const name = await showInputPrompt('New File', '输入文件名');
+  const name = await showInputPrompt('New File', '\u8F93\u5165\u6587\u4EF6\u540D');
   if (!name?.trim()) return;
 
   try {
@@ -36,7 +37,7 @@ async function handleNewFile(): Promise<void> {
     }
   } catch (err) {
     console.error('[Files] Create file failed:', err);
-    alert('创建文件失败: ' + (err instanceof Error ? err.message : String(err)));
+    alert('\u521B\u5EFA\u6587\u4EF6\u5931\u8D25: ' + (err instanceof Error ? err.message : String(err)));
   }
 }
 
@@ -44,11 +45,11 @@ async function handleNewFolder(): Promise<void> {
   console.debug('[Files] new-folder click');
   const dir = getTargetDir();
   if (!dir) {
-    alert('请先打开一个文件夹');
+    alert('\u8BF7\u5148\u6253\u5F00\u4E00\u4E2A\u6587\u4EF6\u5939');
     return;
   }
 
-  const name = await showInputPrompt('New Folder', '输入文件夹名');
+  const name = await showInputPrompt('New Folder', '\u8F93\u5165\u6587\u4EF6\u5939\u540D');
   if (!name?.trim()) return;
 
   try {
@@ -57,7 +58,7 @@ async function handleNewFolder(): Promise<void> {
     await fileTree?.render();
   } catch (err) {
     console.error('[Files] Create directory failed:', err);
-    alert('创建文件夹失败: ' + (err instanceof Error ? err.message : String(err)));
+    alert('\u521B\u5EFA\u6587\u4EF6\u5939\u5931\u8D25: ' + (err instanceof Error ? err.message : String(err)));
   }
 }
 
@@ -75,13 +76,13 @@ function bindFilesToolbar(): void {
   document.getElementById('btn-ai-format-toolbar')?.addEventListener('click', async () => {
     console.debug('[Files] AI format toolbar click');
     const aiService = (window as any).aiService;
-    if (!aiService?.isConfigured?.()) { alert('请先配置 AI'); return; }
+    if (!aiService?.isConfigured?.()) { alert('\u8BF7\u5148\u914D\u7F6E AI'); return; }
     const activePath = store.getActiveFilePath();
-    if (!activePath || !editorManager) { alert('请先打开一个文件'); return; }
+    if (!activePath || !editorManager) { alert('\u8BF7\u5148\u6253\u5F00\u4E00\u4E2A\u6587\u4EF6'); return; }
     const editorData = editorManager.getEditorByPath(activePath);
     if (!editorData) return;
     const content = editorData.model.getValue();
-    if (!content.trim()) { alert('文件内容为空'); return; }
+    if (!content.trim()) { alert('\u6587\u4EF6\u5185\u5BB9\u4E3A\u7A7A'); return; }
 
     const btn = document.getElementById('btn-ai-format-toolbar') as HTMLButtonElement | null;
     const originalHTML = btn?.innerHTML || '';
@@ -96,13 +97,54 @@ function bindFilesToolbar(): void {
       }, 2000);
     } catch (err) {
       console.error('[Files] AI format failed:', err);
-      alert('AI 格式化失败: ' + (err instanceof Error ? err.message : String(err)));
+      alert('AI \u683C\u5F0F\u5316\u5931\u8D25: ' + (err instanceof Error ? err.message : String(err)));
       if (btn) { btn.disabled = false; btn.innerHTML = originalHTML; btn.classList.remove('loading'); }
     }
   });
 }
 
-function initFilesPage(): void {
+function initDragDrop(): void {
+  const pageFiles = document.getElementById('page-files');
+  if (!pageFiles) return;
+
+  pageFiles.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    pageFiles.classList.add('drag-over');
+  });
+
+  pageFiles.addEventListener('dragleave', (e) => {
+    e.preventDefault();
+    pageFiles.classList.remove('drag-over');
+  });
+
+  pageFiles.addEventListener('drop', async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    pageFiles.classList.remove('drag-over');
+
+    const files = e.dataTransfer?.files;
+    if (!files || files.length === 0) return;
+
+    const file = files[0];
+    const filePath = (file as any).path;
+    if (!filePath) return;
+
+    try {
+      await ipcClient.fs.readDirectory(filePath);
+      // If successful, it's a directory
+      await fileTree?.openProjectPath(filePath);
+      store.setWorkspaceRoot(filePath);
+      store.setSelectedFolder(filePath);
+    } catch {
+      // Not a directory - open as file
+      const fileName = filePath.split(/[/\\]/).pop() || filePath;
+      await editorManager?.openFile(filePath, fileName);
+    }
+  });
+}
+
+async function initFilesPage(): Promise<void> {
   if (fileTree) return;
 
   const treeContainer = document.getElementById('file-tree');
@@ -160,8 +202,31 @@ function initFilesPage(): void {
     }
   });
 
-  const workspaceRoot = fileTree.getWorkspaceRoot();
-  if (workspaceRoot) store.setWorkspaceRoot(workspaceRoot);
+  // Restore previous session
+  const saved = FilesStore.restoreState();
+  if (saved.workspaceRoot) {
+    try {
+      await fileTree.openProjectPath(saved.workspaceRoot);
+      store.setWorkspaceRoot(saved.workspaceRoot);
+      store.setSelectedFolder(saved.workspaceRoot);
+
+      // Restore open tabs
+      for (const tabPath of saved.openTabs) {
+        const fileName = tabPath.split(/[/\\]/).pop() || tabPath;
+        await editorManager.openFile(tabPath, fileName);
+      }
+
+      // Restore active tab
+      if (saved.activeTab && saved.openTabs.includes(saved.activeTab)) {
+        editorManager.switchToTab(saved.activeTab);
+      }
+    } catch (err) {
+      console.warn('[Files] Failed to restore session:', err);
+    }
+  }
+
+  // Initialize drag-and-drop
+  initDragDrop();
 
   console.log('[Files] page initialized');
 }

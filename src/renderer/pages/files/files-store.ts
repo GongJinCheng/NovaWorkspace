@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Files store - single source of truth for file manager runtime state.
  *
  * Owns:
@@ -6,6 +6,7 @@
  * - open tabs
  * - active file
  * - dirty flags
+ * - state persistence (localStorage)
  */
 
 export type FilesListener = (state: FilesState) => void;
@@ -17,6 +18,10 @@ export interface FilesState {
   openTabs: string[];
   dirtySet: string[];
 }
+
+const STORAGE_KEY_WORKSPACE = 'files-workspace-root';
+const STORAGE_KEY_TABS = 'files-open-tabs';
+const STORAGE_KEY_ACTIVE = 'files-active-tab';
 
 export class FilesStore {
   private workspaceRoot: string | null = null;
@@ -141,6 +146,38 @@ export class FilesStore {
     return targets;
   }
 
+  // --- State Persistence ---
+
+  saveState(): void {
+    try {
+      if (this.workspaceRoot) {
+        localStorage.setItem(STORAGE_KEY_WORKSPACE, this.workspaceRoot);
+      }
+      localStorage.setItem(STORAGE_KEY_TABS, JSON.stringify(this.openTabs));
+      if (this.activeFilePath) {
+        localStorage.setItem(STORAGE_KEY_ACTIVE, this.activeFilePath);
+      }
+    } catch { /* ignore */ }
+  }
+
+  static restoreState(): { workspaceRoot: string | null; openTabs: string[]; activeTab: string | null } {
+    try {
+      return {
+        workspaceRoot: localStorage.getItem(STORAGE_KEY_WORKSPACE),
+        openTabs: JSON.parse(localStorage.getItem(STORAGE_KEY_TABS) || '[]'),
+        activeTab: localStorage.getItem(STORAGE_KEY_ACTIVE),
+      };
+    } catch {
+      return { workspaceRoot: null, openTabs: [], activeTab: null };
+    }
+  }
+
+  clearState(): void {
+    localStorage.removeItem(STORAGE_KEY_WORKSPACE);
+    localStorage.removeItem(STORAGE_KEY_TABS);
+    localStorage.removeItem(STORAGE_KEY_ACTIVE);
+  }
+
   private emit(): void {
     const state = this.getState();
     for (const listener of this.listeners) {
@@ -150,5 +187,7 @@ export class FilesStore {
         console.error('[FilesStore] listener failed:', error);
       }
     }
+    // Auto-save on every state change
+    this.saveState();
   }
 }

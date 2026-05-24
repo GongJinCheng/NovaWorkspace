@@ -1,5 +1,6 @@
-/**
+﻿/**
  * AI Page - AI assistant with conversational chat + quick tools
+ * Now with streaming responses for typewriter effect.
  */
 import { aiService, type ChatMessage } from './ai-service';
 import { registerPageInit } from '../../app/router';
@@ -7,23 +8,23 @@ import { aiStats } from '../../app/index';
 
 (window as any).aiService = aiService;
 
-// ── Chat state ──
+// Chat state
 const chatHistory: ChatMessage[] = [];
 let isGenerating = false;
 
-// ── Tool action labels ──
+// Tool action labels
 const ACTION_LABELS: Record<string, { loading: string; success: string }> = {
-  format:    { loading: '格式化中...', success: '✓ 格式化完成' },
-  explain:   { loading: '解释中...',   success: '✓ 解释完成' },
-  summarize: { loading: '总结中...',   success: '✓ 总结完成' },
-  translate: { loading: '翻译中...',   success: '✓ 翻译完成' },
+  format:    { loading: '\u683C\u5F0F\u5316\u4E2D...', success: '\u2705 \u683C\u5F0F\u5316\u5B8C\u6210' },
+  explain:   { loading: '\u89E3\u91CA\u4E2D...',   success: '\u2705 \u89E3\u91CA\u5B8C\u6210' },
+  summarize: { loading: '\u603B\u7ED3\u4E2D...',   success: '\u2705 \u603B\u7ED3\u5B8C\u6210' },
+  translate: { loading: '\u7FFB\u8BD1\u4E2D...',   success: '\u2705 \u7FFB\u8BD1\u5B8C\u6210' },
 };
 
 function persistStats(): void {
   localStorage.setItem('ai-stats', JSON.stringify(aiStats));
 }
 
-// ── Chat UI ──
+// Chat UI
 
 function appendMessage(role: 'user' | 'assistant' | 'system', content: string): HTMLElement {
   const container = document.getElementById('ai-chat-messages');
@@ -49,7 +50,7 @@ function appendLoadingIndicator(): HTMLElement {
   el.className = 'ai-msg-loading';
   el.innerHTML =
     '<div class="ai-loading-dots"><span></span><span></span><span></span></div>' +
-    '<span>正在思考...</span>';
+    '<span>\u6B63\u5728\u601D\u8003..</span>';
   container.appendChild(el);
   container.scrollTop = container.scrollHeight;
   return el;
@@ -62,7 +63,7 @@ function removeLoadingIndicator(el: HTMLElement): void {
 async function sendMessage(text: string): Promise<void> {
   if (!text.trim() || isGenerating) return;
   if (!aiService.isConfigured()) {
-    appendMessage('system', '请先在右侧配置 API Key');
+    appendMessage('system', '\u8BF7\u5148\u5728\u53F3\u4FA7\u914D\u7F6E API Key');
     return;
   }
 
@@ -77,26 +78,31 @@ async function sendMessage(text: string): Promise<void> {
 
   isGenerating = true;
   updateSendButton();
-  const loadingEl = appendLoadingIndicator();
+
+  const container = document.getElementById('ai-chat-messages');
+  const bubble = appendMessage('assistant', '');
+  bubble.classList.add('streaming');
 
   try {
     const systemMsg: ChatMessage = {
       role: 'system',
-      content: '你是一个专业的编程助手，帮助用户分析代码、翻译文档、回答技术问题。请用中文回复。'
+      content: '\u4F60\u662F\u4E00\u4E2A\u4E13\u4E1A\u7684\u7F16\u7A0B\u52A9\u624B\uFF0C\u5E2E\u52A9\u7528\u6237\u5206\u6790\u4EE3\u7801\u3001\u7FFB\u8BD1\u6587\u6863\u3001\u56DE\u7B54\u6280\u672F\u95EE\u9898\u3002\u8BF7\u7528\u4E2D\u6587\u56DE\u590D\u3002'
     };
     const messages = [systemMsg, ...chatHistory];
 
-    const result = await aiService.chat(messages, { temperature: 0.7 });
+    const result = await aiService.chatStream(messages, { temperature: 0.7 }, (chunk) => {
+      bubble.textContent += chunk;
+      if (container) container.scrollTop = container.scrollHeight;
+    });
 
-    removeLoadingIndicator(loadingEl);
-    appendMessage('assistant', result);
+    bubble.classList.remove('streaming');
     chatHistory.push({ role: 'assistant', content: result });
-
     incrementAIStats(Math.ceil((text.length + result.length) / 4));
   } catch (err) {
-    removeLoadingIndicator(loadingEl);
+    bubble.classList.remove('streaming');
     const errMsg = err instanceof Error ? err.message : String(err);
-    appendMessage('system', '请求失败: ' + errMsg);
+    bubble.textContent = '';
+    appendMessage('system', '\u8BF7\u6C42\u5931\u8D25: ' + errMsg);
   } finally {
     isGenerating = false;
     updateSendButton();
@@ -115,12 +121,12 @@ function clearChat(): void {
   container.innerHTML =
     '<div class="ai-chat-welcome">' +
     '<div class="ai-chat-welcome-icon"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2a4 4 0 0 1 4 4c0 1.95-1.4 3.58-3.25 3.93L12 22"/><path d="M12 2a4 4 0 0 0-4 4c0 1.95 1.4 3.58 3.25 3.93"/><path d="M12 2v20"/></svg></div>' +
-    '<h3>AI 助手</h3>' +
-    '<p>我可以帮你分析代码、翻译文档、回答问题。</p>' +
+    '<h3>AI \u52A9\u624B</h3>' +
+    '<p>\u6211\u53EF\u4EE5\u5E2E\u4F60\u5206\u6790\u4EE3\u7801\u3001\u7FFB\u8BD1\u6587\u6863\u3001\u56DE\u7B54\u95EE\u9898\u3002</p>' +
     '<div class="ai-chat-suggestions">' +
-    '<button class="ai-suggestion" data-msg="帮我解释一下这段代码">解释代码</button>' +
-    '<button class="ai-suggestion" data-msg="将以下内容翻译成英文">翻译内容</button>' +
-    '<button class="ai-suggestion" data-msg="总结一下这段内容的要点">内容摘要</button>' +
+    '<button class="ai-suggestion" data-msg="\u5E2E\u6211\u89E3\u91CA\u4E00\u4E0B\u8FD9\u6BB5\u4EE3\u7801">\u89E3\u91CA\u4EE3\u7801</button>' +
+    '<button class="ai-suggestion" data-msg="\u5C06\u4EE5\u4E0B\u5185\u5BB9\u7FFB\u8BD1\u6210\u82F1\u6587">\u7FFB\u8BD1\u5185\u5BB9</button>' +
+    '<button class="ai-suggestion" data-msg="\u603B\u7ED3\u4E00\u4E0B\u8FD9\u6BB5\u5185\u5BB9\u7684\u8981\u70B9">\u5185\u5BB9\u6458\u8981</button>' +
     '</div></div>';
   bindSuggestions();
 }
@@ -134,11 +140,10 @@ function bindSuggestions(): void {
   });
 }
 
-// ── Input handling ──
-
 function initChatInput(): void {
-  const input = document.getElementById('ai-chat-input') as HTMLTextAreaElement;
+  const input = document.getElementById('ai-chat-input') as HTMLTextAreaElement | null;
   const sendBtn = document.getElementById('btn-ai-send');
+  const clearBtn = document.getElementById('btn-ai-clear');
 
   if (input) {
     input.addEventListener('keydown', (e) => {
@@ -147,8 +152,8 @@ function initChatInput(): void {
         sendMessage(input.value);
       }
     });
+
     input.addEventListener('input', () => {
-      // Auto-resize
       input.style.height = 'auto';
       input.style.height = Math.min(input.scrollHeight, 120) + 'px';
     });
@@ -158,179 +163,204 @@ function initChatInput(): void {
     if (input) sendMessage(input.value);
   });
 
-  document.getElementById('btn-ai-clear')?.addEventListener('click', clearChat);
+  clearBtn?.addEventListener('click', clearChat);
 }
 
-// ── Sidebar toggle ──
+// Sidebar toggle
 
 function initSidebarToggle(): void {
+  const toggleBtn = document.getElementById('btn-toggle-ai-sidebar');
   const sidebar = document.getElementById('ai-sidebar');
-  const toggleBtn = document.getElementById('btn-ai-toggle-panel');
-  const configToggle = document.getElementById('ai-config-toggle');
-  const configBody = document.getElementById('ai-config-body');
+  if (!toggleBtn || !sidebar) return;
 
-  toggleBtn?.addEventListener('click', () => {
-    sidebar?.classList.toggle('hidden');
-  });
-
-  configToggle?.addEventListener('click', () => {
-    configBody?.classList.toggle('collapsed');
-    const arrow = configToggle.querySelector('svg');
-    if (arrow) {
-      arrow.style.transform = configBody?.classList.contains('collapsed') ? 'rotate(-90deg)' : '';
+  toggleBtn.addEventListener('click', () => {
+    sidebar.classList.toggle('collapsed');
+    const icon = toggleBtn.querySelector('svg');
+    if (icon) {
+      icon.style.transform = sidebar.classList.contains('collapsed') ? 'rotate(180deg)' : '';
     }
   });
 }
 
-// ── Config management ──
+// AI Config
 
 function loadAIConfig(): void {
-  setInputValue('ai-api-key', aiService.getApiKey());
-  setInputValue('ai-base-url', aiService.getBaseUrl());
-  setInputValue('ai-model-select', aiService.getModel());
+  const apiKey = aiService.getApiKey();
+  const baseUrl = aiService.getBaseUrl();
+  const model = aiService.getModel();
+
+  setInputValue('ai-api-key', apiKey);
+  setInputValue('ai-base-url', baseUrl);
+
+  const modelSelect = document.getElementById('ai-model-select') as HTMLSelectElement | null;
+  if (modelSelect) {
+    const option = Array.from(modelSelect.options).find(o => o.value === model);
+    if (option) {
+      modelSelect.value = model;
+    } else {
+      modelSelect.value = 'custom';
+      const customInput = document.getElementById('ai-model-custom') as HTMLInputElement | null;
+      if (customInput) {
+        customInput.style.display = 'block';
+        customInput.value = model;
+      }
+    }
+  }
+
   updateAIStatus();
 }
 
 function saveAIConfig(): void {
-  aiService.saveConfig({
-    apiKey: getInputValue('ai-api-key'),
-    baseUrl: getInputValue('ai-base-url'),
-    model: getInputValue('ai-model-select'),
-  });
-  showMsg('配置已保存', 'success');
+  const apiKey = getInputValue('ai-api-key');
+  const baseUrl = getInputValue('ai-base-url');
+  const modelSelect = document.getElementById('ai-model-select') as HTMLSelectElement | null;
+  let model = modelSelect?.value || 'gpt-3.5-turbo';
+
+  if (model === 'custom') {
+    model = getInputValue('ai-model-custom') || 'gpt-3.5-turbo';
+  }
+
+  aiService.saveConfig({ apiKey, baseUrl, model });
   updateAIStatus();
+  showMsg('\u914D\u7F6E\u5DF2\u4FDD\u5B58', 'success');
 }
 
 async function testAIConnection(): Promise<void> {
-  if (!aiService.isConfigured()) { showMsg('请先填写 API Key', 'warn'); return; }
-  showMsg('正在测试连接...', 'info');
-  try {
-    const models = await aiService.fetchModels();
-    showMsg('连接成功！发现 ' + models.length + ' 个模型', 'success');
-    populateModelSelector(models);
-  } catch (err: unknown) {
-    showMsg('连接失败: ' + (err instanceof Error ? err.message : String(err)), 'error');
+  if (!aiService.isConfigured()) {
+    showMsg('\u8BF7\u5148\u586B\u5199 API Key', 'error');
+    return;
   }
-}
 
-async function fetchModels(): Promise<void> {
+  const btn = document.getElementById('btn-test-ai') as HTMLButtonElement | null;
+  if (btn) { btn.disabled = true; btn.textContent = '\u6D4B\u8BD5\u4E2D...'; }
+
   try {
-    const models = await aiService.fetchModels();
-    populateModelSelector(models);
-    showMsg('找到 ' + models.length + ' 个模型', 'success');
-  } catch (err: unknown) {
-    showMsg('获取失败: ' + (err instanceof Error ? err.message : String(err)), 'error');
+    const result = await aiService.chat(
+      [{ role: 'user', content: 'Say "connection ok" in 3 words or less.' }],
+      { max_tokens: 20 }
+    );
+    showMsg('\u8FDE\u63A5\u6210\u529F: ' + result.slice(0, 50), 'success');
+  } catch (err) {
+    showMsg('\u8FDE\u63A5\u5931\u8D25: ' + (err instanceof Error ? err.message : String(err)), 'error');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '\u6D4B\u8BD5\u8FDE\u63A5'; }
   }
-}
-
-function populateModelSelector(models: string[]): void {
-  const select = document.getElementById('ai-model-select') as HTMLSelectElement | null;
-  if (!select) return;
-  select.innerHTML = '';
-  models.sort().forEach(id => {
-    const opt = document.createElement('option');
-    opt.value = id;
-    opt.textContent = id;
-    select.appendChild(opt);
-  });
-  const customOpt = document.createElement('option');
-  customOpt.value = 'custom';
-  customOpt.textContent = '-- 自定义 --';
-  select.appendChild(customOpt);
 }
 
 function toggleApiKeyVisibility(): void {
   const input = document.getElementById('ai-api-key') as HTMLInputElement | null;
-  if (input) input.type = input.type === 'password' ? 'text' : 'password';
+  if (!input) return;
+  input.type = input.type === 'password' ? 'text' : 'password';
 }
 
-// ── Tool actions ──
+async function fetchModels(): Promise<void> {
+  if (!aiService.isConfigured()) {
+    showMsg('\u8BF7\u5148\u586B\u5199 API Key \u548C Base URL', 'error');
+    return;
+  }
+
+  const btn = document.getElementById('btn-fetch-models') as HTMLButtonElement | null;
+  if (btn) { btn.disabled = true; }
+
+  try {
+    const models = await aiService.fetchModels();
+    const select = document.getElementById('ai-model-select') as HTMLSelectElement | null;
+    if (select && models.length > 0) {
+      // Keep first option (default) and custom, add fetched models
+      const existing = new Set(Array.from(select.options).map(o => o.value));
+      for (const model of models) {
+        if (!existing.has(model) && model !== 'custom') {
+          const opt = document.createElement('option');
+          opt.value = model;
+          opt.textContent = model;
+          select.insertBefore(opt, select.querySelector('option[value="custom"]'));
+        }
+      }
+      showMsg('\u83B7\u53D6\u5230 ' + models.length + ' \u4E2A\u6A21\u578B', 'success');
+    }
+  } catch (err) {
+    showMsg('\u83B7\u53D6\u6A21\u578B\u5931\u8D25: ' + (err instanceof Error ? err.message : String(err)), 'error');
+  } finally {
+    if (btn) { btn.disabled = false; }
+  }
+}
+
+// AI Tool Actions
 
 async function handleAIAction(action: string): Promise<void> {
-  if (!aiService.isConfigured()) { appendMessage('system', '请先配置 API Key'); return; }
-  const em = (window as any).__editorManager;
-  if (!em?.activeEditor) { appendMessage('system', '请先在文件管理器中打开一个文件'); return; }
-  const editorData = em.editors.get(em.activeEditor);
-  if (!editorData) return;
-  const content = editorData.model.getValue();
-  if (!content.trim()) { appendMessage('system', '文件内容为空'); return; }
-
-  const labels = ACTION_LABELS[action] || { loading: '处理中...', success: '✓ 完成' };
-
-  const cardBtn = document.getElementById('btn-ai-' + action) as HTMLButtonElement | null;
-  const toolbarBtn = document.getElementById('btn-ai-format-toolbar') as HTMLButtonElement | null;
-  const originalCardHTML = cardBtn?.innerHTML || '';
-  const originalToolbarHTML = toolbarBtn?.innerHTML || '';
-
-  if (cardBtn) {
-    cardBtn.disabled = true;
-    cardBtn.innerHTML = '<span class="ai-spinner"></span> ' + labels.loading;
-    cardBtn.classList.add('loading');
+  if (!aiService.isConfigured()) {
+    showMsg('\u8BF7\u5148\u914D\u7F6E AI', 'error');
+    return;
   }
-  if (toolbarBtn && action === 'format') {
+
+  const em = (window as any).__editorManager;
+  const activePath = em?.activeEditor;
+  if (!activePath) {
+    showMsg('\u8BF7\u5148\u6253\u5F00\u4E00\u4E2A\u6587\u4EF6', 'error');
+    return;
+  }
+
+  const editorData = em?.getEditorByPath(activePath);
+  if (!editorData) return;
+
+  const content = editorData.model.getValue();
+  if (!content.trim()) {
+    showMsg('\u6587\u4EF6\u5185\u5BB9\u4E3A\u7A7A', 'error');
+    return;
+  }
+
+  const labels = ACTION_LABELS[action];
+  const toolbarBtn = document.getElementById('btn-ai-' + action) as HTMLButtonElement | null;
+  const originalHTML = toolbarBtn?.innerHTML || '';
+
+  if (toolbarBtn) {
     toolbarBtn.disabled = true;
+    toolbarBtn.innerHTML = labels.loading;
     toolbarBtn.classList.add('loading');
   }
 
   try {
     let result: string;
-    let title: string;
     switch (action) {
-      case 'format': title = '格式化结果'; result = await aiService.formatMarkdown(content); break;
-      case 'explain': title = '代码解释'; result = await aiService.explainCode(content); break;
-      case 'summarize': title = '内容摘要'; result = await aiService.summarize(content); break;
-      case 'translate': title = '翻译结果'; result = await aiService.translate(content); break;
-      default: return;
+      case 'format':
+        result = await aiService.formatMarkdown(content);
+        break;
+      case 'explain':
+        result = await aiService.explainCode(content);
+        break;
+      case 'summarize':
+        result = await aiService.summarize(content);
+        break;
+      case 'translate':
+        result = await aiService.translate(content);
+        break;
+      default:
+        return;
     }
+
+    showAIModal(labels.success, result, action === 'format' ? () => {
+      editorData.model.setValue(result);
+    } : undefined);
+
     incrementAIStats(Math.ceil((content.length + result.length) / 4));
 
-    // Show result in chat
-    appendMessage('user', '[' + title + '] 请处理当前文件内容');
-    appendMessage('assistant', result);
-
-    if (cardBtn) {
-      cardBtn.innerHTML = labels.success;
-      cardBtn.classList.remove('loading');
-      cardBtn.classList.add('success');
-    }
-    if (toolbarBtn && action === 'format') {
+    if (toolbarBtn) {
+      toolbarBtn.innerHTML = labels.success;
       toolbarBtn.classList.remove('loading');
-      toolbarBtn.title = labels.success;
+      toolbarBtn.classList.add('success');
     }
-
-    // For format action, offer to apply
-    if (action === 'format') {
-      showAIModal(title, result, () => {
-        editorData.model.setValue(result);
-      });
-    } else {
-      showAIModal(title, result);
-    }
-
     setTimeout(() => {
-      if (cardBtn) {
-        cardBtn.disabled = false;
-        cardBtn.innerHTML = originalCardHTML;
-        cardBtn.classList.remove('success');
-      }
-      if (toolbarBtn && action === 'format') {
+      if (toolbarBtn) {
         toolbarBtn.disabled = false;
-        toolbarBtn.innerHTML = originalToolbarHTML;
-        toolbarBtn.classList.remove('loading');
-        toolbarBtn.title = 'AI 格式化';
+        toolbarBtn.innerHTML = originalHTML;
+        toolbarBtn.classList.remove('success');
       }
     }, 2000);
   } catch (err) {
-    const errMsg = err instanceof Error ? err.message : String(err);
-    appendMessage('system', '操作失败: ' + errMsg);
-    if (cardBtn) {
-      cardBtn.disabled = false;
-      cardBtn.innerHTML = originalCardHTML;
-      cardBtn.classList.remove('loading');
-    }
-    if (toolbarBtn && action === 'format') {
+    showMsg('AI \u64CD\u4F5C\u5931\u8D25: ' + (err instanceof Error ? err.message : String(err)), 'error');
+    if (toolbarBtn) {
       toolbarBtn.disabled = false;
-      toolbarBtn.innerHTML = originalToolbarHTML;
+      toolbarBtn.innerHTML = originalHTML;
       toolbarBtn.classList.remove('loading');
     }
   }
@@ -351,7 +381,7 @@ function showAIModal(title: string, content: string, onApply?: () => void): void
     '<div class="ai-modal-header"><h3>' + title + '</h3>' +
     '<button class="ai-modal-close" id="ai-modal-close"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>' +
     '<div class="ai-result">' + escHTML(content) + '</div>' +
-    (onApply ? '<div class="ai-modal-actions"><button class="ai-save" id="ai-modal-apply"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg> 应用到文件</button></div>' : '') +
+    (onApply ? '<div class="ai-modal-actions"><button class="ai-save" id="ai-modal-apply"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg> \u5E94\u7528\u5230\u6587\u4EF6</button></div>' : '') +
     '</div>';
   document.body.appendChild(modal);
   document.getElementById('ai-modal-close')?.addEventListener('click', () => modal.remove());
@@ -359,20 +389,20 @@ function showAIModal(title: string, content: string, onApply?: () => void): void
     document.getElementById('ai-modal-apply')?.addEventListener('click', () => {
       onApply();
       modal.remove();
-      appendMessage('system', '已将结果应用到当前文件');
+      appendMessage('system', '\u5DF2\u5C06\u7ED3\u679C\u5E94\u7528\u5230\u5F53\u524D\u6587\u4EF6');
     });
   }
   modal.addEventListener('click', (e) => { if (e.target === modal) modal.remove(); });
 }
 
-// ── Status & Stats ──
+// Status & Stats
 
 function updateAIStatus(): void {
   const isConfigured = aiService.isConfigured();
   const chip = document.getElementById('ai-status-chip');
   const dot = chip?.querySelector('.ai-dot');
   const text = chip?.querySelector('.ai-status-text');
-  if (text) text.textContent = isConfigured ? '已连接' : '未配置';
+  if (text) text.textContent = isConfigured ? '\u5DF2\u8FDE\u63A5' : '\u672A\u914D\u7F6E';
   dot?.classList.toggle('active', isConfigured);
   const modelDisplay = document.getElementById('ai-model-display');
   if (modelDisplay) modelDisplay.textContent = isConfigured ? aiService.getModel() : '-';
@@ -413,7 +443,7 @@ function getInputValue(id: string): string {
   return el?.value?.trim() ?? '';
 }
 
-// ── Init ──
+// Init
 
 function initAIPage(): void {
   document.getElementById('btn-save-ai')?.addEventListener('click', saveAIConfig);
@@ -442,7 +472,7 @@ function initAIPage(): void {
   bindSuggestions();
   loadAIConfig();
   updateStatsDisplay();
-  console.log('[AI] 页面初始化完成');
+  console.log('[AI] \u9875\u9762\u521D\u59CB\u5316\u5B8C\u6210');
 }
 
 registerPageInit('ai', initAIPage);
