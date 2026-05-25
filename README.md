@@ -5,6 +5,17 @@
 [![Electron](https://img.shields.io/badge/Electron-35-47848f?logo=electron)](https://www.electronjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.7-3178c6?logo=typescript)](https://www.typescriptlang.org/)
 [![esbuild](https://img.shields.io/badge/esbuild-0.24-ffcf00?logo=esbuild)](https://esbuild.github.io/)
+[![Version](https://img.shields.io/badge/version-2.1.0-0066FF)](https://github.com/GongJinCheng/NovaWorkspace/releases)
+
+---
+
+## 🎬 Demo
+
+[![Nova Showcase](https://img.shields.io/badge/Watch_Animation-0066FF?logo=youtube)](./NovaShowcase/renders/)
+
+A 35-second product showcase built with [HyperFrames](https://hyperframes.heygen.com/), featuring Swiss Pulse design with grid-locked compositions, electric blue accents, and staggered entrance animations.
+
+> Run `cd NovaShowcase && npm run dev` to preview, or `npm run render` to regenerate the MP4.
 
 ---
 
