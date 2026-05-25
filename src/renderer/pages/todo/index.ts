@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Todo Page - Entry and Detail Drawer Coordinator
  * Handles filters, view modes, sliding details drawer, auto-saves, and subtask managers.
  * Performance: debounced refresh to avoid lag on rapid interactions.
@@ -13,6 +13,9 @@ import {
   setShowCompletedInMain,
   setSelectedCatId,
   setSelectedTaskId,
+  updateTaskInStore,
+  getTaskById,
+  getStats,
   PRI_COLORS,
   PRI_LABELS,
   type FilterType,
@@ -24,6 +27,7 @@ import { renderCommandBar } from './dashboard';
 import { renderCategories, initCategoryToolbar } from './categories';
 import { startReminderCheck } from './reminders';
 import { registerPageInit } from '../../app/router';
+import { measure, measureAsync } from '../../utils/performance';
 import type { TodoTask } from '@shared/types/todo';
 
 let initialized = false;
@@ -65,15 +69,17 @@ async function initTodoPage(): Promise<void> {
 }
 
 async function loadData(): Promise<void> {
-  try {
-    const data = await ipcClient.todo.load();
-    setData({
-      categories: data.categories || [],
-      tasks: data.tasks || [],
-    });
-  } catch (err) {
-    console.error('[Todo] loadData failed:', err);
-  }
+  await measureAsync('todo.loadData', async () => {
+    try {
+      const data = await ipcClient.todo.load();
+      setData({
+        categories: data.categories || [],
+        tasks: data.tasks || [],
+      });
+    } catch (err) {
+      console.error('[Todo] loadData failed:', err);
+    }
+  }, 50);
 }
 
 function renderUI(): Promise<void> {
@@ -82,16 +88,18 @@ function renderUI(): Promise<void> {
 }
 
 function renderAll(): void {
-  renderCommandBar();
-  renderCategories(() => renderUI(), refreshAll);
-  renderTaskList(refreshAll, openDrawer);
-  updateNavBadge();
-  syncViewControls();
+  measure('todo.renderAll', () => {
+    renderCommandBar();
+    renderCategories(() => renderUI(), refreshAll);
+    renderTaskList(renderUI, openDrawer);
+    updateNavBadge();
+    syncViewControls();
 
-  const store = getStore();
-  if (store.selectedTaskId) {
-    renderDrawerContent();
-  }
+    const store = getStore();
+    if (store.selectedTaskId) {
+      renderDrawerContent();
+    }
+  });
 }
 
 /**
@@ -142,7 +150,7 @@ function bindFilterEvents(): void {
       setSelectedCatId('');
       container.querySelectorAll('.todo-sidebar-cat-item').forEach(c => c.classList.remove('active'));
 
-      renderTaskList(refreshAll, openDrawer);
+      renderTaskList(renderUI, openDrawer);
     }
   });
 }
@@ -186,8 +194,7 @@ function syncViewControls(): void {
 function updateNavBadge(): void {
   const badge = document.getElementById('todo-nav-badge');
   if (!badge) return;
-  const stats = getStore().data.tasks;
-  const pending = stats.filter(t => !t.completed).length;
+  const pending = getStats().pending;
   badge.textContent = pending > 0 ? String(pending) : '';
 }
 
@@ -213,7 +220,7 @@ function renderDrawerContent(): void {
   if (!content) return;
 
   const store = getStore();
-  const task = store.data.tasks.find(t => t.id === store.selectedTaskId);
+  const task = getTaskById(store.selectedTaskId);
   if (!task) {
     content.innerHTML = '<div class="todo-drawer-empty">' +
       '<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.3"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>' +
@@ -221,7 +228,6 @@ function renderDrawerContent(): void {
     return;
   }
 
-  const cat = store.data.categories.find(c => c.id === task.categoryId);
   const priColor = PRI_COLORS[task.priority] || PRI_COLORS.medium;
 
   content.innerHTML =
@@ -289,8 +295,20 @@ function bindDrawerEvents(taskId: string): void {
   const dueInput = document.getElementById('drawer-task-due') as HTMLInputElement;
 
   const saveUpdates = async (updates: Partial<TodoTask>) => {
-    await ipcClient.todo.updateTask(taskId, updates);
-    await refreshAll();
+    const previous = getTaskById(taskId);
+    if (!previous) return;
+
+    const rollback = { ...previous, subtasks: previous.subtasks?.map(s => ({ ...s })) || [] };
+    updateTaskInStore(taskId, updates);
+    renderAll();
+
+    try {
+      await ipcClient.todo.updateTask(taskId, updates);
+    } catch (err) {
+      console.error('[Todo] drawer save failed, rolling back:', err);
+      updateTaskInStore(taskId, rollback);
+      await refreshAll();
+    }
   };
 
   titleInput?.addEventListener('blur', () => {
@@ -330,8 +348,7 @@ function bindDrawerEvents(taskId: string): void {
     const text = addSubtaskInput.value.trim();
     if (!text) return;
 
-    const store = getStore();
-    const task = store.data.tasks.find(t => t.id === taskId);
+    const task = getTaskById(taskId);
     if (task) {
       const subtasks = [...(task.subtasks || [])];
       subtasks.push({
@@ -340,11 +357,16 @@ function bindDrawerEvents(taskId: string): void {
         done: false,
       });
 
-      await ipcClient.todo.updateTask(taskId, { subtasks });
+      updateTaskInStore(taskId, { subtasks });
       addSubtaskInput.value = '';
-      await refreshAll();
-      renderDrawerContent();
+      renderAll();
       document.getElementById('drawer-new-subtask-input')?.focus();
+      try {
+        await ipcClient.todo.updateTask(taskId, { subtasks });
+      } catch (err) {
+        console.error('[Todo] add subtask failed:', err);
+        await refreshAll();
+      }
     }
   };
 
@@ -367,23 +389,32 @@ function bindDrawerEvents(taskId: string): void {
     const subtaskId = item.dataset.subtaskId;
     if (!subtaskId) return;
 
-    const store = getStore();
-    const task = store.data.tasks.find(t => t.id === taskId);
+    const task = getTaskById(taskId);
     if (!task) return;
 
     if (target.closest('[data-action="drawer-toggle-subtask"]')) {
       const subtasks = task.subtasks.map(s => s.id === subtaskId ? { ...s, done: !s.done } : s);
-      await ipcClient.todo.updateTask(taskId, { subtasks });
-      await refreshAll();
-      renderDrawerContent();
+      updateTaskInStore(taskId, { subtasks });
+      renderAll();
+      try {
+        await ipcClient.todo.updateTask(taskId, { subtasks });
+      } catch (err) {
+        console.error('[Todo] toggle drawer subtask failed:', err);
+        await refreshAll();
+      }
       return;
     }
 
     if (target.closest('[data-action="drawer-delete-subtask"]')) {
       const subtasks = task.subtasks.filter(s => s.id !== subtaskId);
-      await ipcClient.todo.updateTask(taskId, { subtasks });
-      await refreshAll();
-      renderDrawerContent();
+      updateTaskInStore(taskId, { subtasks });
+      renderAll();
+      try {
+        await ipcClient.todo.updateTask(taskId, { subtasks });
+      } catch (err) {
+        console.error('[Todo] delete drawer subtask failed:', err);
+        await refreshAll();
+      }
       return;
     }
   });
@@ -397,14 +428,16 @@ function bindDrawerEvents(taskId: string): void {
       const val = (target as HTMLInputElement).value.trim();
 
       if (subtaskId && val) {
-        const store = getStore();
-        const task = store.data.tasks.find(t => t.id === taskId);
+        const task = getTaskById(taskId);
         if (task) {
           const subtasks = task.subtasks.map(s => s.id === subtaskId ? { ...s, text: val } : s);
-          await ipcClient.todo.updateTask(taskId, { subtasks });
-          debouncedRefresh();
-          const updatedTask = getStore().data.tasks.find(t => t.id === taskId);
-          if (updatedTask) renderDrawerSubtasks(updatedTask);
+          updateTaskInStore(taskId, { subtasks });
+          try {
+            await ipcClient.todo.updateTask(taskId, { subtasks });
+          } catch (err) {
+            console.error('[Todo] edit drawer subtask failed:', err);
+            await refreshAll();
+          }
         }
       }
     }

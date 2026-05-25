@@ -9,6 +9,8 @@
  * - state persistence (localStorage)
  */
 
+import type { SaveWorkspaceSessionInput, WorkspaceSession } from '../../../shared/types/workspace';
+
 export type FilesListener = (state: FilesState) => void;
 
 export interface FilesState {
@@ -17,6 +19,7 @@ export interface FilesState {
   activeFilePath: string | null;
   openTabs: string[];
   dirtySet: string[];
+  favorites: string[];
 }
 
 const STORAGE_KEY_WORKSPACE = 'files-workspace-root';
@@ -45,6 +48,7 @@ export class FilesStore {
       activeFilePath: this.activeFilePath,
       openTabs: [...this.openTabs],
       dirtySet: [...this.dirtySet],
+      favorites: [...this.favorites],
     };
   }
 
@@ -75,6 +79,13 @@ export class FilesStore {
   setWorkspaceRoot(root: string | null): void {
     if (this.workspaceRoot === root) return;
     this.workspaceRoot = root;
+    if (!root) {
+      this.selectedFolderPath = null;
+      this.activeFilePath = null;
+      this.openTabs = [];
+      this.dirtySet.clear();
+      this.favorites.clear();
+    }
     this.emit();
   }
 
@@ -89,6 +100,15 @@ export class FilesStore {
       this.openTabs = [...this.openTabs, filePath];
     }
     this.activeFilePath = filePath;
+    this.emit();
+  }
+
+
+
+  pinFile(filePath: string): void {
+    if (!this.openTabs.includes(filePath)) {
+      this.openTabs = [...this.openTabs, filePath];
+    }
     this.emit();
   }
 
@@ -146,16 +166,54 @@ export class FilesStore {
     return targets;
   }
 
+
+  resetForWorkspace(root: string, options: { emit?: boolean } = {}): void {
+    this.workspaceRoot = root;
+    this.selectedFolderPath = root;
+    this.activeFilePath = null;
+    this.openTabs = [];
+    this.dirtySet.clear();
+    this.favorites.clear();
+    if (options.emit !== false) this.emit();
+  }
+
+  applyWorkspaceSession(session: WorkspaceSession, options: { emit?: boolean } = {}): void {
+    this.workspaceRoot = session.rootPath;
+    this.selectedFolderPath = session.selectedFolderPath || session.rootPath;
+    this.openTabs = Array.from(new Set(session.openTabs || []));
+    this.activeFilePath = session.activeFilePath && this.openTabs.includes(session.activeFilePath)
+      ? session.activeFilePath
+      : this.openTabs[this.openTabs.length - 1] ?? null;
+    this.dirtySet.clear();
+    this.favorites = new Set(session.favorites || []);
+    if (options.emit !== false) this.emit();
+  }
+
+  toWorkspaceSessionInput(): SaveWorkspaceSessionInput | null {
+    if (!this.workspaceRoot) return null;
+    return {
+      rootPath: this.workspaceRoot,
+      openTabs: [...this.openTabs],
+      activeFilePath: this.activeFilePath,
+      selectedFolderPath: this.selectedFolderPath,
+      favorites: [...this.favorites],
+    };
+  }
+
   // --- State Persistence ---
 
   saveState(): void {
     try {
       if (this.workspaceRoot) {
         localStorage.setItem(STORAGE_KEY_WORKSPACE, this.workspaceRoot);
+      } else {
+        localStorage.removeItem(STORAGE_KEY_WORKSPACE);
       }
       localStorage.setItem(STORAGE_KEY_TABS, JSON.stringify(this.openTabs));
       if (this.activeFilePath) {
         localStorage.setItem(STORAGE_KEY_ACTIVE, this.activeFilePath);
+      } else {
+        localStorage.removeItem(STORAGE_KEY_ACTIVE);
       }
     } catch { /* ignore */ }
   }
@@ -197,14 +255,21 @@ export class FilesStore {
   toggleFavorite(filePath: string): boolean {
     if (this.favorites.has(filePath)) {
       this.favorites.delete(filePath);
+      this.emit();
       return false;
     }
     this.favorites.add(filePath);
+    this.emit();
     return true;
   }
 
   isFavorite(filePath: string): boolean {
     return this.favorites.has(filePath);
+  }
+
+  setFavorites(filePaths: string[]): void {
+    this.favorites = new Set(filePaths);
+    this.emit();
   }
 
   getFavorites(): string[] {

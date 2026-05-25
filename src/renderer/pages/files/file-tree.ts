@@ -1,4 +1,4 @@
-﻿/**
+/**
  * FileTree - File tree browser component with search
  * Features: distinct file/folder icons, AI analysis integration
  */
@@ -86,20 +86,31 @@ export class FileTree {
 
     try {
       const name = root.split(/[/\\]/).pop() || root;
+      await ipcClient.workspace.open({ rootPath: root, name });
       await ipcClient.recent.add({ name, path: root, lastOpened: new Date().toISOString() });
     } catch (err) {
-      console.warn('[FileTree] Failed to record recent project:', err);
+      console.warn('[FileTree] Failed to record workspace:', err);
     }
 
     await this.render();
   }
 
-  async openProjectPath(projectPath: string): Promise<void> {
+  async openProjectPath(projectPath: string, options: { recordWorkspace?: boolean } = {}): Promise<void> {
     this.rootPath = projectPath;
     this.selectedPath = null;
     this.selectedIsDir = false;
     this.expandedDirs.clear();
     this.expandedDirs.add(projectPath);
+
+    if (options.recordWorkspace !== false) {
+      try {
+        const name = projectPath.split(/[/\\]/).pop() || projectPath;
+        await ipcClient.workspace.open({ rootPath: projectPath, name });
+      } catch (err) {
+        console.warn('[FileTree] Failed to record workspace:', err);
+      }
+    }
+
     this.onFolderSelect?.(projectPath);
     await this.render();
   }
@@ -140,6 +151,9 @@ export class FileTree {
 
       const item = document.createElement('div');
       item.className = 'tree-item' + (isSelected ? ' selected' : '');
+      item.dataset.path = fullPath;
+      item.dataset.type = entry.isDirectory ? 'dir' : 'file';
+      item.title = fullPath;
       item.style.paddingLeft = (12 + depth * 16) + 'px';
 
       if (entry.isDirectory) {
@@ -355,40 +369,114 @@ export class FileTree {
   }
 
   navigateToFolder(folderPath: string): void {
-    this.store?.setSelectedFolder(folderPath);
-    this.render();
-    if (this.onFolderSelect) this.onFolderSelect(folderPath);
+    if (!folderPath) return;
+    this.selectedPath = folderPath;
+    this.selectedIsDir = true;
+    this.expandAncestors(folderPath);
+    this.expandedDirs.add(folderPath);
+    void this.render().then(() => this.scrollPathIntoView(folderPath));
+    this.onFolderSelect?.(folderPath);
+  }
+
+  async refresh(): Promise<void> {
+    await this.render();
+    if (this.selectedPath) this.scrollPathIntoView(this.selectedPath);
+  }
+
+  async revealPath(filePath: string): Promise<void> {
+    if (!filePath) return;
+    this.expandAncestors(filePath);
+    this.selectedPath = filePath;
+    this.selectedIsDir = false;
+    await this.render();
+    this.scrollPathIntoView(filePath);
+  }
+
+  async listFiles(limit = 1200): Promise<string[]> {
+    if (!this.rootPath) return [];
+    const results: string[] = [];
+    await this.collectFiles(this.rootPath, results, limit);
+    return results;
   }
 
   searchAndHighlight(query: string): void {
-    const items = this.treeEl.querySelectorAll('.tree-item');
+    const normalizedQuery = query.trim().toLowerCase();
+    const items = this.container.querySelectorAll('.tree-item');
     items.forEach(item => {
-      const nameEl = item.querySelector('.tree-name');
+      const nameEl = item.querySelector('.tree-item-name');
       const name = nameEl?.textContent?.toLowerCase() || '';
-      if (name.includes(query)) {
-        (item as HTMLElement).style.display = '';
-        (item as HTMLElement).classList.add('search-match');
-      } else {
-        (item as HTMLElement).style.display = 'none';
-        (item as HTMLElement).classList.remove('search-match');
-      }
-    });
-    // Expand parent folders of matches
-    const visible = this.treeEl.querySelectorAll('.tree-item[style*="display: ""], .tree-item:not([style])');
-    visible.forEach(item => {
-      let parent = (item as HTMLElement).parentElement?.closest('.tree-folder');
-      while (parent) {
-        parent.classList.add('expanded');
-        parent = parent.parentElement?.closest('.tree-folder');
-      }
+      const matched = !normalizedQuery || name.includes(normalizedQuery);
+      (item as HTMLElement).style.display = matched ? '' : 'none';
+      item.classList.toggle('search-match', Boolean(normalizedQuery && matched));
     });
   }
 
   clearSearchHighlight(): void {
-    this.treeEl.querySelectorAll('.tree-item').forEach(item => {
+    this.container.querySelectorAll('.tree-item').forEach(item => {
       (item as HTMLElement).style.display = '';
-      (item as HTMLElement).classList.remove('search-match');
+      item.classList.remove('search-match');
     });
+  }
+
+  private expandAncestors(targetPath: string): void {
+    const root = this.rootPath;
+    if (!root) return;
+
+    const normalizedRoot = root.replace(/\\/g, '/');
+    const normalizedTarget = targetPath.replace(/\\/g, '/');
+    if (!normalizedTarget.startsWith(normalizedRoot)) return;
+
+    this.expandedDirs.add(root);
+    let current = root;
+    const relative = normalizedTarget.slice(normalizedRoot.length).replace(/^\//, '');
+    const parts = relative.split('/').filter(Boolean);
+    for (let i = 0; i < parts.length - 1; i += 1) {
+      current = current + (current.endsWith('\\') || current.endsWith('/') ? '' : '\\') + parts[i];
+      this.expandedDirs.add(current);
+    }
+  }
+
+  private scrollPathIntoView(targetPath: string): void {
+    const normalizedTarget = targetPath.replace(/\\/g, '/');
+    const items = Array.from(this.container.querySelectorAll('.tree-item')) as HTMLElement[];
+    const match = items.find((item) => (item.dataset.path || '').replace(/\\/g, '/') === normalizedTarget);
+    if (!match) return;
+    this.container.querySelectorAll('.tree-item.selected').forEach((el) => el.classList.remove('selected'));
+    match.classList.add('selected');
+    match.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  }
+
+  private async collectFiles(dirPath: string, results: string[], limit: number): Promise<void> {
+    if (results.length >= limit) return;
+
+    let entries: FileEntry[];
+    try {
+      entries = await ipcClient.fs.readDirectory(dirPath);
+    } catch {
+      return;
+    }
+
+    entries.sort((a, b) => {
+      if (a.isDirectory !== b.isDirectory) return a.isDirectory ? -1 : 1;
+      return a.name.localeCompare(b.name);
+    });
+
+    for (const entry of entries) {
+      if (results.length >= limit) return;
+      const fullPath = dirPath + (dirPath.endsWith('\\') || dirPath.endsWith('/') ? '' : '\\') + entry.name;
+
+      if (entry.isDirectory) {
+        if (this.shouldSkipDirectory(entry.name)) continue;
+        await this.collectFiles(fullPath, results, limit);
+        continue;
+      }
+
+      results.push(fullPath);
+    }
+  }
+
+  private shouldSkipDirectory(name: string): boolean {
+    return new Set(['node_modules', '.git', 'dist', 'build', 'out', '.next', '.vite', 'coverage']).has(name);
   }
 
 }

@@ -1,4 +1,4 @@
-﻿/**
+/**
  * AI Page - AI assistant with conversational chat + quick tools
  * Now with streaming responses for typewriter effect.
  */
@@ -11,13 +11,16 @@ import { aiStats } from '../../app/index';
 // Chat state
 const chatHistory: ChatMessage[] = [];
 let isGenerating = false;
+let aiPageBound = false;
+let activeToolAction: string | null = null;
+let toolResetTimer: number | null = null;
 
 // Tool action labels
 const ACTION_LABELS: Record<string, { loading: string; success: string }> = {
-  format:    { loading: '\u683C\u5F0F\u5316\u4E2D...', success: '\u2705 \u683C\u5F0F\u5316\u5B8C\u6210' },
-  explain:   { loading: '\u89E3\u91CA\u4E2D...',   success: '\u2705 \u89E3\u91CA\u5B8C\u6210' },
-  summarize: { loading: '\u603B\u7ED3\u4E2D...',   success: '\u2705 \u603B\u7ED3\u5B8C\u6210' },
-  translate: { loading: '\u7FFB\u8BD1\u4E2D...',   success: '\u2705 \u7FFB\u8BD1\u5B8C\u6210' },
+  format:    { loading: '格式化中...', success: '✅ 格式化完成' },
+  explain:   { loading: '解释中...',   success: '✅ 解释完成' },
+  summarize: { loading: '总结中...',   success: '✅ 总结完成' },
+  translate: { loading: '翻译中...',   success: '✅ 翻译完成' },
 };
 
 function persistStats(): void {
@@ -25,12 +28,10 @@ function persistStats(): void {
 }
 
 // Chat UI
-
 function appendMessage(role: 'user' | 'assistant' | 'system', content: string): HTMLElement {
   const container = document.getElementById('ai-chat-messages');
   if (!container) return document.createElement('div');
 
-  // Remove welcome screen on first message
   const welcome = container.querySelector('.ai-chat-welcome');
   if (welcome) welcome.remove();
 
@@ -42,28 +43,11 @@ function appendMessage(role: 'user' | 'assistant' | 'system', content: string): 
   return bubble;
 }
 
-function appendLoadingIndicator(): HTMLElement {
-  const container = document.getElementById('ai-chat-messages');
-  if (!container) return document.createElement('div');
-
-  const el = document.createElement('div');
-  el.className = 'ai-msg-loading';
-  el.innerHTML =
-    '<div class="ai-loading-dots"><span></span><span></span><span></span></div>' +
-    '<span>\u6B63\u5728\u601D\u8003..</span>';
-  container.appendChild(el);
-  container.scrollTop = container.scrollHeight;
-  return el;
-}
-
-function removeLoadingIndicator(el: HTMLElement): void {
-  el.remove();
-}
-
 async function sendMessage(text: string): Promise<void> {
   if (!text.trim() || isGenerating) return;
+  await aiService.ready();
   if (!aiService.isConfigured()) {
-    appendMessage('system', '\u8BF7\u5148\u5728\u53F3\u4FA7\u914D\u7F6E API Key');
+    appendMessage('system', '请先在右侧或设置页配置 AI 模型');
     return;
   }
 
@@ -86,7 +70,7 @@ async function sendMessage(text: string): Promise<void> {
   try {
     const systemMsg: ChatMessage = {
       role: 'system',
-      content: '\u4F60\u662F\u4E00\u4E2A\u4E13\u4E1A\u7684\u7F16\u7A0B\u52A9\u624B\uFF0C\u5E2E\u52A9\u7528\u6237\u5206\u6790\u4EE3\u7801\u3001\u7FFB\u8BD1\u6587\u6863\u3001\u56DE\u7B54\u6280\u672F\u95EE\u9898\u3002\u8BF7\u7528\u4E2D\u6587\u56DE\u590D\u3002'
+      content: '你是一个专业的编程助手，帮助用户分析代码、翻译文档、回答技术问题。请用中文回复。'
     };
     const messages = [systemMsg, ...chatHistory];
 
@@ -102,7 +86,7 @@ async function sendMessage(text: string): Promise<void> {
     bubble.classList.remove('streaming');
     const errMsg = err instanceof Error ? err.message : String(err);
     bubble.textContent = '';
-    appendMessage('system', '\u8BF7\u6C42\u5931\u8D25: ' + errMsg);
+    appendMessage('system', '请求失败: ' + errMsg);
   } finally {
     isGenerating = false;
     updateSendButton();
@@ -121,53 +105,48 @@ function clearChat(): void {
   container.innerHTML =
     '<div class="ai-chat-welcome">' +
     '<div class="ai-chat-welcome-icon"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2a4 4 0 0 1 4 4c0 1.95-1.4 3.58-3.25 3.93L12 22"/><path d="M12 2a4 4 0 0 0-4 4c0 1.95 1.4 3.58 3.25 3.93"/><path d="M12 2v20"/></svg></div>' +
-    '<h3>AI \u52A9\u624B</h3>' +
-    '<p>\u6211\u53EF\u4EE5\u5E2E\u4F60\u5206\u6790\u4EE3\u7801\u3001\u7FFB\u8BD1\u6587\u6863\u3001\u56DE\u7B54\u95EE\u9898\u3002</p>' +
+    '<h3>AI 助手</h3>' +
+    '<p>我可以帮你分析代码、翻译文档、回答问题。</p>' +
     '<div class="ai-chat-suggestions">' +
-    '<button class="ai-suggestion" data-msg="\u5E2E\u6211\u89E3\u91CA\u4E00\u4E0B\u8FD9\u6BB5\u4EE3\u7801">\u89E3\u91CA\u4EE3\u7801</button>' +
-    '<button class="ai-suggestion" data-msg="\u5C06\u4EE5\u4E0B\u5185\u5BB9\u7FFB\u8BD1\u6210\u82F1\u6587">\u7FFB\u8BD1\u5185\u5BB9</button>' +
-    '<button class="ai-suggestion" data-msg="\u603B\u7ED3\u4E00\u4E0B\u8FD9\u6BB5\u5185\u5BB9\u7684\u8981\u70B9">\u5185\u5BB9\u6458\u8981</button>' +
+    '<button class="ai-suggestion" data-msg="帮我解释一下这段代码">解释代码</button>' +
+    '<button class="ai-suggestion" data-msg="将以下内容翻译成英文">翻译内容</button>' +
+    '<button class="ai-suggestion" data-msg="总结一下这段内容的要点">内容摘要</button>' +
     '</div></div>';
-  bindSuggestions();
-}
-
-function bindSuggestions(): void {
-  document.querySelectorAll('.ai-suggestion').forEach(el => {
-    el.addEventListener('click', () => {
-      const msg = (el as HTMLElement).dataset.msg;
-      if (msg) sendMessage(msg);
-    });
-  });
 }
 
 function initChatInput(): void {
   const input = document.getElementById('ai-chat-input') as HTMLTextAreaElement | null;
   const sendBtn = document.getElementById('btn-ai-send');
   const clearBtn = document.getElementById('btn-ai-clear');
+  const messages = document.getElementById('ai-chat-messages');
 
-  if (input) {
-    input.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        sendMessage(input.value);
-      }
-    });
+  input?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      void sendMessage(input.value);
+    }
+  });
 
-    input.addEventListener('input', () => {
-      input.style.height = 'auto';
-      input.style.height = Math.min(input.scrollHeight, 120) + 'px';
-    });
-  }
+  input?.addEventListener('input', () => {
+    input.style.height = 'auto';
+    input.style.height = Math.min(input.scrollHeight, 120) + 'px';
+  });
 
   sendBtn?.addEventListener('click', () => {
-    if (input) sendMessage(input.value);
+    if (input) void sendMessage(input.value);
   });
 
   clearBtn?.addEventListener('click', clearChat);
+
+  messages?.addEventListener('click', (event) => {
+    const target = event.target as HTMLElement | null;
+    const suggestion = target?.closest('.ai-suggestion') as HTMLElement | null;
+    const msg = suggestion?.dataset.msg;
+    if (msg) void sendMessage(msg);
+  });
 }
 
 // Sidebar toggle
-
 function initSidebarToggle(): void {
   const toggleBtn = document.getElementById('btn-ai-toggle-panel');
   const sidebar = document.getElementById('ai-sidebar');
@@ -183,8 +162,8 @@ function initSidebarToggle(): void {
 }
 
 // AI Config
-
-function loadAIConfig(): void {
+async function loadAIConfig(): Promise<void> {
+  await aiService.reloadConfig();
   const apiKey = aiService.getApiKey();
   const baseUrl = aiService.getBaseUrl();
   const model = aiService.getModel();
@@ -207,10 +186,10 @@ function loadAIConfig(): void {
     }
   }
 
-  updateAIStatus();
+  void updateAIStatus();
 }
 
-function saveAIConfig(): void {
+async function saveAIConfig(): Promise<void> {
   const apiKey = getInputValue('ai-api-key');
   const baseUrl = getInputValue('ai-base-url');
   const modelSelect = document.getElementById('ai-model-select') as HTMLSelectElement | null;
@@ -220,30 +199,29 @@ function saveAIConfig(): void {
     model = getInputValue('ai-model-custom') || 'gpt-3.5-turbo';
   }
 
-  aiService.saveConfig({ apiKey, baseUrl, model });
-  updateAIStatus();
-  showMsg('\u914D\u7F6E\u5DF2\u4FDD\u5B58', 'success');
+  await aiService.saveConfig({ apiKey, baseUrl, model });
+  void updateAIStatus();
+  showMsg('配置已保存', 'success');
 }
 
 async function testAIConnection(): Promise<void> {
+  await aiService.ready();
   if (!aiService.isConfigured()) {
-    showMsg('\u8BF7\u5148\u586B\u5199 API Key', 'error');
+    showMsg('请先填写 API Key', 'error');
     return;
   }
 
   const btn = document.getElementById('btn-test-ai') as HTMLButtonElement | null;
-  if (btn) { btn.disabled = true; btn.textContent = '\u6D4B\u8BD5\u4E2D...'; }
+  const original = btn?.textContent || '测试连接';
+  if (btn) { btn.disabled = true; btn.textContent = '测试中...'; }
 
   try {
-    const result = await aiService.chat(
-      [{ role: 'user', content: 'Say "connection ok" in 3 words or less.' }],
-      { max_tokens: 20 }
-    );
-    showMsg('\u8FDE\u63A5\u6210\u529F: ' + result.slice(0, 50), 'success');
+    const result = await aiService.testConnection();
+    showMsg('连接成功: ' + result.slice(0, 50), 'success');
   } catch (err) {
-    showMsg('\u8FDE\u63A5\u5931\u8D25: ' + (err instanceof Error ? err.message : String(err)), 'error');
+    showMsg('连接失败: ' + (err instanceof Error ? err.message : String(err)), 'error');
   } finally {
-    if (btn) { btn.disabled = false; btn.textContent = '\u6D4B\u8BD5\u8FDE\u63A5'; }
+    if (btn) { btn.disabled = false; btn.textContent = original; }
   }
 }
 
@@ -254,19 +232,20 @@ function toggleApiKeyVisibility(): void {
 }
 
 async function fetchModels(): Promise<void> {
+  await aiService.ready();
   if (!aiService.isConfigured()) {
-    showMsg('\u8BF7\u5148\u586B\u5199 API Key \u548C Base URL', 'error');
+    showMsg('请先填写 API Key 和 Base URL', 'error');
     return;
   }
 
   const btn = document.getElementById('btn-fetch-models') as HTMLButtonElement | null;
-  if (btn) { btn.disabled = true; }
+  const original = btn?.textContent || '获取模型';
+  if (btn) { btn.disabled = true; btn.textContent = '获取中...'; }
 
   try {
     const models = await aiService.fetchModels();
     const select = document.getElementById('ai-model-select') as HTMLSelectElement | null;
     if (select && models.length > 0) {
-      // Keep first option (default) and custom, add fetched models
       const existing = new Set(Array.from(select.options).map(o => o.value));
       for (const model of models) {
         if (!existing.has(model) && model !== 'custom') {
@@ -276,27 +255,31 @@ async function fetchModels(): Promise<void> {
           select.insertBefore(opt, select.querySelector('option[value="custom"]'));
         }
       }
-      showMsg('\u83B7\u53D6\u5230 ' + models.length + ' \u4E2A\u6A21\u578B', 'success');
+      showMsg('获取到 ' + models.length + ' 个模型', 'success');
     }
   } catch (err) {
-    showMsg('\u83B7\u53D6\u6A21\u578B\u5931\u8D25: ' + (err instanceof Error ? err.message : String(err)), 'error');
+    showMsg('获取模型失败: ' + (err instanceof Error ? err.message : String(err)), 'error');
   } finally {
-    if (btn) { btn.disabled = false; }
+    if (btn) { btn.disabled = false; btn.textContent = original; }
   }
 }
 
 // AI Tool Actions
-
 async function handleAIAction(action: string): Promise<void> {
+  await aiService.ready();
+  if (activeToolAction) {
+    showMsg('AI 正在处理“' + ACTION_LABELS[activeToolAction].loading.replace('中...', '') + '”，请稍后', 'info');
+    return;
+  }
   if (!aiService.isConfigured()) {
-    showMsg('\u8BF7\u5148\u914D\u7F6E AI', 'error');
+    showMsg('请先配置 AI', 'error');
     return;
   }
 
   const em = (window as any).__editorManager;
   const activePath = em?.activeEditor;
   if (!activePath) {
-    showMsg('\u8BF7\u5148\u6253\u5F00\u4E00\u4E2A\u6587\u4EF6', 'error');
+    showMsg('请先打开一个文件', 'error');
     return;
   }
 
@@ -305,18 +288,21 @@ async function handleAIAction(action: string): Promise<void> {
 
   const content = editorData.model.getValue();
   if (!content.trim()) {
-    showMsg('\u6587\u4EF6\u5185\u5BB9\u4E3A\u7A7A', 'error');
+    showMsg('文件内容为空', 'error');
     return;
   }
 
   const labels = ACTION_LABELS[action];
   const toolbarBtn = document.getElementById('btn-ai-' + action) as HTMLButtonElement | null;
-  const originalHTML = toolbarBtn?.innerHTML || '';
+  const originalHTML = toolbarBtn?.dataset.originalHtml || toolbarBtn?.innerHTML || '';
+  if (toolbarBtn && !toolbarBtn.dataset.originalHtml) toolbarBtn.dataset.originalHtml = originalHTML;
 
+  activeToolAction = action;
+  setToolButtonsDisabled(true, toolbarBtn);
   if (toolbarBtn) {
-    toolbarBtn.disabled = true;
     toolbarBtn.innerHTML = labels.loading;
     toolbarBtn.classList.add('loading');
+    toolbarBtn.classList.remove('success');
   }
 
   try {
@@ -349,21 +335,40 @@ async function handleAIAction(action: string): Promise<void> {
       toolbarBtn.classList.remove('loading');
       toolbarBtn.classList.add('success');
     }
-    setTimeout(() => {
-      if (toolbarBtn) {
-        toolbarBtn.disabled = false;
-        toolbarBtn.innerHTML = originalHTML;
-        toolbarBtn.classList.remove('success');
-      }
-    }, 2000);
   } catch (err) {
-    showMsg('AI \u64CD\u4F5C\u5931\u8D25: ' + (err instanceof Error ? err.message : String(err)), 'error');
-    if (toolbarBtn) {
-      toolbarBtn.disabled = false;
-      toolbarBtn.innerHTML = originalHTML;
-      toolbarBtn.classList.remove('loading');
-    }
+    showMsg('AI 操作失败: ' + (err instanceof Error ? err.message : String(err)), 'error');
+  } finally {
+    activeToolAction = null;
+    scheduleToolButtonReset(toolbarBtn, originalHTML);
   }
+}
+
+function setToolButtonsDisabled(disabled: boolean, activeButton?: HTMLButtonElement | null): void {
+  document.querySelectorAll('.ai-tool-card').forEach((btn) => {
+    const button = btn as HTMLButtonElement;
+    button.disabled = disabled && button !== activeButton ? true : disabled;
+  });
+}
+
+function scheduleToolButtonReset(activeButton: HTMLButtonElement | null, originalHTML: string): void {
+  if (toolResetTimer) {
+    window.clearTimeout(toolResetTimer);
+    toolResetTimer = null;
+  }
+
+  toolResetTimer = window.setTimeout(() => {
+    document.querySelectorAll('.ai-tool-card').forEach((btn) => {
+      const button = btn as HTMLButtonElement;
+      const original = button.dataset.originalHtml;
+      button.disabled = false;
+      button.classList.remove('loading', 'success');
+      if (original) button.innerHTML = original;
+    });
+    if (activeButton && !activeButton.dataset.originalHtml) {
+      activeButton.innerHTML = originalHTML;
+    }
+    void updateAIStatus();
+  }, 700);
 }
 
 function escHTML(str: string): string {
@@ -371,42 +376,53 @@ function escHTML(str: string): string {
 }
 
 function showAIModal(title: string, content: string, onApply?: () => void): void {
-  const existing = document.querySelector('.ai-modal');
-  if (existing) existing.remove();
-
-  const modal = document.createElement('div');
-  modal.className = 'ai-modal';
-  modal.innerHTML =
-    '<div class="ai-modal-content">' +
-    '<div class="ai-modal-header"><h3>' + title + '</h3>' +
-    '<button class="ai-modal-close" id="ai-modal-close"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>' +
-    '<div class="ai-result">' + escHTML(content) + '</div>' +
-    (onApply ? '<div class="ai-modal-actions"><button class="ai-save" id="ai-modal-apply"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg> \u5E94\u7528\u5230\u6587\u4EF6</button></div>' : '') +
-    '</div>';
-  document.body.appendChild(modal);
-  document.getElementById('ai-modal-close')?.addEventListener('click', () => modal.remove());
-  if (onApply) {
-    document.getElementById('ai-modal-apply')?.addEventListener('click', () => {
-      onApply();
-      modal.remove();
-      appendMessage('system', '\u5DF2\u5C06\u7ED3\u679C\u5E94\u7528\u5230\u5F53\u524D\u6587\u4EF6');
-    });
+  let modal = document.querySelector('.ai-modal') as HTMLElement | null;
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.className = 'ai-modal';
+    modal.innerHTML =
+      '<div class="ai-modal-content">' +
+      '<div class="ai-modal-header"><h3 id="ai-modal-title"></h3>' +
+      '<button class="ai-modal-close" id="ai-modal-close"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>' +
+      '<div class="ai-result" id="ai-modal-result"></div>' +
+      '<div class="ai-modal-actions" id="ai-modal-actions"></div>' +
+      '</div>';
+    document.body.appendChild(modal);
+    modal.addEventListener('click', (e) => { if (e.target === modal) modal?.remove(); });
+    modal.querySelector('#ai-modal-close')?.addEventListener('click', () => modal?.remove());
   }
-  modal.addEventListener('click', (e) => { if (e.target === modal) modal.remove(); });
+
+  const titleEl = modal.querySelector('#ai-modal-title');
+  const resultEl = modal.querySelector('#ai-modal-result');
+  const actionsEl = modal.querySelector('#ai-modal-actions') as HTMLElement | null;
+  if (titleEl) titleEl.textContent = title;
+  if (resultEl) resultEl.innerHTML = escHTML(content);
+  if (actionsEl) {
+    actionsEl.innerHTML = onApply
+      ? '<button class="ai-save" id="ai-modal-apply"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg> 应用到文件</button>'
+      : '';
+    actionsEl.style.display = onApply ? 'flex' : 'none';
+    const applyBtn = actionsEl.querySelector('#ai-modal-apply');
+    applyBtn?.addEventListener('click', () => {
+      onApply?.();
+      modal?.remove();
+      appendMessage('system', '已将结果应用到当前文件');
+    }, { once: true });
+  }
 }
 
 // Status & Stats
-
-function updateAIStatus(): void {
+async function updateAIStatus(): Promise<void> {
+  await aiService.ready();
   const isConfigured = aiService.isConfigured();
   const chip = document.getElementById('ai-status-chip');
   const dot = chip?.querySelector('.ai-dot');
   const text = chip?.querySelector('.ai-status-text');
-  if (text) text.textContent = isConfigured ? '\u5DF2\u8FDE\u63A5' : '\u672A\u914D\u7F6E';
+  if (text) text.textContent = isConfigured ? '已连接' : '未配置';
   dot?.classList.toggle('active', isConfigured);
   const modelDisplay = document.getElementById('ai-model-display');
   if (modelDisplay) modelDisplay.textContent = isConfigured ? aiService.getModel() : '-';
-  document.querySelectorAll('.ai-tool-card').forEach(btn => (btn as HTMLButtonElement).disabled = !isConfigured);
+  document.querySelectorAll('.ai-tool-card').forEach(btn => (btn as HTMLButtonElement).disabled = !isConfigured || !!activeToolAction);
   updateStatsDisplay();
 }
 
@@ -429,7 +445,7 @@ function showMsg(text: string, type: string = 'info'): void {
   if (msgEl) {
     msgEl.textContent = text;
     msgEl.className = 'ai-msg show ' + type;
-    setTimeout(() => { msgEl.className = 'ai-msg'; }, 3000);
+    window.setTimeout(() => { msgEl.className = 'ai-msg'; }, 3000);
   }
 }
 
@@ -444,16 +460,18 @@ function getInputValue(id: string): string {
 }
 
 // Init
+function bindAIPageEventsOnce(): void {
+  if (aiPageBound) return;
+  aiPageBound = true;
 
-function initAIPage(): void {
-  document.getElementById('btn-save-ai')?.addEventListener('click', saveAIConfig);
-  document.getElementById('btn-test-ai')?.addEventListener('click', () => testAIConnection());
+  document.getElementById('btn-save-ai')?.addEventListener('click', () => { void saveAIConfig(); });
+  document.getElementById('btn-test-ai')?.addEventListener('click', () => { void testAIConnection(); });
   document.getElementById('btn-toggle-key')?.addEventListener('click', toggleApiKeyVisibility);
-  document.getElementById('btn-fetch-models')?.addEventListener('click', () => fetchModels());
-  document.getElementById('btn-ai-format')?.addEventListener('click', () => handleAIAction('format'));
-  document.getElementById('btn-ai-explain')?.addEventListener('click', () => handleAIAction('explain'));
-  document.getElementById('btn-ai-summarize')?.addEventListener('click', () => handleAIAction('summarize'));
-  document.getElementById('btn-ai-translate')?.addEventListener('click', () => handleAIAction('translate'));
+  document.getElementById('btn-fetch-models')?.addEventListener('click', () => { void fetchModels(); });
+  document.getElementById('btn-ai-format')?.addEventListener('click', () => { void handleAIAction('format'); });
+  document.getElementById('btn-ai-explain')?.addEventListener('click', () => { void handleAIAction('explain'); });
+  document.getElementById('btn-ai-summarize')?.addEventListener('click', () => { void handleAIAction('summarize'); });
+  document.getElementById('btn-ai-translate')?.addEventListener('click', () => { void handleAIAction('translate'); });
 
   const modelSelect = document.getElementById('ai-model-select') as HTMLSelectElement | null;
   modelSelect?.addEventListener('change', (e) => {
@@ -463,16 +481,19 @@ function initAIPage(): void {
       if (customInput) { customInput.style.display = 'block'; (customInput as HTMLInputElement).focus(); }
     } else {
       if (customInput) customInput.style.display = 'none';
-      aiService.saveConfig({ model: target.value });
+      void aiService.saveConfig({ model: target.value });
     }
   });
 
   initChatInput();
   initSidebarToggle();
-  bindSuggestions();
-  loadAIConfig();
+}
+
+function initAIPage(): void {
+  bindAIPageEventsOnce();
+  void loadAIConfig();
   updateStatsDisplay();
-  console.log('[AI] \u9875\u9762\u521D\u59CB\u5316\u5B8C\u6210');
+  console.log('[AI] 页面初始化完成');
 }
 
 registerPageInit('ai', initAIPage);

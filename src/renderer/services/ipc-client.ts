@@ -4,6 +4,7 @@
 import type { ElectronAPI } from '../../shared/types/ipc';
 import type { FileEntry, DialogResult, RecentProject } from '../../shared/types/file';
 import type { TodoData, TodoTask, TodoCategory, CreateTaskInput, UpdateTaskInput } from '../../shared/types/todo';
+import type { Workspace, WorkspaceSession, OpenWorkspaceInput, SaveWorkspaceSessionInput } from '../../shared/types/workspace';
 
 const api = (): ElectronAPI => window.electronAPI;
 
@@ -39,5 +40,13 @@ export const ipcClient = {
     add: (project: RecentProject): Promise<RecentProject[]> => api().recent.add(project),
     remove: (projectPath: string): Promise<RecentProject[]> => api().recent.remove(projectPath),
     clear: (): Promise<RecentProject[]> => api().recent.clear(),
+  },
+  workspace: {
+    list: (): Promise<Workspace[]> => api().workspace.list(),
+    open: (input: OpenWorkspaceInput): Promise<Workspace> => api().workspace.open(input),
+    remove: (rootPath: string): Promise<Workspace[]> => api().workspace.remove(rootPath),
+    clear: (): Promise<Workspace[]> => api().workspace.clear(),
+    getSession: (rootPath: string): Promise<WorkspaceSession | null> => api().workspace.getSession(rootPath),
+    saveSession: (input: SaveWorkspaceSessionInput): Promise<WorkspaceSession> => api().workspace.saveSession(input),
   },
 }; 

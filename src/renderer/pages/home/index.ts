@@ -6,7 +6,7 @@
 import { registerPageInit } from '../../app/router';
 import { ipcClient } from '../../services/ipc-client';
 import { switchPage } from '../../app/router';
-import type { RecentProject } from '@shared/types/file';
+import type { Workspace } from '@shared/types/workspace';
 
 async function initHomePage(): Promise<void> {
   await renderTodoSummary();
@@ -60,52 +60,61 @@ async function renderRecentProjects(): Promise<void> {
   if (!container) return;
 
   try {
-    const projects = await ipcClient.recent.get();
+    let projects = await ipcClient.workspace.list();
+    if (projects.length === 0) {
+      const legacyProjects = await ipcClient.recent.get().catch(() => []);
+      if (legacyProjects.length > 0) {
+        for (const legacy of legacyProjects) {
+          await ipcClient.workspace.open({ rootPath: legacy.path, name: legacy.name }).catch(() => null);
+        }
+        projects = await ipcClient.workspace.list();
+      }
+    }
+
     if (projects.length === 0) {
       container.innerHTML =
         '<div class="home-recent-empty">' +
         '<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.25"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/><line x1="12" y1="11" x2="12" y2="17"/><line x1="9" y1="14" x2="15" y2="14"/></svg>' +
-        '<p>还没有打开过项目</p>' +
+        '<p>还没有打开过工作区</p>' +
         '<button class="btn-ghost" id="btn-home-open-folder">打开文件夹</button>' +
         '</div>';
-      document.getElementById('btn-home-open-folder')?.addEventListener('click', () => switchPage('files'));
+      document.getElementById('btn-home-open-folder')?.addEventListener('click', () => openWorkspacePicker());
       return;
+    }
+
+    container.innerHTML = projects.map((p: Workspace) =>
+      '<div class="home-recent-item" data-path="' + escAttr(p.rootPath) + '">' +
+      '<div class="home-recent-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg></div>' +
+      '<div class="home-recent-info"><div class="home-recent-name">' + esc(p.name) + '</div><div class="home-recent-path">' + esc(p.rootPath) + '</div></div>' +
+      '<div class="home-recent-meta"><span class="home-recent-time">' + formatRelativeTime(p.lastOpened) + '</span>' +
+      '<button class="home-recent-remove" data-path="' + escAttr(p.rootPath) + '" title="移除记录"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>' +
+      '</div></div>'
+    ).join('');
+
+    container.onclick = async (e) => {
+      const target = e.target as HTMLElement;
+      const removeButton = target.closest('.home-recent-remove') as HTMLElement | null;
+      if (removeButton?.dataset.path) {
+        e.stopPropagation();
+        await removeRecentProject(removeButton.dataset.path);
+        return;
       }
 
-      container.innerHTML = projects.map(p =>
-        '<div class="home-recent-item" data-path="' + escAttr(p.path) + '">' +
-        '<div class="home-recent-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg></div>' +
-        '<div class="home-recent-info"><div class="home-recent-name">' + esc(p.name) + '</div><div class="home-recent-path">' + esc(p.path) + '</div></div>' +
-        '<div class="home-recent-meta"><span class="home-recent-time">' + formatRelativeTime(p.lastOpened) + '</span>' +
-        '<button class="home-recent-remove" data-path="' + escAttr(p.path) + '" title="移除记录"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>' +
-        '</div></div>'
-      ).join('');
-
-      container.querySelectorAll('.home-recent-item').forEach(el => {
-        el.addEventListener('click', (e) => {
-          const target = e.target as HTMLElement;
-          if (target.closest('.home-recent-remove')) return;
-          const p = (el as HTMLElement).dataset.path;
-          if (p) openRecentProject(p);
-        });
-      });
-
-      container.querySelectorAll('.home-recent-remove').forEach(el => {
-        el.addEventListener('click', (e) => {
-          e.stopPropagation();
-          const p = (el as HTMLElement).dataset.path;
-          if (p) removeRecentProject(p);
-        });
-      });
-
-      const clearBtn = document.getElementById('btn-clear-recent');
-      if (clearBtn) {
-        clearBtn.style.display = projects.length > 0 ? '' : 'none';
-        clearBtn.onclick = async () => {
-          await ipcClient.recent.clear();
-          await renderRecentProjects();
-        };
+      const item = target.closest('.home-recent-item') as HTMLElement | null;
+      if (item?.dataset.path) {
+        await openRecentProject(item.dataset.path);
       }
+    };
+
+    const clearBtn = document.getElementById('btn-clear-recent');
+    if (clearBtn) {
+      clearBtn.style.display = projects.length > 0 ? '' : 'none';
+      clearBtn.onclick = async () => {
+        await ipcClient.workspace.clear();
+        await ipcClient.recent.clear().catch(() => []);
+        await renderRecentProjects();
+      };
+    }
   } catch (err) {
     console.error('[Home] renderRecentProjects failed:', err);
   }
@@ -114,17 +123,38 @@ async function renderRecentProjects(): Promise<void> {
 async function openRecentProject(projectPath: string): Promise<void> {
   switchPage('files');
   setTimeout(async () => {
+    const openWorkspace = (window as any).__openWorkspaceRoot;
     const ft = (window as any).__fileTree;
+    const store = (window as any).__filesStore;
+
+    if (typeof openWorkspace === 'function') {
+      await openWorkspace(projectPath, { restoreSession: true });
+      return;
+    }
+
     if (ft?.openProjectPath) {
       await ft.openProjectPath(projectPath);
-      const store = (window as any).__filesStore;
       if (store) store.setWorkspaceRoot(projectPath);
     }
   }, 200);
 }
 
+async function openWorkspacePicker(): Promise<void> {
+  switchPage('files');
+  setTimeout(async () => {
+    const chooseWorkspace = (window as any).__chooseWorkspaceFolder;
+    const ft = (window as any).__fileTree;
+    if (typeof chooseWorkspace === 'function') {
+      await chooseWorkspace();
+    } else if (ft?.openFolder) {
+      await ft.openFolder();
+    }
+  }, 200);
+}
+
 async function removeRecentProject(projectPath: string): Promise<void> {
-  await ipcClient.recent.remove(projectPath);
+  await ipcClient.workspace.remove(projectPath);
+  await ipcClient.recent.remove(projectPath).catch(() => []);
   await renderRecentProjects();
 }
 
@@ -134,14 +164,8 @@ function bindQuickActions(): void {
   document.getElementById('btn-go-files')?.addEventListener('click', () => switchPage('files'));
   document.getElementById('btn-go-ai')?.addEventListener('click', () => switchPage('ai'));
   document.getElementById('btn-go-todo')?.addEventListener('click', () => switchPage('todo'));
-  document.getElementById('btn-home-open-folder')?.addEventListener('click', () => switchPage('files'));
-  document.getElementById('btn-new-project')?.addEventListener('click', async () => {
-    switchPage('files');
-    setTimeout(async () => {
-      const ft = (window as any).__fileTree;
-      if (ft) await ft.openFolder();
-    }, 200);
-  });
+  document.getElementById('btn-home-open-folder')?.addEventListener('click', () => openWorkspacePicker());
+  document.getElementById('btn-new-project')?.addEventListener('click', () => openWorkspacePicker());
 }
 
 // ── 工具函数 ──

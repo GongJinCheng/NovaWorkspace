@@ -1,15 +1,18 @@
-﻿/**
+/**
  * EditorManager - Monaco Editor Manager
  * Manages Monaco editor instances, tab rendering, and editor lifecycle.
  * Supports VSCode-style tabs: preview tabs, pinned tabs, scroll overflow,
  * right-click context menu, middle-click close.
  */
 import { ipcClient } from '../../services/ipc-client';
+import { aiService } from '../ai/ai-service';
 import type { FilesStore } from './files-store';
+import { isMarkdownFile, renderMarkdownToHtml } from './markdown-preview';
 
 
 interface MonacoEditor {
   create(container: HTMLElement, options: Record<string, unknown>): MonacoEditorInstance;
+  createModel(value: string, language: string): MonacoModel;
   defineTheme(name: string, config: Record<string, unknown>): void;
 }
 
@@ -18,6 +21,16 @@ interface MonacoEditorInstance {
   getModel(): MonacoModel | null;
   layout(): void;
   getPosition(): { lineNumber: number; column: number } | null;
+  saveViewState(): unknown;
+  restoreViewState(state: unknown): void;
+  getSelection(): MonacoRange | null;
+}
+
+interface MonacoRange {
+  startLineNumber: number;
+  startColumn: number;
+  endLineNumber: number;
+  endColumn: number;
 }
 
 interface MonacoModel {
@@ -25,8 +38,10 @@ interface MonacoModel {
   setValue(value: string): void;
   getLanguageId(): string;
   dispose(): void;
-  getFullModelRange(): { startLineNumber: number; startColumn: number; endLineNumber: number; endColumn: number };
+  getFullModelRange(): MonacoRange;
+  getValueInRange(range: MonacoRange): string;
   pushEditOperations(before: unknown[], operations: unknown[], fn: (() => null) | null): void;
+  onDidChangeContent(listener: () => void): { dispose(): void };
 }
 
 interface MonacoStatic {
@@ -40,6 +55,8 @@ interface EditorTab {
   viewState: unknown;
   isPreview: boolean;
 }
+
+type MarkdownViewMode = 'edit' | 'preview' | 'split';
 
 declare global {
   interface Window {
@@ -57,6 +74,12 @@ export class EditorManager {
   private previewPath: string | null = null;
   private monaco: MonacoStatic | null = null;
   private editor: MonacoEditorInstance | null = null;
+  private editorHost: HTMLElement | null = null;
+  private markdownPreview: HTMLElement | null = null;
+  private markdownToolbar: HTMLElement | null = null;
+  private markdownMode: MarkdownViewMode = 'edit';
+  private markdownPreviewTimer: ReturnType<typeof setTimeout> | null = null;
+  private markdownAiBusy = false;
   private store: FilesStore | null = null;
   private _closeTabCtxMenu: (() => void) | null = null;
 
@@ -110,6 +133,9 @@ export class EditorManager {
 
   private createEditor(): void {
     this.container.innerHTML = '';
+    this.editorHost = null;
+    this.markdownPreview = null;
+    this.markdownToolbar = null;
 
     this.monaco.editor.defineTheme('custom-dark', {
       base: 'vs-dark',
@@ -153,7 +179,32 @@ export class EditorManager {
       },
     });
 
-    this.editor = this.monaco.editor.create(this.container, {
+    const shell = document.createElement('div');
+    shell.className = 'editor-shell';
+    shell.innerHTML =
+      '<div class="markdown-toolbar" data-visible="false">' +
+        '<div class="markdown-mode-group">' +
+          '<button class="markdown-tool-btn active" data-md-mode="edit" title="仅编辑">编辑</button>' +
+          '<button class="markdown-tool-btn" data-md-mode="preview" title="仅预览">预览</button>' +
+          '<button class="markdown-tool-btn" data-md-mode="split" title="分屏编辑预览">分屏</button>' +
+        '</div>' +
+        '<div class="markdown-ai-group">' +
+          '<button class="markdown-tool-btn" data-md-action="summary">AI 总结</button>' +
+          '<button class="markdown-tool-btn" data-md-action="outline">生成大纲</button>' +
+          '<button class="markdown-tool-btn" data-md-action="rewrite">改写选中</button>' +
+        '</div>' +
+      '</div>' +
+      '<div class="markdown-workspace">' +
+        '<div class="monaco-editor-host"></div>' +
+        '<article class="markdown-preview-pane" aria-label="Markdown Preview"></article>' +
+      '</div>';
+    this.container.appendChild(shell);
+    this.editorHost = shell.querySelector('.monaco-editor-host');
+    this.markdownPreview = shell.querySelector('.markdown-preview-pane');
+    this.markdownToolbar = shell.querySelector('.markdown-toolbar');
+    this.bindMarkdownToolbar();
+
+    this.editor = this.monaco.editor.create(this.editorHost || this.container, {
       value: '',
       language: 'plaintext',
       theme: this.getCurrentTheme(),
@@ -170,6 +221,188 @@ export class EditorManager {
       },
       showUnicodeHighlightDialog: false,
     });
+
+    this.applyMarkdownMode();
+  }
+
+
+  private bindMarkdownToolbar(): void {
+    if (!this.markdownToolbar) return;
+
+    this.markdownToolbar.addEventListener('click', async (event) => {
+      const target = event.target as HTMLElement;
+      const modeButton = target.closest('[data-md-mode]') as HTMLElement | null;
+      const actionButton = target.closest('[data-md-action]') as HTMLButtonElement | null;
+
+      if (modeButton) {
+        this.markdownMode = (modeButton.dataset.mdMode as MarkdownViewMode) || 'edit';
+        this.applyMarkdownMode();
+        return;
+      }
+
+      if (actionButton) {
+        await this.runMarkdownAiAction(actionButton.dataset.mdAction || '', actionButton);
+      }
+    });
+  }
+
+  private isActiveMarkdown(): boolean {
+    return !!this.activeEditorPath && isMarkdownFile(this.activeEditorPath);
+  }
+
+  private updateMarkdownChrome(): void {
+    const visible = this.isActiveMarkdown();
+    if (this.markdownToolbar) {
+      this.markdownToolbar.dataset.visible = visible ? 'true' : 'false';
+    }
+    if (!visible) {
+      this.markdownMode = 'edit';
+    }
+    this.applyMarkdownMode();
+  }
+
+  private applyMarkdownMode(): void {
+    const isMd = this.isActiveMarkdown();
+    const mode = isMd ? this.markdownMode : 'edit';
+    const workspace = this.container.querySelector('.markdown-workspace') as HTMLElement | null;
+
+    workspace?.setAttribute('data-md-mode', mode);
+    this.markdownToolbar?.querySelectorAll('[data-md-mode]').forEach((button) => {
+      const el = button as HTMLElement;
+      el.classList.toggle('active', el.dataset.mdMode === mode);
+    });
+
+    if (this.markdownPreview) {
+      this.markdownPreview.hidden = !isMd || mode === 'edit';
+    }
+    if (this.editorHost) {
+      this.editorHost.hidden = isMd && mode === 'preview';
+    }
+
+    if (isMd) this.updateMarkdownPreview();
+    setTimeout(() => this.editor?.layout(), 50);
+  }
+
+  private scheduleMarkdownPreviewUpdate(): void {
+    if (!this.isActiveMarkdown()) return;
+    if (this.markdownPreviewTimer) clearTimeout(this.markdownPreviewTimer);
+    this.markdownPreviewTimer = setTimeout(() => this.updateMarkdownPreview(), 120);
+  }
+
+  private updateMarkdownPreview(): void {
+    if (!this.markdownPreview || !this.activeEditorPath) return;
+    const tab = this.editors.get(this.activeEditorPath);
+    if (!tab || !this.isActiveMarkdown()) return;
+    this.markdownPreview.innerHTML = renderMarkdownToHtml(tab.model.getValue());
+  }
+
+  private async runMarkdownAiAction(action: string, button: HTMLButtonElement): Promise<void> {
+    if (this.markdownAiBusy) return;
+    if (!this.activeEditorPath) return;
+
+    const tab = this.editors.get(this.activeEditorPath);
+    if (!tab) return;
+    if (!aiService.isConfigured()) {
+      window.alert('请先在设置页配置 AI 模型');
+      return;
+    }
+
+    this.markdownAiBusy = true;
+    const originalText = button.textContent || '';
+    button.disabled = true;
+    button.textContent = action === 'rewrite' ? '改写中...' : action === 'outline' ? '生成中...' : '总结中...';
+
+    try {
+      if (action === 'rewrite') {
+        await this.rewriteSelectedMarkdown(tab);
+        this.scheduleMarkdownPreviewUpdate();
+        button.textContent = '已改写';
+        return;
+      }
+
+      const content = tab.model.getValue();
+      if (!content.trim()) {
+        window.alert('当前 Markdown 文档为空');
+        return;
+      }
+
+      const result = action === 'outline'
+        ? await aiService.chat([
+            { role: 'system', content: '为下面的 Markdown 文档生成一份结构清晰的中文大纲。只输出大纲。' },
+            { role: 'user', content },
+          ], { temperature: 0.4 })
+        : await aiService.summarize(content);
+
+      this.showMarkdownAiResult(action === 'outline' ? 'Markdown 大纲' : 'Markdown 总结', result);
+      button.textContent = '完成';
+    } catch (error) {
+      console.error('[EditorManager] Markdown AI action failed:', error);
+      window.alert('AI 操作失败: ' + (error instanceof Error ? error.message : String(error)));
+      button.textContent = '失败';
+    } finally {
+      setTimeout(() => {
+        button.disabled = false;
+        button.textContent = originalText;
+        this.markdownAiBusy = false;
+      }, 700);
+    }
+  }
+
+  private async rewriteSelectedMarkdown(tab: EditorTab): Promise<void> {
+    if (!this.editor) return;
+    const selection = this.editor.getSelection();
+    if (!selection) return;
+
+    const selected = tab.model.getValueInRange(selection).trim();
+    if (!selected) {
+      window.alert('请先选中要改写的 Markdown 内容');
+      return;
+    }
+
+    const rewritten = await aiService.chat([
+      { role: 'system', content: '请改写用户选中的 Markdown 内容，使其更清晰、自然、结构更好。保持 Markdown 格式，只输出改写后的正文。' },
+      { role: 'user', content: selected },
+    ], { temperature: 0.5 });
+
+    tab.model.pushEditOperations([], [{ range: selection, text: rewritten }], () => null);
+    this.pinTab(tab.filePath);
+    const tabEl = this.tabElements.get(tab.filePath);
+    tabEl?.classList.add('modified');
+    this.store?.markDirty(tab.filePath);
+  }
+
+  private showMarkdownAiResult(title: string, content: string): void {
+    let modal = document.querySelector('.markdown-ai-modal') as HTMLElement | null;
+    if (!modal) {
+      modal = document.createElement('div');
+      modal.className = 'markdown-ai-modal';
+      modal.innerHTML =
+        '<div class="markdown-ai-modal-card">' +
+          '<div class="markdown-ai-modal-header">' +
+            '<h3></h3>' +
+            '<button class="markdown-ai-modal-close" title="关闭">×</button>' +
+          '</div>' +
+          '<pre class="markdown-ai-modal-content"></pre>' +
+          '<div class="markdown-ai-modal-actions">' +
+            '<button class="markdown-ai-copy-btn">复制结果</button>' +
+          '</div>' +
+        '</div>';
+      document.body.appendChild(modal);
+      modal.querySelector('.markdown-ai-modal-close')?.addEventListener('click', () => modal?.remove());
+      modal.addEventListener('click', (event) => {
+        if (event.target === modal) modal?.remove();
+      });
+      modal.querySelector('.markdown-ai-copy-btn')?.addEventListener('click', async () => {
+        const text = (modal?.querySelector('.markdown-ai-modal-content') as HTMLElement | null)?.textContent || '';
+        await navigator.clipboard?.writeText(text);
+      });
+    }
+
+    const titleEl = modal.querySelector('h3');
+    const contentEl = modal.querySelector('.markdown-ai-modal-content') as HTMLElement | null;
+    if (titleEl) titleEl.textContent = title;
+    if (contentEl) contentEl.textContent = content;
+    modal.classList.add('show');
   }
 
   private getCurrentTheme(): string {
@@ -251,6 +484,7 @@ export class EditorManager {
           const tabEl = this.tabElements.get(filePath);
           tabEl?.classList.add('modified');
           this.store?.markDirty(filePath);
+          this.scheduleMarkdownPreviewUpdate();
         });
 
         // Update active states
@@ -259,6 +493,7 @@ export class EditorManager {
         });
 
         this.updateStatusBar();
+        this.updateMarkdownChrome();
         setTimeout(() => this.editor?.layout(), 50);
         return;
       }
@@ -281,9 +516,11 @@ export class EditorManager {
         const tabEl = this.tabElements.get(filePath);
         tabEl?.classList.add('modified');
         this.store?.markDirty(filePath);
+        this.scheduleMarkdownPreviewUpdate();
       });
 
       this.updateStatusBar();
+      this.updateMarkdownChrome();
     } catch (err) {
       console.error('[EditorManager] openFile failed:', err);
     }
@@ -299,36 +536,38 @@ export class EditorManager {
         '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>' +
       '</button>';
 
+    const getCurrentPath = () => tab.dataset.path || filePath;
+
     // Single-click to switch
     tab.addEventListener('click', (e) => {
       if ((e.target as HTMLElement).closest('.tab-close')) return;
-      this.switchToTab(filePath);
+      this.switchToTab(getCurrentPath());
     });
 
     // Double-click to pin
     tab.addEventListener('dblclick', (e) => {
       if ((e.target as HTMLElement).closest('.tab-close')) return;
-      this.pinTab(filePath);
+      this.pinTab(getCurrentPath());
     });
 
     // Close button
     tab.querySelector('.tab-close')?.addEventListener('click', (e) => {
       e.stopPropagation();
-      this.closeTab(filePath);
+      this.closeTab(getCurrentPath());
     });
 
     // Middle-click to close
     tab.addEventListener('mousedown', (e) => {
       if (e.button === 1) {
         e.preventDefault();
-        this.closeTab(filePath);
+        this.closeTab(getCurrentPath());
       }
     });
 
     // Right-click context menu
     tab.addEventListener('contextmenu', (e) => {
       e.preventDefault();
-      this.showTabContextMenu(e, filePath);
+      this.showTabContextMenu(e, getCurrentPath());
     });
 
     // Deactivate other tabs
@@ -356,6 +595,18 @@ export class EditorManager {
     }
   }
 
+  private getDirtyOpenTabs(paths = Array.from(this.editors.keys())): string[] {
+    return paths.filter((p) => Boolean(this.store?.isDirty(p)));
+  }
+
+  private confirmCloseDirtyTabs(paths: string[]): boolean {
+    const dirty = this.getDirtyOpenTabs(paths);
+    if (dirty.length === 0) return true;
+    const names = dirty.slice(0, 5).map((p) => p.split(/[/\\]/).pop() || p).join('、');
+    const more = dirty.length > 5 ? ` 等 ${dirty.length} 个文件` : '';
+    return window.confirm(`有未保存的更改：${names}${more}。确定关闭并丢弃这些更改吗？`);
+  }
+
   // --- Tab Context Menu ---
 
   private showTabContextMenu(e: MouseEvent, filePath: string): void {
@@ -376,10 +627,10 @@ export class EditorManager {
     }
 
     items.push(
-      { label: '\u5173\u95ED', action: () => this.closeTab(filePath) },
-      { label: '\u5173\u95ED\u5176\u4ED6', action: () => this.closeOtherTabs(filePath) },
-      { label: '\u5173\u95ED\u6240\u6709', action: () => this.closeAllTabs() },
-      { label: '\u5173\u95ED\u5DF2\u4FDD\u5B58', action: () => this.closeSavedTabs() },
+      { label: '\u5173\u95ED', action: () => { void this.closeTab(filePath); } },
+      { label: '\u5173\u95ED\u5176\u4ED6', action: () => { void this.closeOtherTabs(filePath); } },
+      { label: '\u5173\u95ED\u6240\u6709', action: () => { void this.closeAllTabs(); } },
+      { label: '\u5173\u95ED\u5DF2\u4FDD\u5B58', action: () => { void this.closeSavedTabs(); } },
     );
 
     for (const item of items) {
@@ -400,19 +651,21 @@ export class EditorManager {
     document.querySelectorAll('.tab-context-menu').forEach(el => el.remove());
   }
 
-  private closeOtherTabs(keepPath: string): void {
+  private async closeOtherTabs(keepPath: string): Promise<void> {
     const paths = Array.from(this.editors.keys()).filter(p => p !== keepPath);
-    for (const p of paths) this.closeTab(p, { force: true });
+    if (!this.confirmCloseDirtyTabs(paths)) return;
+    for (const p of paths) await this.closeTab(p, { force: true });
   }
 
-  private closeAllTabs(): void {
+  private async closeAllTabs(): Promise<void> {
     const paths = Array.from(this.editors.keys());
-    for (const p of paths) this.closeTab(p, { force: true });
+    if (!this.confirmCloseDirtyTabs(paths)) return;
+    for (const p of paths) await this.closeTab(p, { force: true });
   }
 
-  private closeSavedTabs(): void {
+  private async closeSavedTabs(): Promise<void> {
     const paths = Array.from(this.editors.keys()).filter(p => !this.store?.isDirty(p));
-    for (const p of paths) this.closeTab(p, { force: true });
+    for (const p of paths) await this.closeTab(p, { force: true });
   }
 
   // --- Tab Switching ---
@@ -436,6 +689,7 @@ export class EditorManager {
 
     this.store?.setActive(filePath);
     this.updateStatusBar();
+    this.updateMarkdownChrome();
     setTimeout(() => this.editor?.layout(), 50);
   }
 
@@ -447,8 +701,7 @@ export class EditorManager {
     }
 
     if (!options?.force && this.store?.isDirty(filePath)) {
-      const shouldClose = window.confirm('\u6587\u4EF6\u6709\u672A\u4FDD\u5B58\u7684\u66F4\u6539\uFF0C\u786E\u5B9A\u5173\u95ED\u5417\uFF1F');
-      if (!shouldClose) return;
+      if (!this.confirmCloseDirtyTabs([filePath])) return;
     }
 
     const remaining = Array.from(this.editors.keys()).filter((key) => key !== filePath);
@@ -481,6 +734,36 @@ export class EditorManager {
     this.showWelcomeScreen();
   }
 
+  resetForWorkspace(): void {
+    this.removeTabContextMenu();
+    if (this.markdownPreviewTimer) {
+      clearTimeout(this.markdownPreviewTimer);
+      this.markdownPreviewTimer = null;
+    }
+
+    for (const tab of this.editors.values()) {
+      try {
+        tab.model.dispose();
+      } catch (error) {
+        console.warn('[EditorManager] model dispose failed during workspace reset:', error);
+      }
+    }
+
+    this.editors.clear();
+    this.tabElements.clear();
+    this.tabsList.innerHTML = '';
+    this.activeEditorPath = null;
+    this.previewPath = null;
+    this.markdownMode = 'edit';
+    this.markdownAiBusy = false;
+
+    if (this.editor) {
+      this.editor.setModel(null);
+      this.updateMarkdownChrome();
+      setTimeout(() => this.editor?.layout(), 50);
+    }
+  }
+
   renameTab(oldPath: string, newPath: string, newFileName: string): void {
     const tab = this.editors.get(oldPath);
     if (!tab) return;
@@ -509,12 +792,19 @@ export class EditorManager {
 
     this.store?.renameFile(oldPath, newPath);
     this.updateStatusBar();
+    this.updateMarkdownChrome();
   }
 
   closeTabsForDeletedPaths(deletedPaths: string[]): void {
     for (const filePath of deletedPaths) {
       this.closeTab(filePath, { force: true });
     }
+  }
+
+  async revealActiveFile(): Promise<void> {
+    if (!this.activeEditorPath) return;
+    const fileTree = (window as any).__fileTree;
+    await fileTree?.revealPath?.(this.activeEditorPath);
   }
 
   async saveFile(): Promise<void> {
@@ -527,6 +817,7 @@ export class EditorManager {
     tabEl?.classList.remove('modified');
     this.store?.clearDirty(this.activeEditorPath);
     this.updateStatusBar();
+    this.scheduleMarkdownPreviewUpdate();
   }
 
   private removeTabElement(filePath: string): void {

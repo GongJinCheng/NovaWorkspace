@@ -1,6 +1,11 @@
 import { contextBridge, ipcRenderer } from 'electron';
 import { IPC_CHANNELS } from '../shared/constants/ipc-channels';
 import type { ElectronAPI } from '../shared/types/ipc';
+import type { AIChatRequest } from '../shared/types/ai';
+
+function createRequestId(prefix: string): string {
+  return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+}
 
 contextBridge.exposeInMainWorld('electronAPI', {
   window: {
@@ -34,6 +39,58 @@ contextBridge.exposeInMainWorld('electronAPI', {
     add: (project) => ipcRenderer.invoke(IPC_CHANNELS.RECENT.ADD, project),
     remove: (projectPath: string) => ipcRenderer.invoke(IPC_CHANNELS.RECENT.REMOVE, projectPath),
     clear: () => ipcRenderer.invoke(IPC_CHANNELS.RECENT.CLEAR),
+  },
+  workspace: {
+    list: () => ipcRenderer.invoke(IPC_CHANNELS.WORKSPACE.LIST),
+    open: (input) => ipcRenderer.invoke(IPC_CHANNELS.WORKSPACE.OPEN, input),
+    remove: (rootPath: string) => ipcRenderer.invoke(IPC_CHANNELS.WORKSPACE.REMOVE, rootPath),
+    clear: () => ipcRenderer.invoke(IPC_CHANNELS.WORKSPACE.CLEAR),
+    getSession: (rootPath: string) => ipcRenderer.invoke(IPC_CHANNELS.WORKSPACE.GET_SESSION, rootPath),
+    saveSession: (input) => ipcRenderer.invoke(IPC_CHANNELS.WORKSPACE.SAVE_SESSION, input),
+  },
+  ai: {
+    getSettings: () => ipcRenderer.invoke(IPC_CHANNELS.AI.GET_SETTINGS),
+    saveProvider: (provider) => ipcRenderer.invoke(IPC_CHANNELS.AI.SAVE_PROVIDER, provider),
+    deleteProvider: (providerId: string) => ipcRenderer.invoke(IPC_CHANNELS.AI.DELETE_PROVIDER, providerId),
+    setDefaultProvider: (providerId: string) => ipcRenderer.invoke(IPC_CHANNELS.AI.SET_DEFAULT_PROVIDER, providerId),
+    chat: (request: AIChatRequest) => ipcRenderer.invoke(IPC_CHANNELS.AI.CHAT, request),
+    fetchModels: (providerId?: string) => ipcRenderer.invoke(IPC_CHANNELS.AI.FETCH_MODELS, providerId),
+    testConnection: (providerId?: string) => ipcRenderer.invoke(IPC_CHANNELS.AI.TEST_CONNECTION, providerId),
+    chatStream: (request, callbacks) => {
+      const requestId = createRequestId('ai-stream');
+
+      const handleChunk = (_event: unknown, eventRequestId: string, chunk: string) => {
+        if (eventRequestId === requestId) callbacks.onChunk?.(chunk);
+      };
+      const handleDone = (_event: unknown, eventRequestId: string, fullText: string) => {
+        if (eventRequestId !== requestId) return;
+        cleanup();
+        callbacks.onDone?.(fullText);
+      };
+      const handleError = (_event: unknown, eventRequestId: string, message: string) => {
+        if (eventRequestId !== requestId) return;
+        cleanup();
+        callbacks.onError?.(message);
+      };
+      const cleanup = () => {
+        ipcRenderer.removeListener(IPC_CHANNELS.AI.STREAM_CHUNK, handleChunk);
+        ipcRenderer.removeListener(IPC_CHANNELS.AI.STREAM_DONE, handleDone);
+        ipcRenderer.removeListener(IPC_CHANNELS.AI.STREAM_ERROR, handleError);
+      };
+
+      ipcRenderer.on(IPC_CHANNELS.AI.STREAM_CHUNK, handleChunk);
+      ipcRenderer.on(IPC_CHANNELS.AI.STREAM_DONE, handleDone);
+      ipcRenderer.on(IPC_CHANNELS.AI.STREAM_ERROR, handleError);
+      ipcRenderer.send(IPC_CHANNELS.AI.STREAM_START, requestId, request);
+
+      return {
+        requestId,
+        cancel: () => {
+          cleanup();
+          ipcRenderer.send(IPC_CHANNELS.AI.STREAM_CANCEL, requestId);
+        },
+      };
+    },
   },
 } satisfies ElectronAPI);
 

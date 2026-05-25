@@ -35,6 +35,28 @@ export const IPC_CHANNELS = {
     REMOVE: 'recent:remove',
     CLEAR: 'recent:clear',
   },
+  WORKSPACE: {
+    LIST: 'workspace:list',
+    OPEN: 'workspace:open',
+    REMOVE: 'workspace:remove',
+    CLEAR: 'workspace:clear',
+    GET_SESSION: 'workspace:get-session',
+    SAVE_SESSION: 'workspace:save-session',
+  },
+  AI: {
+    GET_SETTINGS: 'ai:get-settings',
+    SAVE_PROVIDER: 'ai:save-provider',
+    DELETE_PROVIDER: 'ai:delete-provider',
+    SET_DEFAULT_PROVIDER: 'ai:set-default-provider',
+    CHAT: 'ai:chat',
+    FETCH_MODELS: 'ai:fetch-models',
+    TEST_CONNECTION: 'ai:test-connection',
+    STREAM_START: 'ai:stream-start',
+    STREAM_CANCEL: 'ai:stream-cancel',
+    STREAM_CHUNK: 'ai:stream-chunk',
+    STREAM_DONE: 'ai:stream-done',
+    STREAM_ERROR: 'ai:stream-error',
+  },
 } as const;
 
 export type IpcChannel = typeof IPC_CHANNELS;

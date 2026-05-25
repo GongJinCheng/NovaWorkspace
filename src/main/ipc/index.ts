@@ -2,6 +2,8 @@ import { registerWindowHandlers } from './window.handlers';
 import { registerFsHandlers } from './fs.handlers';
 import { registerTodoHandlers } from './todo.handlers';
 import { registerRecentHandlers } from './recent.handlers';
+import { registerAIHandlers } from './ai.handlers';
+import { registerWorkspaceHandlers } from './workspace.handlers';
 
 /** 注册所有 IPC handlers */
 export function registerAllHandlers(): void {
@@ -9,4 +11,6 @@ export function registerAllHandlers(): void {
   registerFsHandlers();
   registerTodoHandlers();
   registerRecentHandlers();
+  registerWorkspaceHandlers();
+  registerAIHandlers();
 }
