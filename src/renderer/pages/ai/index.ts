@@ -45,9 +45,9 @@ function appendMessage(role: 'user' | 'assistant' | 'system', content: string): 
 
 async function sendMessage(text: string): Promise<void> {
   if (!text.trim() || isGenerating) return;
-  await aiService.ready();
+  await aiService.reloadConfig().catch(() => undefined);
   if (!aiService.isConfigured()) {
-    appendMessage('system', '请先在右侧或设置页配置 AI 模型');
+    appendMessage('system', '请先在右侧或设置页配置 AI 模型，并点击“保存配置”。');
     return;
   }
 
@@ -163,7 +163,10 @@ function initSidebarToggle(): void {
 
 // AI Config
 async function loadAIConfig(): Promise<void> {
-  await aiService.reloadConfig();
+  // Always read from the main-process settings store. Do not trust cached UI state,
+  // otherwise changes from Settings page can leave this panel showing an old model.
+  const settings = await aiService.getSettings();
+  const activeProvider = aiService.getActiveProvider();
   const apiKey = aiService.getApiKey();
   const baseUrl = aiService.getBaseUrl();
   const model = aiService.getModel();
@@ -173,39 +176,44 @@ async function loadAIConfig(): Promise<void> {
 
   const modelSelect = document.getElementById('ai-model-select') as HTMLSelectElement | null;
   if (modelSelect) {
-    const option = Array.from(modelSelect.options).find(o => o.value === model);
-    if (option) {
-      modelSelect.value = model;
-    } else {
-      modelSelect.value = 'custom';
-      const customInput = document.getElementById('ai-model-custom') as HTMLInputElement | null;
-      if (customInput) {
-        customInput.style.display = 'block';
-        customInput.value = model;
-      }
-    }
+    renderModelOptions(modelSelect, model, settings.providers.map(provider => ({
+      name: provider.name,
+      model: provider.defaultModel,
+    })));
   }
 
-  void updateAIStatus();
+  const configTitle = document.getElementById('ai-config-toggle');
+  if (configTitle && activeProvider) {
+    configTitle.setAttribute('title', `当前默认供应商：${activeProvider.name} · ${activeProvider.defaultModel}`);
+  }
+  renderCurrentProviderInfo(activeProvider);
+
+  await updateAIStatus();
 }
 
 async function saveAIConfig(): Promise<void> {
   const apiKey = getInputValue('ai-api-key');
   const baseUrl = getInputValue('ai-base-url');
   const modelSelect = document.getElementById('ai-model-select') as HTMLSelectElement | null;
-  let model = modelSelect?.value || 'gpt-3.5-turbo';
+  const selectedModel = modelSelect?.value?.trim() || '';
+  const model = selectedModel && selectedModel !== 'custom' ? selectedModel : aiService.getModel();
 
-  if (model === 'custom') {
-    model = getInputValue('ai-model-custom') || 'gpt-3.5-turbo';
+  if (!baseUrl.trim()) {
+    showMsg('请填写 Base URL', 'error');
+    return;
+  }
+  if (!model.trim()) {
+    showMsg('请先到设置页填写默认模型，或点击“获取”选择模型', 'error');
+    return;
   }
 
   await aiService.saveConfig({ apiKey, baseUrl, model });
-  void updateAIStatus();
+  await loadAIConfig();
   showMsg('配置已保存', 'success');
 }
 
 async function testAIConnection(): Promise<void> {
-  await aiService.ready();
+  await aiService.reloadConfig({ silent: true });
   if (!aiService.isConfigured()) {
     showMsg('请先填写 API Key', 'error');
     return;
@@ -232,7 +240,7 @@ function toggleApiKeyVisibility(): void {
 }
 
 async function fetchModels(): Promise<void> {
-  await aiService.ready();
+  await aiService.reloadConfig({ silent: true });
   if (!aiService.isConfigured()) {
     showMsg('请先填写 API Key 和 Base URL', 'error');
     return;
@@ -246,16 +254,22 @@ async function fetchModels(): Promise<void> {
     const models = await aiService.fetchModels();
     const select = document.getElementById('ai-model-select') as HTMLSelectElement | null;
     if (select && models.length > 0) {
+      const currentModel = aiService.getModel();
       const existing = new Set(Array.from(select.options).map(o => o.value));
       for (const model of models) {
         if (!existing.has(model) && model !== 'custom') {
           const opt = document.createElement('option');
           opt.value = model;
           opt.textContent = model;
-          select.insertBefore(opt, select.querySelector('option[value="custom"]'));
+          const customOption = select.querySelector('option[value="custom"]');
+          if (customOption) select.insertBefore(opt, customOption);
+          else select.appendChild(opt);
         }
       }
+      ensureModelOption(select, currentModel);
+      select.value = currentModel;
       showMsg('获取到 ' + models.length + ' 个模型', 'success');
+      await loadAIConfig();
     }
   } catch (err) {
     showMsg('获取模型失败: ' + (err instanceof Error ? err.message : String(err)), 'error');
@@ -266,13 +280,13 @@ async function fetchModels(): Promise<void> {
 
 // AI Tool Actions
 async function handleAIAction(action: string): Promise<void> {
-  await aiService.ready();
+  await aiService.reloadConfig().catch(() => undefined);
   if (activeToolAction) {
     showMsg('AI 正在处理“' + ACTION_LABELS[activeToolAction].loading.replace('中...', '') + '”，请稍后', 'info');
     return;
   }
   if (!aiService.isConfigured()) {
-    showMsg('请先配置 AI', 'error');
+    showMsg('请先在设置页配置 AI，并点击“保存配置”', 'error');
     return;
   }
 
@@ -418,7 +432,8 @@ async function updateAIStatus(): Promise<void> {
   const chip = document.getElementById('ai-status-chip');
   const dot = chip?.querySelector('.ai-dot');
   const text = chip?.querySelector('.ai-status-text');
-  if (text) text.textContent = isConfigured ? '已连接' : '未配置';
+  const activeProvider = aiService.getActiveProvider();
+  if (text) text.textContent = isConfigured && activeProvider ? `${activeProvider.name} · ${aiService.getModel()}` : '未配置';
   dot?.classList.toggle('active', isConfigured);
   const modelDisplay = document.getElementById('ai-model-display');
   if (modelDisplay) modelDisplay.textContent = isConfigured ? aiService.getModel() : '-';
@@ -449,6 +464,93 @@ function showMsg(text: string, type: string = 'info'): void {
   }
 }
 
+
+
+function renderCurrentProviderInfo(provider: ReturnType<typeof aiService.getActiveProvider>): void {
+  const body = document.getElementById('ai-config-body');
+  if (!body) return;
+  let info = document.getElementById('ai-current-provider');
+  if (!info) {
+    info = document.createElement('div');
+    info.id = 'ai-current-provider';
+    info.className = 'ai-current-provider';
+    body.insertBefore(info, body.firstChild);
+  }
+
+  if (!provider) {
+    info.textContent = '当前未配置默认模型';
+    return;
+  }
+
+  info.textContent = `当前默认：${provider.name} / ${provider.defaultModel}`;
+}
+
+function renderModelOptions(
+  select: HTMLSelectElement,
+  activeModel: string,
+  providerModels: Array<{ name?: string; model?: string }> = []
+): void {
+  const previousOptions = Array.from(select.options)
+    .map(option => ({ value: option.value, text: option.textContent || option.value }))
+    .filter(option => option.value && option.value !== 'custom');
+
+  const models = new Map<string, string>();
+
+  const addModel = (model?: string, labelPrefix?: string) => {
+    const value = (model || '').trim();
+    if (!value) return;
+    models.set(value, labelPrefix ? `${value}（${labelPrefix}）` : value);
+  };
+
+  addModel(activeModel, '当前默认');
+  providerModels.forEach(provider => addModel(provider.model, provider.name));
+  previousOptions.forEach(option => {
+    if (!models.has(option.value)) models.set(option.value, option.text);
+  });
+
+  select.innerHTML = '';
+  if (models.size === 0) {
+    const empty = document.createElement('option');
+    empty.value = '';
+    empty.textContent = '-- 请先在设置页配置默认模型 --';
+    select.appendChild(empty);
+  } else {
+    for (const [value, label] of models) {
+      const option = document.createElement('option');
+      option.value = value;
+      option.textContent = label;
+      select.appendChild(option);
+    }
+  }
+
+  const custom = document.createElement('option');
+  custom.value = 'custom';
+  custom.textContent = '自定义 / 手动输入请到设置页修改';
+  select.appendChild(custom);
+
+  if (activeModel) {
+    ensureModelOption(select, activeModel);
+    select.value = activeModel;
+  } else {
+    select.value = select.options[0]?.value || '';
+  }
+}
+
+function ensureModelOption(select: HTMLSelectElement, model: string): void {
+  if (!model) return;
+  const exists = Array.from(select.options).some(option => option.value === model);
+  if (exists) return;
+  const option = document.createElement('option');
+  option.value = model;
+  option.textContent = model;
+  const first = select.options[0];
+  if (first && !first.value) {
+    select.insertBefore(option, first.nextSibling);
+  } else {
+    select.appendChild(option);
+  }
+}
+
 function setInputValue(id: string, value: string): void {
   const el = document.getElementById(id) as HTMLInputElement | null;
   if (el) el.value = value;
@@ -476,14 +578,18 @@ function bindAIPageEventsOnce(): void {
   const modelSelect = document.getElementById('ai-model-select') as HTMLSelectElement | null;
   modelSelect?.addEventListener('change', (e) => {
     const target = e.target as HTMLSelectElement;
-    const customInput = document.getElementById('ai-model-custom');
-    if (target.value === 'custom') {
-      if (customInput) { customInput.style.display = 'block'; (customInput as HTMLInputElement).focus(); }
+    const nextModel = target.value?.trim();
+    if (nextModel && nextModel !== 'custom') {
+      void aiService.saveConfig({ model: nextModel }).then(() => loadAIConfig());
     } else {
-      if (customInput) customInput.style.display = 'none';
-      void aiService.saveConfig({ model: target.value });
+      void loadAIConfig();
     }
   });
+
+  const refreshConfig = () => { void loadAIConfig(); };
+  window.addEventListener('nova:ai-settings-updated', refreshConfig);
+  window.addEventListener('nova:ai-settings-changed', refreshConfig);
+  window.addEventListener('focus', refreshConfig);
 
   initChatInput();
   initSidebarToggle();

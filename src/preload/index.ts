@@ -23,6 +23,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     renameItem: (oldPath: string, newName: string) => ipcRenderer.invoke(IPC_CHANNELS.FS.RENAME_ITEM, oldPath, newName),
     getHomeDir: () => ipcRenderer.invoke(IPC_CHANNELS.FS.GET_HOME),
     showOpenDialog: (options: Record<string, unknown>) => ipcRenderer.invoke(IPC_CHANNELS.FS.SHOW_OPEN_DIALOG, options),
+    createSampleWorkspace: () => ipcRenderer.invoke(IPC_CHANNELS.FS.CREATE_SAMPLE_WORKSPACE),
   },
   todo: {
     load: () => ipcRenderer.invoke(IPC_CHANNELS.TODO.LOAD),

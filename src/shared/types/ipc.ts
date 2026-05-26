@@ -23,6 +23,7 @@ export interface ElectronAPI {
     renameItem(oldPath: string, newName: string): Promise<string>;
     getHomeDir(): Promise<string>;
     showOpenDialog(options: Record<string, unknown>): Promise<DialogResult>;
+    createSampleWorkspace(): Promise<string>;
   };
   todo: {
     load(): Promise<TodoData>;

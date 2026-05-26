@@ -22,8 +22,10 @@ export function switchPage(pageId: PageId): void {
     target.classList.add('active');
   }
 
-  // Call init on first activation
-  if (currentPage !== pageId) {
+  // Call page init every time the user navigates to a page.
+  // Individual pages keep their own one-time binding guards, but this lets pages
+  // refresh data/config after settings changes or background writes.
+  if (currentPage !== pageId || pageId === 'ai' || pageId === 'todo' || pageId === 'files') {
     pageInits.get(pageId)?.();
   }
 

@@ -19,6 +19,7 @@ import '../pages/settings/index';
 export const aiStats = { tokens: 0, requests: 0 };
 
 async function initApp(): Promise<void> {
+  installElectronDialogSafetyGuards();
   initTheme();
   bindTitleBarEvents();
   bindNavEvents();
@@ -30,6 +31,21 @@ async function initApp(): Promise<void> {
   initializeActivePage();
   initSidebarCollapse();
   console.log('[App] \u521D\u59CB\u5316\u5B8C\u6210');
+}
+
+
+function installElectronDialogSafetyGuards(): void {
+  // Electron 35+ does not support the native browser prompt dialog in renderer.
+  // Older cached bundles or third-party snippets may still call window.prompt();
+  // prevent the whole AI action from crashing with "prompt() is not supported".
+  try {
+    window.prompt = ((message?: string, defaultValue?: string) => {
+      console.warn('[Nova] Native prompt is disabled in Electron. Message:', message || '');
+      return defaultValue || '';
+    }) as typeof window.prompt;
+  } catch {
+    // Ignore read-only environments.
+  }
 }
 
 function setGreeting(): void {

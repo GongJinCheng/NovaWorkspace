@@ -510,6 +510,11 @@ async function initFilesPage(): Promise<void> {
   (window as any).__filesStore = store;
   (window as any).__openWorkspaceRoot = openWorkspaceRoot;
   (window as any).__chooseWorkspaceFolder = chooseAndOpenWorkspace;
+  (window as any).__openFilePath = async (filePath: string) => {
+    if (!editorManager) return;
+    await editorManager.openPath(filePath);
+  };
+  (window as any).__getActiveFileSnapshot = () => editorManager?.getActiveFileSnapshot?.() || null;
 
   fileTree.onFileSelect = (filePath, fileName) => {
     editorManager?.openFile(filePath, fileName);

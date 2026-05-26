@@ -969,3 +969,26 @@
   color: var(--accent-hover);
   font-weight: 600;
 }
+
+.markdown-tool-btn.primary {
+  color: var(--accent);
+  background: var(--accent-soft);
+  border-color: color-mix(in srgb, var(--accent) 35%, transparent);
+}
+
+.markdown-ai-insert-btn,
+.markdown-ai-todo-btn {
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font: inherit;
+  cursor: pointer;
+}
+
+.markdown-ai-insert-btn:hover,
+.markdown-ai-todo-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}

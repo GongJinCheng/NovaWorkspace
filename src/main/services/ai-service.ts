@@ -99,7 +99,8 @@ export async function chatStream(request: AIChatRequest, callbacks: StreamCallba
 
         try {
           const parsed = JSON.parse(payload);
-          const content = parsed.choices?.[0]?.delta?.content ?? parsed.choices?.[0]?.message?.content;
+          const delta = parsed.choices?.[0]?.delta;
+          const content = delta?.content ?? delta?.reasoning_content ?? parsed.choices?.[0]?.message?.content;
           if (content) {
             fullText += content;
             callbacks.onChunk(content);
@@ -196,7 +197,15 @@ function buildHeaders(provider: AIProviderConfig): Record<string, string> {
 }
 
 function buildUrl(baseUrl: string, pathname: string): string {
-  return `${baseUrl.replace(/\/+$/, '')}${pathname}`;
+  const normalizedPath = pathname.startsWith('/') ? pathname : `/${pathname}`;
+  let url = baseUrl.trim().replace(/\/+$/, '');
+
+  // 很多国内中转平台会把完整 endpoint 直接给用户，例如：
+  // https://example.com/v1/chat/completions
+  // 这里统一还原成 base URL，避免拼成 /chat/completions/chat/completions。
+  url = url.replace(/\/(chat\/completions|models)$/i, '');
+
+  return `${url}${normalizedPath}`;
 }
 
 function ensureProviderReady(provider: AIProviderConfig, requireModel = true): void {

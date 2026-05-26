@@ -1231,3 +1231,30 @@
   background: #6366f1;
   color: white;
 }
+.todo-source-field {
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-elevated);
+  border-radius: 12px;
+  padding: 12px;
+}
+
+.todo-source-link {
+  border: 0;
+  background: transparent;
+  color: var(--accent);
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0;
+  text-align: left;
+}
+
+.todo-source-link:hover {
+  text-decoration: underline;
+}
+
+.todo-source-path {
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--text-tertiary);
+  word-break: break-all;
+}

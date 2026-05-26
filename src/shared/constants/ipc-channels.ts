@@ -18,6 +18,7 @@ export const IPC_CHANNELS = {
     RENAME_ITEM: 'fs:rename-item',
     GET_HOME: 'fs:get-home-dir',
     SHOW_OPEN_DIALOG: 'fs:show-open-dialog',
+    CREATE_SAMPLE_WORKSPACE: 'fs:create-sample-workspace',
   },
   TODO: {
     LOAD: 'todo:load',

@@ -25,6 +25,14 @@ export interface TodoTask {
   reminded: boolean;
   createdAt: string;
   completedAt?: string;
+  /** 任务来源：手动、AI 或文档 */
+  sourceType?: 'manual' | 'ai' | 'document';
+  /** 来源文档路径 */
+  sourceFilePath?: string;
+  /** 来源显示标题 */
+  sourceTitle?: string;
+  /** 来源行号，后续用于精准定位 */
+  sourceLine?: number;
 }
 
 /** 待办分类 */

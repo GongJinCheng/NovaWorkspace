@@ -25,17 +25,21 @@ class AIService {
 
   constructor() {
     this.readyPromise = this.reloadConfig();
+    const refresh = () => { this.readyPromise = this.reloadConfig({ silent: true }); };
+    window.addEventListener('nova:ai-settings-changed', refresh);
+    window.addEventListener('nova:ai-settings-updated', refresh);
   }
 
   async ready(): Promise<void> {
     await this.readyPromise;
   }
 
-  async reloadConfig(): Promise<void> {
+  async reloadConfig(options: { silent?: boolean } = {}): Promise<void> {
     try {
       this.settings = await window.electronAPI.ai.getSettings();
       await this.migrateLegacyLocalStorageIfNeeded();
       this.activeProvider = this.getDefaultProviderFromSettings();
+      if (!options.silent) this.notifySettingsChanged();
     } catch (error) {
       aiLog.error('Failed to load AI settings: ' + (error instanceof Error ? error.message : String(error)));
       this.settings = null;
@@ -45,8 +49,9 @@ class AIService {
 
 
   async getSettings(): Promise<AISettings> {
-    await this.ready();
-    return this.settings || await window.electronAPI.ai.getSettings();
+    this.settings = await window.electronAPI.ai.getSettings();
+    this.activeProvider = this.getDefaultProviderFromSettings();
+    return this.settings;
   }
 
   getActiveProvider(): AIProviderConfig | null {
@@ -118,7 +123,7 @@ class AIService {
     messages: ChatMessage[],
     options: { model?: string; temperature?: number; max_tokens?: number; signal?: AbortSignal; timeout?: number } = {}
   ): Promise<string> {
-    await this.ready();
+    await this.reloadConfig({ silent: true });
     if (!this.isConfigured()) throw new Error('请先配置 AI API Key');
 
     aiLog.debug('Starting chat request through main process');
@@ -140,26 +145,40 @@ class AIService {
     options: { model?: string; temperature?: number; max_tokens?: number } = {},
     onChunk: (text: string) => void
   ): Promise<string> {
-    await this.ready();
+    await this.reloadConfig({ silent: true });
     if (!this.isConfigured()) throw new Error('请先配置 AI API Key');
 
-    return await new Promise((resolve, reject) => {
-      window.electronAPI.ai.chatStream(
-        {
-          providerId: this.getProviderId(),
-          model: options.model || this.getModel(),
-          messages,
-          temperature: options.temperature ?? 0.7,
-          max_tokens: options.max_tokens ?? 4096,
-          stream: true,
-        },
-        {
-          onChunk,
-          onDone: resolve,
-          onError: (message) => reject(new Error(message)),
-        }
-      );
-    });
+    try {
+      return await new Promise((resolve, reject) => {
+        window.electronAPI.ai.chatStream(
+          {
+            providerId: this.getProviderId(),
+            model: options.model || this.getModel(),
+            messages,
+            temperature: options.temperature ?? 0.7,
+            max_tokens: options.max_tokens ?? 4096,
+            stream: true,
+          },
+          {
+            onChunk,
+            onDone: resolve,
+            onError: (message) => reject(new Error(message)),
+          }
+        );
+      });
+    } catch (error) {
+      // 部分国产 OpenAI-compatible 中转不支持 stream，或 SSE 格式不完全兼容。
+      // 聊天页不要直接失败，自动降级为普通非流式请求。
+      aiLog.warn('Stream failed, falling back to non-stream chat: ' + (error instanceof Error ? error.message : String(error)));
+      const text = await this.chat(messages, {
+        model: options.model,
+        temperature: options.temperature,
+        max_tokens: options.max_tokens,
+        timeout: 60000,
+      });
+      onChunk(text);
+      return text;
+    }
   }
 
   async formatMarkdown(content: string, signal?: AbortSignal): Promise<string> {
@@ -208,14 +227,14 @@ class AIService {
   }
 
   async fetchModels(): Promise<string[]> {
-    await this.ready();
+    await this.reloadConfig({ silent: true });
     if (!this.activeProvider?.baseUrl) throw new Error('请先填写 Base URL');
     if (this.activeProvider.type !== 'ollama' && !this.activeProvider.apiKey) throw new Error('请先填写 API Key');
     return await window.electronAPI.ai.fetchModels(this.activeProvider.id);
   }
 
   async testConnection(): Promise<string> {
-    await this.ready();
+    await this.reloadConfig({ silent: true });
     const result = await window.electronAPI.ai.testConnection(this.activeProvider?.id);
     if (!result.ok) throw new Error(result.message);
     return result.message;
@@ -264,6 +283,12 @@ class AIService {
       createdAt: now,
       updatedAt: now,
     };
+  }
+
+  private notifySettingsChanged(): void {
+    const detail = this.getActiveProvider();
+    window.dispatchEvent(new CustomEvent('nova:ai-settings-updated', { detail }));
+    window.dispatchEvent(new CustomEvent('nova:ai-settings-changed', { detail }));
   }
 
   private clearLegacyLocalStorage(): void {

@@ -8,6 +8,7 @@ import { ipcClient } from '../../services/ipc-client';
 import { aiService } from '../ai/ai-service';
 import type { FilesStore } from './files-store';
 import { isMarkdownFile, renderMarkdownToHtml } from './markdown-preview';
+import { showInputPrompt } from '../../components/modal';
 
 
 interface MonacoEditor {
@@ -137,7 +138,10 @@ export class EditorManager {
     this.markdownPreview = null;
     this.markdownToolbar = null;
 
-    this.monaco.editor.defineTheme('custom-dark', {
+    const monaco = this.monaco;
+    if (!monaco) return;
+
+    monaco.editor.defineTheme('custom-dark', {
       base: 'vs-dark',
       inherit: true,
       rules: [],
@@ -158,7 +162,7 @@ export class EditorManager {
       },
     });
 
-    this.monaco.editor.defineTheme('custom-light', {
+    monaco.editor.defineTheme('custom-light', {
       base: 'vs',
       inherit: true,
       rules: [],
@@ -192,6 +196,8 @@ export class EditorManager {
           '<button class="markdown-tool-btn" data-md-action="summary">AI 总结</button>' +
           '<button class="markdown-tool-btn" data-md-action="outline">生成大纲</button>' +
           '<button class="markdown-tool-btn" data-md-action="rewrite">改写选中</button>' +
+          '<button class="markdown-tool-btn" data-md-action="askdoc">问当前文档</button>' +
+          '<button class="markdown-tool-btn primary" data-md-action="todo">生成待办</button>' +
         '</div>' +
       '</div>' +
       '<div class="markdown-workspace">' +
@@ -204,7 +210,7 @@ export class EditorManager {
     this.markdownToolbar = shell.querySelector('.markdown-toolbar');
     this.bindMarkdownToolbar();
 
-    this.editor = this.monaco.editor.create(this.editorHost || this.container, {
+    this.editor = monaco.editor.create(this.editorHost || this.container, {
       value: '',
       language: 'plaintext',
       theme: this.getCurrentTheme(),
@@ -302,15 +308,16 @@ export class EditorManager {
 
     const tab = this.editors.get(this.activeEditorPath);
     if (!tab) return;
+    await aiService.reloadConfig().catch(() => undefined);
     if (!aiService.isConfigured()) {
-      window.alert('请先在设置页配置 AI 模型');
+      window.alert('请先在设置页配置 AI 模型，并点击“保存配置”。');
       return;
     }
 
     this.markdownAiBusy = true;
     const originalText = button.textContent || '';
     button.disabled = true;
-    button.textContent = action === 'rewrite' ? '改写中...' : action === 'outline' ? '生成中...' : '总结中...';
+    button.textContent = action === 'rewrite' ? '改写中...' : action === 'outline' || action === 'todo' ? '生成中...' : action === 'askdoc' ? '思考中...' : '总结中...';
 
     try {
       if (action === 'rewrite') {
@@ -326,6 +333,29 @@ export class EditorManager {
         return;
       }
 
+      if (action === 'askdoc') {
+        const question = await showInputPrompt('问当前文档', '请输入你想基于当前文档问 AI 的问题', '请总结当前文档，并指出下一步应该做什么');
+        if (!question?.trim()) return;
+        const result = await aiService.chat([
+          { role: 'system', content: '你正在帮助用户处理当前 Markdown 文档。请基于文档内容回答，不要编造文档中不存在的信息。用中文输出。' },
+          { role: 'user', content: `文件路径：${tab.filePath}
+
+文档内容：
+${content}
+
+用户问题：${question}` },
+        ], { temperature: 0.4 });
+        this.showMarkdownAiResult('当前文档问答', result, tab);
+        button.textContent = '完成';
+        return;
+      }
+
+      if (action === 'todo') {
+        await this.generateTodosFromMarkdown(tab);
+        button.textContent = '已生成';
+        return;
+      }
+
       const result = action === 'outline'
         ? await aiService.chat([
             { role: 'system', content: '为下面的 Markdown 文档生成一份结构清晰的中文大纲。只输出大纲。' },
@@ -333,7 +363,7 @@ export class EditorManager {
           ], { temperature: 0.4 })
         : await aiService.summarize(content);
 
-      this.showMarkdownAiResult(action === 'outline' ? 'Markdown 大纲' : 'Markdown 总结', result);
+      this.showMarkdownAiResult(action === 'outline' ? 'Markdown 大纲' : 'Markdown 总结', result, tab);
       button.textContent = '完成';
     } catch (error) {
       console.error('[EditorManager] Markdown AI action failed:', error);
@@ -371,7 +401,7 @@ export class EditorManager {
     this.store?.markDirty(tab.filePath);
   }
 
-  private showMarkdownAiResult(title: string, content: string): void {
+  private showMarkdownAiResult(title: string, content: string, tab?: EditorTab): void {
     let modal = document.querySelector('.markdown-ai-modal') as HTMLElement | null;
     if (!modal) {
       modal = document.createElement('div');
@@ -385,6 +415,8 @@ export class EditorManager {
           '<pre class="markdown-ai-modal-content"></pre>' +
           '<div class="markdown-ai-modal-actions">' +
             '<button class="markdown-ai-copy-btn">复制结果</button>' +
+            '<button class="markdown-ai-insert-btn">插入到当前文档</button>' +
+            '<button class="markdown-ai-todo-btn">生成待办</button>' +
           '</div>' +
         '</div>';
       document.body.appendChild(modal);
@@ -392,23 +424,140 @@ export class EditorManager {
       modal.addEventListener('click', (event) => {
         if (event.target === modal) modal?.remove();
       });
-      modal.querySelector('.markdown-ai-copy-btn')?.addEventListener('click', async () => {
-        const text = (modal?.querySelector('.markdown-ai-modal-content') as HTMLElement | null)?.textContent || '';
-        await navigator.clipboard?.writeText(text);
-      });
     }
 
     const titleEl = modal.querySelector('h3');
     const contentEl = modal.querySelector('.markdown-ai-modal-content') as HTMLElement | null;
     if (titleEl) titleEl.textContent = title;
     if (contentEl) contentEl.textContent = content;
+
+    const getText = () => (modal?.querySelector('.markdown-ai-modal-content') as HTMLElement | null)?.textContent || '';
+    const copyBtn = modal.querySelector('.markdown-ai-copy-btn') as HTMLButtonElement | null;
+    const insertBtn = modal.querySelector('.markdown-ai-insert-btn') as HTMLButtonElement | null;
+    const todoBtn = modal.querySelector('.markdown-ai-todo-btn') as HTMLButtonElement | null;
+
+    if (copyBtn) copyBtn.onclick = async () => { await navigator.clipboard?.writeText(getText()); copyBtn.textContent = '已复制'; setTimeout(() => copyBtn.textContent = '复制结果', 900); };
+    if (insertBtn) insertBtn.onclick = () => {
+      const current = tab || (this.activeEditorPath ? this.editors.get(this.activeEditorPath) : undefined);
+      if (!current || !this.editor) return;
+      const position = this.editor.getPosition();
+      const line = position?.lineNumber || current.model.getFullModelRange().endLineNumber;
+      const column = position?.column || 1;
+      current.model.pushEditOperations([], [{ range: { startLineNumber: line, startColumn: column, endLineNumber: line, endColumn: column }, text: '\n\n' + getText() + '\n' }], () => null);
+      this.pinTab(current.filePath);
+      this.store?.markDirty(current.filePath);
+      this.scheduleMarkdownPreviewUpdate();
+      insertBtn.textContent = '已插入';
+      setTimeout(() => insertBtn.textContent = '插入到当前文档', 900);
+    };
+    if (todoBtn) todoBtn.onclick = async () => {
+      const current = tab || (this.activeEditorPath ? this.editors.get(this.activeEditorPath) : undefined);
+      await this.createTodosFromText(getText(), current);
+    };
+
     modal.classList.add('show');
+  }
+
+  private async generateTodosFromMarkdown(tab: EditorTab): Promise<void> {
+    await this.createTodosFromText(tab.model.getValue(), tab, true);
+  }
+
+  private async createTodosFromText(content: string, tab?: EditorTab, useAi = false): Promise<void> {
+    const sourceText = content.trim();
+    if (!sourceText) {
+      window.alert('没有可生成待办的内容');
+      return;
+    }
+
+    let tasks = useAi ? [] : this.parseTodoCandidates(sourceText);
+    if (useAi || tasks.length === 0) {
+      await aiService.reloadConfig().catch(() => undefined);
+      if (!aiService.isConfigured()) {
+        window.alert('请先在设置页配置 AI 模型，并点击“保存配置”。');
+        return;
+      }
+      const raw = await aiService.chat([
+        { role: 'system', content: '请从用户提供的内容中提取可执行任务。只输出 JSON 数组，不要解释。每项包含 title、description、priority。priority 只能是 low、medium、high、urgent。' },
+        { role: 'user', content: sourceText },
+      ], { temperature: 0.2 });
+      tasks = this.parseJsonTasks(raw);
+    }
+
+    if (tasks.length === 0) {
+      window.alert('没有识别到可创建的待办');
+      return;
+    }
+
+    const preview = tasks.slice(0, 8).map((task, index) => `${index + 1}. ${task.title}`).join('\n');
+    if (!window.confirm(`将创建 ${tasks.length} 个待办：\n\n${preview}${tasks.length > 8 ? '\n...' : ''}\n\n确认创建吗？`)) return;
+
+    const created = [];
+    for (const task of tasks) {
+      const createdTask = await ipcClient.todo.addTask({
+        title: task.title.slice(0, 80),
+        description: task.description || '',
+        priority: task.priority || 'medium',
+        categoryId: '',
+        dueDate: '',
+        subtasks: [],
+        reminded: false,
+        sourceType: tab ? 'document' : 'ai',
+        sourceFilePath: tab?.filePath,
+        sourceTitle: tab?.fileName,
+      });
+      created.push(createdTask);
+    }
+
+    window.dispatchEvent(new CustomEvent('nova:todo-data-changed', { detail: { count: created.length } }));
+    window.alert(`已创建 ${created.length} 个待办。现在可以到“待办中心”查看。`);
+  }
+
+  private parseTodoCandidates(text: string): Array<{ title: string; description: string; priority: 'low' | 'medium' | 'high' | 'urgent' }> {
+    return text.split(/\r?\n/)
+      .map(line => line.trim().replace(/^[-*]\s+\[[ xX]\]\s*/, '').replace(/^[-*]\s+/, '').replace(/^\d+[.)]\s*/, ''))
+      .filter(line => line.length >= 3 && line.length <= 120)
+      .slice(0, 12)
+      .map(title => ({ title, description: '', priority: 'medium' }));
+  }
+
+  private parseJsonTasks(raw: string): Array<{ title: string; description: string; priority: 'low' | 'medium' | 'high' | 'urgent' }> {
+    const cleaned = raw.replace(/```json|```/g, '').trim();
+    const start = cleaned.indexOf('[');
+    const end = cleaned.lastIndexOf(']');
+    if (start === -1 || end === -1 || end <= start) return this.parseTodoCandidates(raw);
+    try {
+      const parsed = JSON.parse(cleaned.slice(start, end + 1));
+      if (!Array.isArray(parsed)) return [];
+      return parsed.map((item) => ({
+        title: String(item.title || '').trim(),
+        description: String(item.description || '').trim(),
+        priority: ['low', 'medium', 'high', 'urgent'].includes(item.priority) ? item.priority : 'medium',
+      })).filter(item => item.title).slice(0, 20);
+    } catch {
+      return this.parseTodoCandidates(raw);
+    }
   }
 
   private getCurrentTheme(): string {
     return document.documentElement.getAttribute('data-theme') === 'dark'
       ? 'custom-dark'
       : 'custom-light';
+  }
+
+
+  getActiveFileSnapshot(): { filePath: string; fileName: string; content: string; selection?: string } | null {
+    if (!this.activeEditorPath) return null;
+    const tab = this.editors.get(this.activeEditorPath);
+    if (!tab) return null;
+    const selection = this.editor?.getSelection();
+    const selected = selection ? tab.model.getValueInRange(selection) : '';
+    return { filePath: tab.filePath, fileName: tab.fileName, content: tab.model.getValue(), selection: selected || undefined };
+  }
+
+  async openPath(filePath: string): Promise<void> {
+    const fileName = filePath.split(/[/\\]/).pop() || filePath;
+    await this.openFile(filePath, fileName);
+    this.pinTab(filePath);
   }
 
   async openFile(filePath: string, fileName: string): Promise<void> {
@@ -428,9 +577,11 @@ export class EditorManager {
         return;
       }
 
+      const monaco = this.monaco;
+      if (!monaco) return;
       const content = await ipcClient.fs.readFile(filePath);
       const language = this.detectLanguage(fileName);
-      const model = this.monaco.editor.createModel(content, language);
+      const model = monaco.editor.createModel(content, language);
 
       // Check if we can replace the current preview tab
       const previewTab = this.previewPath ? this.editors.get(this.previewPath) : null;

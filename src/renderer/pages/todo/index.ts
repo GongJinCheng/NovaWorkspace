@@ -26,7 +26,7 @@ import { renderTaskList } from './task-list';
 import { renderCommandBar } from './dashboard';
 import { renderCategories, initCategoryToolbar } from './categories';
 import { startReminderCheck } from './reminders';
-import { registerPageInit } from '../../app/router';
+import { registerPageInit, switchPage } from '../../app/router';
 import { measure, measureAsync } from '../../utils/performance';
 import type { TodoTask } from '@shared/types/todo';
 
@@ -34,7 +34,10 @@ let initialized = false;
 let refreshTimer: ReturnType<typeof setTimeout> | null = null;
 
 async function initTodoPage(): Promise<void> {
-  if (initialized) return;
+  if (initialized) {
+    await refreshAll();
+    return;
+  }
   initialized = true;
 
   await loadData();
@@ -45,6 +48,10 @@ async function initTodoPage(): Promise<void> {
   bindFilterEvents();
   bindViewControls();
   startReminderCheck();
+
+  window.addEventListener('nova:todo-data-changed', () => {
+    void refreshAll();
+  });
 
   // Bind details drawer close trigger
   document.getElementById('todo-drawer-close')?.addEventListener('click', () => {
@@ -272,6 +279,17 @@ function renderDrawerContent(): void {
   bindDrawerEvents(task.id);
 }
 
+
+function renderTaskSource(task: TodoTask): string {
+  if (!task.sourceFilePath) return '';
+  const title = task.sourceTitle || task.sourceFilePath.split(/[/\\]/).pop() || '来源文档';
+  return '<div class="todo-drawer-field todo-source-field">' +
+    '<span class="todo-drawer-field-label">来源</span>' +
+    '<button class="todo-source-link" id="drawer-open-source" title="打开来源文档">' + esc(title) + '</button>' +
+    '<div class="todo-source-path">' + esc(task.sourceFilePath) + '</div>' +
+  '</div>';
+}
+
 function renderDrawerSubtasks(task: TodoTask): string {
   if (!task.subtasks || task.subtasks.length === 0) return '<div class="todo-drawer-subtask-empty">\u6682\u65E0\u5B50\u4EFB\u52A1</div>';
   return task.subtasks.map(sub =>
@@ -293,6 +311,7 @@ function bindDrawerEvents(taskId: string): void {
   const catSelect = document.getElementById('drawer-task-cat') as HTMLSelectElement;
   const priSelect = document.getElementById('drawer-task-pri') as HTMLSelectElement;
   const dueInput = document.getElementById('drawer-task-due') as HTMLInputElement;
+  const sourceBtn = document.getElementById('drawer-open-source') as HTMLButtonElement | null;
 
   const saveUpdates = async (updates: Partial<TodoTask>) => {
     const previous = getTaskById(taskId);
@@ -310,6 +329,19 @@ function bindDrawerEvents(taskId: string): void {
       await refreshAll();
     }
   };
+
+
+  sourceBtn?.addEventListener('click', () => {
+    const task = getTaskById(taskId);
+    if (!task?.sourceFilePath) return;
+    switchPage('files');
+    setTimeout(() => {
+      const openFilePath = (window as any).__openFilePath;
+      if (typeof openFilePath === 'function') {
+        void openFilePath(task.sourceFilePath);
+      }
+    }, 250);
+  });
 
   titleInput?.addEventListener('blur', () => {
     const val = titleInput.value.trim();

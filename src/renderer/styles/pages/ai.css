@@ -706,3 +706,13 @@
 @keyframes ai-blink {
   50% { opacity: 0; }
 }
+.ai-current-provider {
+  margin: 0 0 12px 0;
+  padding: 8px 10px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  background: var(--bg-soft);
+  word-break: break-all;
+}
