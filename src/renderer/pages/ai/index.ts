@@ -47,7 +47,7 @@ async function sendMessage(text: string): Promise<void> {
   if (!text.trim() || isGenerating) return;
   await aiService.reloadConfig().catch(() => undefined);
   if (!aiService.isConfigured()) {
-    appendMessage('system', '请先在右侧或设置页配置 AI 模型，并点击“保存配置”。');
+    appendMessage('system', '请先在右侧或设置页配置 AI 模型，并点击“保存配置”。配置完成后回到这里会自动刷新。');
     return;
   }
 
@@ -74,7 +74,7 @@ async function sendMessage(text: string): Promise<void> {
     };
     const messages = [systemMsg, ...chatHistory];
 
-    const result = await aiService.chatStream(messages, { temperature: 0.7 }, (chunk) => {
+    const result = await aiService.chatStream(messages, { temperature: 0.7, timeout: 60000 }, (chunk) => {
       bubble.textContent += chunk;
       if (container) container.scrollTop = container.scrollHeight;
     });
@@ -86,7 +86,7 @@ async function sendMessage(text: string): Promise<void> {
     bubble.classList.remove('streaming');
     const errMsg = err instanceof Error ? err.message : String(err);
     bubble.textContent = '';
-    appendMessage('system', '请求失败: ' + errMsg);
+    appendMessage('system', '请求失败：' + formatFriendlyAiError(errMsg));
   } finally {
     isGenerating = false;
     updateSendButton();
@@ -227,7 +227,7 @@ async function testAIConnection(): Promise<void> {
     const result = await aiService.testConnection();
     showMsg('连接成功: ' + result.slice(0, 50), 'success');
   } catch (err) {
-    showMsg('连接失败: ' + (err instanceof Error ? err.message : String(err)), 'error');
+    showMsg('连接失败：' + formatFriendlyAiError(err), 'error');
   } finally {
     if (btn) { btn.disabled = false; btn.textContent = original; }
   }
@@ -272,7 +272,7 @@ async function fetchModels(): Promise<void> {
       await loadAIConfig();
     }
   } catch (err) {
-    showMsg('获取模型失败: ' + (err instanceof Error ? err.message : String(err)), 'error');
+    showMsg('获取模型失败：' + formatFriendlyAiError(err), 'error');
   } finally {
     if (btn) { btn.disabled = false; btn.textContent = original; }
   }
@@ -350,7 +350,7 @@ async function handleAIAction(action: string): Promise<void> {
       toolbarBtn.classList.add('success');
     }
   } catch (err) {
-    showMsg('AI 操作失败: ' + (err instanceof Error ? err.message : String(err)), 'error');
+    showMsg('AI 操作失败：' + formatFriendlyAiError(err), 'error');
   } finally {
     activeToolAction = null;
     scheduleToolButtonReset(toolbarBtn, originalHTML);
@@ -453,6 +453,16 @@ function incrementAIStats(tokens: number): void {
   aiStats.requests += 1;
   persistStats();
   updateStatsDisplay();
+}
+
+function formatFriendlyAiError(error: unknown): string {
+  const message = error instanceof Error ? error.message : String(error || '');
+  if (/timeout|超时|AbortError/i.test(message)) return '请求超时了。模型或中转服务可能响应较慢，请稍后重试。';
+  if (/401|unauthorized|api key|apikey|密钥|鉴权/i.test(message)) return 'API Key 可能不正确或没有权限，请重新保存配置。';
+  if (/404|model|模型/i.test(message)) return '模型名称可能不存在，请检查默认模型。';
+  if (/network|fetch failed|ENOTFOUND|ECONNREFUSED|Failed to fetch/i.test(message)) return '网络连接失败，请检查 Base URL 是否可访问。';
+  if (/余额|quota|insufficient|credit/i.test(message)) return '账号额度可能不足，请检查服务商余额或套餐。';
+  return message || '未知错误，请检查 AI 配置。';
 }
 
 function showMsg(text: string, type: string = 'info'): void {

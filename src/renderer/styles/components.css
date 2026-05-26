@@ -521,3 +521,50 @@
   background: var(--red);
   color: #fff;
 }
+.modal-message {
+  line-height: 1.65;
+  white-space: normal;
+}
+
+.modal-task-preview-list {
+  max-height: 360px;
+  overflow: auto;
+  display: grid;
+  gap: 10px;
+  padding-right: 4px;
+}
+
+.modal-task-preview-item {
+  padding: 12px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  background: var(--bg-elevated);
+}
+
+.modal-task-preview-title {
+  display: flex;
+  gap: 8px;
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 650;
+  line-height: 1.45;
+}
+
+.modal-task-preview-title span {
+  color: var(--accent);
+  flex-shrink: 0;
+}
+
+.modal-task-preview-desc {
+  margin-top: 6px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.modal-task-preview-priority,
+.modal-task-preview-more {
+  margin-top: 8px;
+  color: var(--text-tertiary);
+  font-size: 11px;
+}

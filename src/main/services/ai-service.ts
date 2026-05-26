@@ -59,13 +59,19 @@ export async function chatStream(request: AIChatRequest, callbacks: StreamCallba
   ensureProviderReady(provider);
 
   let fullText = '';
+  const timeout = request.timeout ?? DEFAULT_TIMEOUT * 2;
+  const controller = new AbortController();
+  const timer = timeout > 0 ? setTimeout(() => controller.abort(), timeout) : null;
+  if (signal) {
+    signal.addEventListener('abort', () => controller.abort(), { once: true });
+  }
 
   try {
     const response = await fetch(buildUrl(provider.baseUrl, '/chat/completions'), {
       method: 'POST',
       headers: buildHeaders(provider),
       body: JSON.stringify(buildChatBody(provider, request, true)),
-      signal,
+      signal: controller.signal,
     });
 
     await assertOk(response, 'AI 流式请求失败');
@@ -114,10 +120,12 @@ export async function chatStream(request: AIChatRequest, callbacks: StreamCallba
     callbacks.onDone(fullText);
   } catch (error: any) {
     if (error?.name === 'AbortError') {
-      callbacks.onError(new Error('请求已取消'));
+      callbacks.onError(new Error(signal?.aborted ? '请求已取消' : '请求超时'));
       return;
     }
     callbacks.onError(error instanceof Error ? error : new Error(String(error)));
+  } finally {
+    if (timer) clearTimeout(timer);
   }
 }
 

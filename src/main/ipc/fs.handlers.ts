@@ -4,6 +4,28 @@ import path from 'path';
 import { IPC_CHANNELS } from '@shared/constants/ipc-channels';
 import { getMainWindow } from '../windows/main-window';
 
+
+function normalizePathForCompare(value: string): string {
+  return path.resolve(value).replace(/\\/g, '/').toLowerCase();
+}
+
+function ensureInsideWorkspace(workspaceRoot: string, targetPath: string): void {
+  const root = normalizePathForCompare(workspaceRoot);
+  const target = normalizePathForCompare(targetPath);
+  if (target !== root && !target.startsWith(root + '/')) {
+    throw new Error('目标文件不在当前工作区内');
+  }
+}
+
+function safeHistoryName(filePath: string, workspaceRoot: string): string {
+  const relative = path.relative(workspaceRoot, filePath) || path.basename(filePath);
+  return relative.replace(/[\\/:*?"<>|]+/g, '__').replace(/\s+/g, '_');
+}
+
+function timestampForFileName(date = new Date()): string {
+  return date.toISOString().replace(/[:.]/g, '-');
+}
+
 export function registerFsHandlers(): void {
   ipcMain.handle(IPC_CHANNELS.FS.READ_DIR, async (_event, dirPath: string) => {
     try {
@@ -151,6 +173,186 @@ export function registerFsHandlers(): void {
     } catch (error: unknown) {
       const msg = error instanceof Error ? error.message : String(error);
       throw new Error('无法创建示例工作区: ' + msg);
+    }
+  });
+
+  ipcMain.handle(IPC_CHANNELS.FS.GET_RECENT_MARKDOWN, async (_event, rootPaths?: string[]) => {
+    const roots = Array.from(new Set((rootPaths || []).filter((item): item is string => typeof item === 'string' && item.trim().length > 0)));
+    const results: Array<{ name: string; path: string; workspacePath: string; workspaceName: string; modifiedAt: string; size: number }> = [];
+    const ignored = new Set(['node_modules', '.git', '.nova', 'dist', 'release', 'build', 'out', '.next', '.cache']);
+
+    async function walk(rootPath: string, dirPath: string, depth: number): Promise<void> {
+      if (depth > 4 || results.length > 200) return;
+      let entries: Array<{ name: string; isDirectory(): boolean; isFile(): boolean }>;
+      try {
+        entries = await fs.readdir(dirPath, { withFileTypes: true });
+      } catch {
+        return;
+      }
+
+      for (const entry of entries) {
+        if (results.length > 200) return;
+        if (ignored.has(entry.name)) continue;
+        const itemPath = path.join(dirPath, entry.name);
+        if (entry.isDirectory()) {
+          await walk(rootPath, itemPath, depth + 1);
+          continue;
+        }
+        if (!entry.isFile() || !entry.name.toLowerCase().endsWith('.md')) continue;
+        try {
+          const stat = await fs.stat(itemPath);
+          results.push({
+            name: entry.name,
+            path: itemPath,
+            workspacePath: rootPath,
+            workspaceName: path.basename(rootPath) || rootPath,
+            modifiedAt: stat.mtime.toISOString(),
+            size: stat.size,
+          });
+        } catch {
+          // ignore inaccessible files
+        }
+      }
+    }
+
+    for (const rootPath of roots.slice(0, 6)) {
+      await walk(rootPath, rootPath, 0);
+    }
+
+    return results
+      .sort((a, b) => new Date(b.modifiedAt).getTime() - new Date(a.modifiedAt).getTime())
+      .slice(0, 8);
+  });
+
+
+
+  ipcMain.handle(IPC_CHANNELS.FS.CREATE_BACKUP, async (_event, input: { workspaceRoot: string; filePath: string; content: string; reason?: string }) => {
+    try {
+      const workspaceRoot = path.resolve(input.workspaceRoot);
+      const filePath = path.resolve(input.filePath);
+      ensureInsideWorkspace(workspaceRoot, filePath);
+
+      const now = new Date();
+      const id = `${timestampForFileName(now)}-${Math.random().toString(36).slice(2, 8)}`;
+      const historyDir = path.join(workspaceRoot, '.nova', 'history');
+      await fs.mkdir(historyDir, { recursive: true });
+
+      const safeName = safeHistoryName(filePath, workspaceRoot);
+      const backupPath = path.join(historyDir, `${safeName}.${id}.bak`);
+      const metadataPath = `${backupPath}.json`;
+      const content = typeof input.content === 'string' ? input.content : '';
+      await fs.writeFile(backupPath, content, 'utf-8');
+
+      const stat = await fs.stat(backupPath);
+      const entry = {
+        id,
+        filePath,
+        fileName: path.basename(filePath),
+        backupPath,
+        reason: input.reason || '手动保存版本',
+        createdAt: now.toISOString(),
+        size: stat.size,
+      };
+      await fs.writeFile(metadataPath, JSON.stringify(entry, null, 2), 'utf-8');
+      return entry;
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : String(error);
+      throw new Error('无法创建版本备份: ' + msg);
+    }
+  });
+
+  ipcMain.handle(IPC_CHANNELS.FS.LIST_BACKUPS, async (_event, input: { workspaceRoot: string; filePath: string }) => {
+    try {
+      const workspaceRoot = path.resolve(input.workspaceRoot);
+      const filePath = path.resolve(input.filePath);
+      ensureInsideWorkspace(workspaceRoot, filePath);
+      const historyDir = path.join(workspaceRoot, '.nova', 'history');
+      let entries: string[] = [];
+      try {
+        entries = await fs.readdir(historyDir);
+      } catch {
+        return [];
+      }
+
+      const result: Array<{ id: string; filePath: string; fileName: string; backupPath: string; reason: string; createdAt: string; size: number }> = [];
+      for (const name of entries) {
+        if (!name.endsWith('.json')) continue;
+        const metadataPath = path.join(historyDir, name);
+        try {
+          const raw = await fs.readFile(metadataPath, 'utf-8');
+          const item = JSON.parse(raw);
+          if (normalizePathForCompare(item.filePath) !== normalizePathForCompare(filePath)) continue;
+          result.push(item);
+        } catch {
+          // ignore broken metadata
+        }
+      }
+      return result.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).slice(0, 50);
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : String(error);
+      throw new Error('无法读取版本历史: ' + msg);
+    }
+  });
+
+
+  ipcMain.handle(IPC_CHANNELS.FS.READ_BACKUP, async (_event, input: { workspaceRoot: string; backupPath: string }) => {
+    try {
+      const workspaceRoot = path.resolve(input.workspaceRoot);
+      const backupPath = path.resolve(input.backupPath);
+      const historyDir = path.join(workspaceRoot, '.nova', 'history');
+      const normalizedHistoryDir = normalizePathForCompare(historyDir);
+      const normalizedBackup = normalizePathForCompare(backupPath);
+      if (!normalizedBackup.startsWith(normalizedHistoryDir + '/')) {
+        throw new Error('备份文件不在版本历史目录内');
+      }
+      const content = await fs.readFile(backupPath, 'utf-8');
+      return { content };
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : String(error);
+      throw new Error('无法读取版本内容: ' + msg);
+    }
+  });
+
+  ipcMain.handle(IPC_CHANNELS.FS.DELETE_BACKUP, async (_event, input: { workspaceRoot: string; backupPath: string }) => {
+    try {
+      const workspaceRoot = path.resolve(input.workspaceRoot);
+      const backupPath = path.resolve(input.backupPath);
+      const historyDir = path.join(workspaceRoot, '.nova', 'history');
+      const normalizedHistoryDir = normalizePathForCompare(historyDir);
+      const normalizedBackup = normalizePathForCompare(backupPath);
+      if (!normalizedBackup.startsWith(normalizedHistoryDir + '/')) {
+        throw new Error('备份文件不在版本历史目录内');
+      }
+
+      const metadataPath = `${backupPath}.json`;
+      await fs.rm(backupPath, { force: true });
+      await fs.rm(metadataPath, { force: true });
+      return true;
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : String(error);
+      throw new Error('无法删除历史版本: ' + msg);
+    }
+  });
+
+
+  ipcMain.handle(IPC_CHANNELS.FS.RESTORE_BACKUP, async (_event, input: { workspaceRoot: string; filePath: string; backupPath: string }) => {
+    try {
+      const workspaceRoot = path.resolve(input.workspaceRoot);
+      const filePath = path.resolve(input.filePath);
+      const backupPath = path.resolve(input.backupPath);
+      ensureInsideWorkspace(workspaceRoot, filePath);
+      const historyDir = path.join(workspaceRoot, '.nova', 'history');
+      const normalizedHistoryDir = normalizePathForCompare(historyDir);
+      const normalizedBackup = normalizePathForCompare(backupPath);
+      if (!normalizedBackup.startsWith(normalizedHistoryDir + '/')) {
+        throw new Error('备份文件不在版本历史目录内');
+      }
+      const content = await fs.readFile(backupPath, 'utf-8');
+      await fs.writeFile(filePath, content, 'utf-8');
+      return { content, restoredAt: new Date().toISOString() };
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : String(error);
+      throw new Error('无法恢复版本: ' + msg);
     }
   });
 

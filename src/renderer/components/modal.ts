@@ -129,6 +129,75 @@ export function showInputPrompt(title: string, placeholder: string, defaultValue
   });
 }
 
+
+export function showConfirmDialog(options: {
+  title: string;
+  message: string;
+  confirmText?: string;
+  cancelText?: string;
+  danger?: boolean;
+}): Promise<boolean> {
+  return new Promise((resolve) => {
+    let resolved = false;
+    let overlay: HTMLElement;
+    const done = (value: boolean) => {
+      if (resolved) return;
+      resolved = true;
+      if (overlay) overlay.remove();
+      resolve(value);
+    };
+
+    overlay = showModal({
+      title: options.title,
+      content: '<p class="modal-message">' + esc(options.message).replace(/\n/g, '<br>') + '</p>',
+      actions: [
+        { label: options.cancelText || '取消', type: 'secondary', onClick: () => done(false) },
+        { label: options.confirmText || '确定', type: options.danger ? 'danger' : 'primary', onClick: () => done(true) },
+      ],
+      onClose: () => done(false),
+    });
+  });
+}
+
+export function showTaskConfirmDialog(tasks: Array<{ title: string; description?: string; priority?: string }>): Promise<boolean> {
+  return new Promise((resolve) => {
+    let resolved = false;
+    let overlay: HTMLElement;
+    const done = (value: boolean) => {
+      if (resolved) return;
+      resolved = true;
+      if (overlay) overlay.remove();
+      resolve(value);
+    };
+
+    const priorityLabel: Record<string, string> = {
+      urgent: '紧急',
+      high: '高',
+      medium: '中',
+      low: '低',
+    };
+    const listHtml = tasks.slice(0, 12).map((task, index) =>
+      '<div class="modal-task-preview-item">' +
+        '<div class="modal-task-preview-title"><span>' + (index + 1) + '.</span>' + esc(task.title) + '</div>' +
+        (task.description ? '<div class="modal-task-preview-desc">' + esc(task.description) + '</div>' : '') +
+        '<div class="modal-task-preview-priority">优先级：' + esc(priorityLabel[task.priority || 'medium'] || '中') + '</div>' +
+      '</div>'
+    ).join('');
+
+    overlay = showModal({
+      title: '确认创建待办',
+      content:
+        '<p class="modal-message">AI 已识别出 ' + tasks.length + ' 个待办，请确认后创建。</p>' +
+        '<div class="modal-task-preview-list">' + listHtml + (tasks.length > 12 ? '<div class="modal-task-preview-more">还有 ' + (tasks.length - 12) + ' 个待办未显示</div>' : '') + '</div>',
+      actions: [
+        { label: '取消', type: 'secondary', onClick: () => done(false) },
+        { label: '创建待办', type: 'primary', onClick: () => done(true) },
+      ],
+      onClose: () => done(false),
+    });
+  });
+}
+
 function esc(text: string): string {
   const d = document.createElement('div');
   d.textContent = text;

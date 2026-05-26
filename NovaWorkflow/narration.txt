@@ -1,0 +1,4 @@
+﻿Nova. The AI-powered developer workspace.
+Edit code with Monaco, smart syntax highlighting, multi-tab isolation. Native desktop performance.
+Built-in AI assistant. Analyzes your pipeline bottlenecks, context-aware of your project structure.
+Open source and free. Your next developer workspace is ready.

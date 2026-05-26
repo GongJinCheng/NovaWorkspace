@@ -21,3 +21,24 @@ export interface RecentProject {
   path: string;
   lastOpened: string;
 }
+/** 最近 Markdown 文档 */
+export interface RecentMarkdownFile {
+  name: string;
+  path: string;
+  workspacePath: string;
+  workspaceName: string;
+  modifiedAt: string;
+  size: number;
+}
+
+
+/** Markdown/File backup entry stored under .nova/history */
+export interface FileBackupEntry {
+  id: string;
+  filePath: string;
+  fileName: string;
+  backupPath: string;
+  reason: string;
+  createdAt: string;
+  size: number;
+}

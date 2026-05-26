@@ -265,6 +265,7 @@ function renderDrawerContent(): void {
       '<span class="todo-drawer-field-label">\u622A\u6B62\u65E5\u671F</span>' +
       '<input type="datetime-local" id="drawer-task-due" class="todo-drawer-datetime" value="' + (task.dueDate ? new Date(task.dueDate).toISOString().slice(0, 16) : '') + '" />' +
     '</div>' +
+    renderTaskSource(task) +
     '<div class="todo-drawer-field">' +
       '<span class="todo-drawer-field-label">\u5B50\u4EFB\u52A1</span>' +
       '<div id="drawer-subtasks-list" class="todo-drawer-subtasks">' +

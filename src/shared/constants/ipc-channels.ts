@@ -19,6 +19,12 @@ export const IPC_CHANNELS = {
     GET_HOME: 'fs:get-home-dir',
     SHOW_OPEN_DIALOG: 'fs:show-open-dialog',
     CREATE_SAMPLE_WORKSPACE: 'fs:create-sample-workspace',
+    GET_RECENT_MARKDOWN: 'fs:get-recent-markdown',
+    CREATE_BACKUP: 'fs:create-backup',
+    LIST_BACKUPS: 'fs:list-backups',
+    READ_BACKUP: 'fs:read-backup',
+    RESTORE_BACKUP: 'fs:restore-backup',
+    DELETE_BACKUP: 'fs:delete-backup',
   },
   TODO: {
     LOAD: 'todo:load',

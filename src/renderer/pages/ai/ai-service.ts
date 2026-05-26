@@ -142,7 +142,7 @@ class AIService {
 
   async chatStream(
     messages: ChatMessage[],
-    options: { model?: string; temperature?: number; max_tokens?: number } = {},
+    options: { model?: string; temperature?: number; max_tokens?: number; timeout?: number } = {},
     onChunk: (text: string) => void
   ): Promise<string> {
     await this.reloadConfig({ silent: true });
@@ -158,6 +158,7 @@ class AIService {
             temperature: options.temperature ?? 0.7,
             max_tokens: options.max_tokens ?? 4096,
             stream: true,
+            timeout: options.timeout ?? 60000,
           },
           {
             onChunk,
@@ -174,7 +175,7 @@ class AIService {
         model: options.model,
         temperature: options.temperature,
         max_tokens: options.max_tokens,
-        timeout: 60000,
+        timeout: options.timeout ?? 60000,
       });
       onChunk(text);
       return text;

@@ -2,7 +2,7 @@
  * IPC Client - Type-safe renderer to main communication
  */
 import type { ElectronAPI } from '../../shared/types/ipc';
-import type { FileEntry, DialogResult, RecentProject } from '../../shared/types/file';
+import type { FileEntry, DialogResult, RecentProject, RecentMarkdownFile, FileBackupEntry } from '../../shared/types/file';
 import type { TodoData, TodoTask, TodoCategory, CreateTaskInput, UpdateTaskInput } from '../../shared/types/todo';
 import type { Workspace, WorkspaceSession, OpenWorkspaceInput, SaveWorkspaceSessionInput } from '../../shared/types/workspace';
 import type { AIChatRequest, AIProviderConfig } from '../../shared/types/ai';
@@ -26,6 +26,12 @@ export const ipcClient = {
     getHomeDir: (): Promise<string> => api().fs.getHomeDir(),
     showOpenDialog: (options: Record<string, unknown>): Promise<DialogResult> => api().fs.showOpenDialog(options),
     createSampleWorkspace: (): Promise<string> => api().fs.createSampleWorkspace(),
+    getRecentMarkdown: (rootPaths?: string[]): Promise<RecentMarkdownFile[]> => api().fs.getRecentMarkdown(rootPaths),
+    createBackup: (input: { workspaceRoot: string; filePath: string; content: string; reason?: string }): Promise<FileBackupEntry> => api().fs.createBackup(input),
+    listBackups: (input: { workspaceRoot: string; filePath: string }): Promise<FileBackupEntry[]> => api().fs.listBackups(input),
+    readBackup: (input: { workspaceRoot: string; backupPath: string }): Promise<{ content: string }> => api().fs.readBackup(input),
+    restoreBackup: (input: { workspaceRoot: string; filePath: string; backupPath: string }): Promise<{ content: string; restoredAt: string }> => api().fs.restoreBackup(input),
+    deleteBackup: (input: { workspaceRoot: string; backupPath: string }): Promise<boolean> => api().fs.deleteBackup(input),
   },
   todo: {
     load: (): Promise<TodoData> => api().todo.load(),

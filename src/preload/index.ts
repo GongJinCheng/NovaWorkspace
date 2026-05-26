@@ -24,6 +24,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
     getHomeDir: () => ipcRenderer.invoke(IPC_CHANNELS.FS.GET_HOME),
     showOpenDialog: (options: Record<string, unknown>) => ipcRenderer.invoke(IPC_CHANNELS.FS.SHOW_OPEN_DIALOG, options),
     createSampleWorkspace: () => ipcRenderer.invoke(IPC_CHANNELS.FS.CREATE_SAMPLE_WORKSPACE),
+    getRecentMarkdown: (rootPaths?: string[]) => ipcRenderer.invoke(IPC_CHANNELS.FS.GET_RECENT_MARKDOWN, rootPaths),
+    createBackup: (input: { workspaceRoot: string; filePath: string; content: string; reason?: string }) => ipcRenderer.invoke(IPC_CHANNELS.FS.CREATE_BACKUP, input),
+    listBackups: (input: { workspaceRoot: string; filePath: string }) => ipcRenderer.invoke(IPC_CHANNELS.FS.LIST_BACKUPS, input),
+    readBackup: (input: { workspaceRoot: string; backupPath: string }) => ipcRenderer.invoke(IPC_CHANNELS.FS.READ_BACKUP, input),
+    restoreBackup: (input: { workspaceRoot: string; filePath: string; backupPath: string }) => ipcRenderer.invoke(IPC_CHANNELS.FS.RESTORE_BACKUP, input),
+    deleteBackup: (input: { workspaceRoot: string; backupPath: string }) => ipcRenderer.invoke(IPC_CHANNELS.FS.DELETE_BACKUP, input),
   },
   todo: {
     load: () => ipcRenderer.invoke(IPC_CHANNELS.TODO.LOAD),

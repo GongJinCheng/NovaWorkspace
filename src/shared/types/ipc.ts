@@ -2,7 +2,7 @@
  * Type-safe IPC interface definition
  * Defines the API exposed to renderer via preload (contextBridge)
  */
-import type { FileEntry, DialogResult, RecentProject } from './file';
+import type { FileEntry, DialogResult, RecentProject, RecentMarkdownFile, FileBackupEntry } from './file';
 import type { TodoData, TodoTask, TodoCategory, CreateTaskInput, UpdateTaskInput } from './todo';
 import type { AISettings, AIProviderConfig, AIChatRequest, AIChatResponse, AIConnectionTestResult } from './ai';
 import type { Workspace, WorkspaceSession, OpenWorkspaceInput, SaveWorkspaceSessionInput } from './workspace';
@@ -24,6 +24,12 @@ export interface ElectronAPI {
     getHomeDir(): Promise<string>;
     showOpenDialog(options: Record<string, unknown>): Promise<DialogResult>;
     createSampleWorkspace(): Promise<string>;
+    getRecentMarkdown(rootPaths?: string[]): Promise<RecentMarkdownFile[]>;
+    createBackup(input: { workspaceRoot: string; filePath: string; content: string; reason?: string }): Promise<FileBackupEntry>;
+    listBackups(input: { workspaceRoot: string; filePath: string }): Promise<FileBackupEntry[]>;
+    readBackup(input: { workspaceRoot: string; backupPath: string }): Promise<{ content: string }>;
+    restoreBackup(input: { workspaceRoot: string; filePath: string; backupPath: string }): Promise<{ content: string; restoredAt: string }>;
+    deleteBackup(input: { workspaceRoot: string; backupPath: string }): Promise<boolean>;
   };
   todo: {
     load(): Promise<TodoData>;

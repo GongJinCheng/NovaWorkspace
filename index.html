@@ -202,41 +202,71 @@
             </button>
           </div>
 
-          <!-- 两栏布局：待办概览 + 最近项目 -->
-          <div class="home-columns">
-            <!-- 待办概览 -->
-            <div class="home-section">
+          <!-- 工作台概览 -->
+          <div class="home-overview-grid">
+            <div class="home-stat-card home-stat-primary">
+              <div class="home-stat-value" id="home-todo-pending">0</div>
+              <div class="home-stat-label">未完成任务</div>
+            </div>
+            <div class="home-stat-card home-stat-info">
+              <div class="home-stat-value" id="home-todo-today">0</div>
+              <div class="home-stat-label">今日到期</div>
+            </div>
+            <div class="home-stat-card home-stat-warning">
+              <div class="home-stat-value" id="home-todo-overdue">0</div>
+              <div class="home-stat-label">已逾期</div>
+            </div>
+            <div class="home-stat-card home-stat-success">
+              <div class="home-stat-value" id="home-todo-completed">0</div>
+              <div class="home-stat-label">已完成</div>
+            </div>
+          </div>
+
+          <div class="home-columns home-columns-wide">
+            <div class="home-section home-section-main">
               <div class="home-section-header">
-                <h2>待办概览</h2>
+                <div>
+                  <h2>今日工作台</h2>
+                  <p>优先处理今天和逾期的任务</p>
+                </div>
+                <button class="link-btn link-btn-normal" id="btn-home-view-todo">查看全部</button>
               </div>
-              <div class="home-stats-grid">
-                <div class="home-stat-card">
-                  <div class="home-stat-value" id="home-todo-pending">0</div>
-                  <div class="home-stat-label">待处理</div>
-                </div>
-                <div class="home-stat-card home-stat-warning">
-                  <div class="home-stat-value" id="home-todo-overdue">0</div>
-                  <div class="home-stat-label">已逾期</div>
-                </div>
-                <div class="home-stat-card home-stat-info">
-                  <div class="home-stat-value" id="home-todo-today">0</div>
-                  <div class="home-stat-label">今日待办</div>
-                </div>
-                <div class="home-stat-card home-stat-success">
-                  <div class="home-stat-value" id="home-todo-completed">0</div>
-                  <div class="home-stat-label">已完成</div>
-                </div>
-              </div>
-              <div class="home-next-task">
+              <div class="home-next-task home-next-task-large">
                 <span class="home-next-label">下一件</span>
                 <span class="home-next-title" id="home-todo-next">暂无待办</span>
               </div>
+              <div class="home-today-list" id="home-today-list"></div>
             </div>
 
-            <!-- 最近项目 -->
             <div class="home-section">
               <div class="home-section-header">
-                <h2>最近项目</h2>
+                <div>
+                  <h2>最近文档</h2>
+                  <p>继续刚刚编辑的 Markdown</p>
+                </div>
+              </div>
+              <div class="home-doc-list" id="home-doc-list"></div>
+            </div>
+          </div>
+
+          <div class="home-columns">
+            <div class="home-section">
+              <div class="home-section-header">
+                <div>
+                  <h2>AI 状态</h2>
+                  <p>确认模型配置是否可用</p>
+                </div>
+                <button class="link-btn link-btn-normal" id="btn-home-ai-settings">配置</button>
+              </div>
+              <div class="home-ai-status" id="home-ai-status"></div>
+            </div>
+
+            <div class="home-section">
+              <div class="home-section-header">
+                <div>
+                  <h2>最近项目</h2>
+                  <p>快速回到工作区</p>
+                </div>
                 <button class="link-btn" id="btn-clear-recent" style="display:none">清空历史</button>
               </div>
               <div class="home-recent-list" id="home-recent-list">
