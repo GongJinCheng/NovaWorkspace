@@ -8,6 +8,7 @@ import { initTheme, cycleTheme } from './theme';
 import { switchPage, registerPageInit, initializeActivePage } from './router';
 import { ipcClient } from '../services/ipc-client';
 import { showInputPrompt } from '../components/modal';
+import { buildTemplateCommandResults } from '../services/template-service';
 
 // Page modules - must be imported so esbuild includes them and their registerPageInit side effects run
 import '../pages/home/index';
@@ -194,13 +195,19 @@ function getDefaultPaletteActions(): PaletteResult[] {
 }
 
 function getCommandActions(): PaletteResult[] {
+  const templateActions = buildTemplateCommandResults((template) => {
+    switchPage('files');
+    setTimeout(() => { void (window as any).__handleNewFileFromTemplate?.(template.id); }, 220);
+  });
+
   return [
     { id: 'cmd-open-folder', group: '命令', title: '打开工作区', subtitle: '选择一个本地文件夹作为项目', icon: '📂', action: () => { switchPage('files'); setTimeout(() => (window as any).__fileTree?.openFolder?.() || (window as any).__chooseWorkspaceFolder?.(), 200); } },
     { id: 'cmd-project-overview', group: '命令', title: '打开项目概览', subtitle: '查看当前工作区统计和动态', icon: '📊', action: () => switchPage('project') },
-    { id: 'cmd-new-file', group: '命令', title: '新建文档', subtitle: '在当前工作区创建 Markdown 或其他文件', icon: '📝', action: () => { switchPage('files'); setTimeout(() => (window as any).__handleNewFile?.(), 200); } },
+    { id: 'cmd-new-file', group: '命令', title: '新建文档', subtitle: '选择模板并创建 Markdown 文档', icon: '📝', action: () => { switchPage('files'); setTimeout(() => (window as any).__handleNewFile?.(), 200); } },
     { id: 'cmd-new-todo', group: '命令', title: '新建待办', subtitle: '快速创建一条任务', icon: '➕', action: createQuickTodo },
     { id: 'cmd-settings', group: '命令', title: '打开设置', subtitle: '配置 AI Provider、主题和快捷键', icon: '⚙️', action: () => switchPage('settings') },
     { id: 'cmd-ai', group: '命令', title: '打开 AI 助手', subtitle: '进入 AI 对话页', icon: '🤖', action: () => switchPage('ai') },
+    ...templateActions,
     { id: 'cmd-ai-summary', group: 'AI 命令', title: 'AI 总结当前文档', subtitle: '基于当前 Markdown 生成总结', icon: '✨', action: () => runActiveMarkdownCommand('summary') },
     { id: 'cmd-ai-todo', group: 'AI 命令', title: 'AI 根据当前文档生成待办', subtitle: '从当前 Markdown 提取任务', icon: '✅', action: () => runActiveMarkdownCommand('todo') },
     { id: 'cmd-ask-doc', group: 'AI 命令', title: '问当前文档', subtitle: '基于当前 Markdown 向 AI 提问', icon: '💬', action: () => runActiveMarkdownCommand('askdoc') },

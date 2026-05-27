@@ -9,6 +9,7 @@ import { ipcClient } from '../../services/ipc-client';
 import { registerPageInit, PageId } from '../../app/router';
 import { showInputPrompt } from '../../components/modal';
 import { aiService } from '../ai/ai-service';
+import { createDocumentFromTemplate } from '../../services/template-service';
 
 const store = new FilesStore();
 let fileTree: FileTree | null = null;
@@ -108,24 +109,32 @@ async function handleNewFile(): Promise<void> {
   console.debug('[Files] new-file click');
   const dir = getTargetDir();
   if (!dir) {
-    alert('\u8BF7\u5148\u6253\u5F00\u4E00\u4E2A\u6587\u4EF6\u5939');
+    alert('请先打开一个文件夹');
     return;
   }
 
-  const name = await showInputPrompt('New File', '\u8F93\u5165\u6587\u4EF6\u540D');
-  if (!name?.trim()) return;
+  await createDocumentFromTemplate(undefined, {
+    targetDir: dir,
+    afterCreate: async () => { await fileTree?.render(); },
+    openFile: async (filePath, fileName) => {
+      if (editorManager && filePath) await editorManager.openFile(filePath, fileName);
+    },
+  });
+}
 
-  try {
-    const filePath = await ipcClient.fs.createFile(dir, name.trim());
-    console.log('[Files] Created file:', filePath);
-    await fileTree?.render();
-    if (editorManager && filePath) {
-      await editorManager.openFile(filePath, name.trim());
-    }
-  } catch (err) {
-    console.error('[Files] Create file failed:', err);
-    alert('\u521B\u5EFA\u6587\u4EF6\u5931\u8D25: ' + (err instanceof Error ? err.message : String(err)));
+async function handleNewFileFromTemplate(templateId: string): Promise<void> {
+  const dir = getTargetDir();
+  if (!dir) {
+    alert('请先打开一个文件夹');
+    return;
   }
+  await createDocumentFromTemplate(templateId, {
+    targetDir: dir,
+    afterCreate: async () => { await fileTree?.render(); },
+    openFile: async (filePath, fileName) => {
+      if (editorManager && filePath) await editorManager.openFile(filePath, fileName);
+    },
+  });
 }
 
 async function handleNewFolder(): Promise<void> {
@@ -629,6 +638,7 @@ if (searchInput) {
 
 bindFilesToolbar();
 (window as any).__handleNewFile = handleNewFile;
+(window as any).__handleNewFileFromTemplate = handleNewFileFromTemplate;
 
 registerPageInit('files' as PageId, initFilesPage);
 

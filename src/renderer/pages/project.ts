@@ -3,6 +3,7 @@ import { registerPageInit, switchPage } from '../app/router';
 import { ipcClient } from '../services/ipc-client';
 import { getCurrentWorkspaceRoot } from '../services/workspace-context';
 import { showInputPrompt } from '../components/modal';
+import { getBuiltInTemplates } from '../services/template-service';
 import type { ProjectOverview, ProjectActivityItem, ProjectRecentDocument } from '@shared/types/workspace';
 
 let currentOverview: ProjectOverview | null = null;
@@ -71,6 +72,7 @@ function renderOverview(overview: ProjectOverview): void {
   setText('project-last-edit', overview.documentStat.lastEditedAt ? formatRelativeTime(overview.documentStat.lastEditedAt) : '暂无编辑记录');
 
   renderRecentDocs(overview.recentDocuments);
+  renderTemplateShortcuts();
   renderActivities(overview.activities);
 }
 
@@ -94,6 +96,27 @@ function renderRecentDocs(docs: ProjectRecentDocument[]): void {
       if (!filePath) return;
       switchPage('files');
       setTimeout(() => { void (window as any).__openFilePath?.(filePath); }, 220);
+    });
+  });
+}
+
+
+function renderTemplateShortcuts(): void {
+  const host = document.getElementById('project-template-shortcuts');
+  if (!host) return;
+  const quickTemplates = getBuiltInTemplates().filter((template) => ['prd', 'meeting', 'tech-plan', 'weekly-report'].includes(template.id));
+  host.innerHTML = quickTemplates.map((template) =>
+    '<button class="project-template-card" data-template-id="' + escAttr(template.id) + '">' +
+      '<span class="project-template-icon">' + esc(template.icon) + '</span>' +
+      '<span><strong>' + esc(template.name) + '</strong><em>' + esc(template.description) + '</em></span>' +
+    '</button>'
+  ).join('');
+  host.querySelectorAll('.project-template-card').forEach((card) => {
+    card.addEventListener('click', async () => {
+      const templateId = (card as HTMLElement).dataset.templateId;
+      if (!templateId) return;
+      switchPage('files');
+      setTimeout(() => { void (window as any).__handleNewFileFromTemplate?.(templateId); }, 260);
     });
   });
 }
