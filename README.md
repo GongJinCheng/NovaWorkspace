@@ -31,18 +31,7 @@ Nova 的核心工作流是：
 
 ## 🎬 Demo
 
-<p align="center">
-  <video
-    src="./NovaShowcase/renders/202605272254.mp4"
-    controls
-    width="100%"
-  >
-    Your browser does not support the video tag.
-  </video>
-</p>
-
-> 如果视频没有自动显示，可以点击这里查看：
-> [Watch Nova Showcase](./NovaShowcase/renders/202605272254.mp4)
+https://github.com/user-attachments/assets/1d3dfa41-1755-47a5-8340-6f9a7c81de85
 
 A 45-second Nova Workspace product showcase built with [HyperFrames](https://hyperframes.heygen.com/), featuring project workspace, Markdown editing, AI document assistant, AI-generated todos, project dashboard, and document version safety.
 
