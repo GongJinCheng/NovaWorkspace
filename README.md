@@ -31,9 +31,20 @@ Nova 的核心工作流是：
 
 ## 🎬 Demo
 
-[![Nova Showcase](https://img.shields.io/badge/Watch_Animation-0066FF?logo=youtube)](./NovaShowcase/renders/)
+<p align="center">
+  <video
+    src="./NovaShowcase/renders/202605272254.mp4"
+    controls
+    width="100%"
+  >
+    Your browser does not support the video tag.
+  </video>
+</p>
 
-A 35-second product showcase built with [HyperFrames](https://hyperframes.heygen.com/), featuring Swiss Pulse design with grid-locked compositions, electric blue accents, and staggered entrance animations.
+> 如果视频没有自动显示，可以点击这里查看：
+> [Watch Nova Showcase](./NovaShowcase/renders/202605272254.mp4)
+
+A 45-second Nova Workspace product showcase built with [HyperFrames](https://hyperframes.heygen.com/), featuring project workspace, Markdown editing, AI document assistant, AI-generated todos, project dashboard, and document version safety.
 
 > Run `cd NovaShowcase && npm run dev` to preview, or `npm run render` to regenerate the MP4.
 

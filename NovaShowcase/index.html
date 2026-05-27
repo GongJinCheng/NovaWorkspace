@@ -1,0 +1,274 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Nova Workspace Showcase</title>
+  <link rel="stylesheet" href="styles.css" />
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+</head>
+<body>
+  <main
+    id="nova-showcase"
+    data-composition-id="nova-workspace-showcase-v2-6"
+    data-start="0"
+    data-width="1920"
+    data-height="1080"
+    data-duration="45"
+    data-fps="30"
+  >
+    <div class="background-grid"></div>
+    <div class="blue-orb orb-a"></div>
+    <div class="blue-orb orb-b"></div>
+    <div class="noise"></div>
+
+    <section id="scene-hero" class="clip scene hero" data-start="0" data-duration="4.2" data-track-index="1">
+      <div class="brand-mark">
+        <img id="nova-logo-hero" src="assets/nova-icon.png" alt="Nova" />
+      </div>
+      <p class="eyebrow">Local-first AI Workspace</p>
+      <h1>Nova Workspace</h1>
+      <p class="subtitle">Docs · AI · Todo · Project Dashboard</p>
+      <div class="hero-pills">
+        <span>Markdown</span>
+        <span>OpenAI Compatible</span>
+        <span>Project Todo</span>
+        <span>Version Safety</span>
+      </div>
+    </section>
+
+    <section id="scene-workspace" class="clip scene workspace" data-start="4" data-duration="5.2" data-track-index="2">
+      <div class="scene-header">
+        <p class="eyebrow">01 / Workspace</p>
+        <h2>Open a folder. Start a project.</h2>
+        <p>Every local workspace becomes a structured project.</p>
+      </div>
+      <div class="folder-stage glass-card">
+        <div class="folder-icon">
+          <div></div>
+        </div>
+        <div class="tree">
+          <span class="line root">NovaProject/</span>
+          <span class="line">├─ 产品方案.md</span>
+          <span class="line">├─ 会议纪要.md</span>
+          <span class="line">├─ 开发计划.md</span>
+          <span class="line accent">└─ .nova/</span>
+          <span class="line muted">&nbsp;&nbsp;&nbsp;├─ project.json</span>
+          <span class="line muted">&nbsp;&nbsp;&nbsp;├─ todos.json</span>
+          <span class="line muted">&nbsp;&nbsp;&nbsp;└─ history/</span>
+        </div>
+      </div>
+      <div class="caption-card">Data stays local. Projects stay portable.</div>
+    </section>
+
+    <section id="scene-markdown" class="clip scene markdown" data-start="9" data-duration="6.2" data-track-index="3">
+      <div class="app-window">
+        <div class="window-topbar">
+          <span></span><span></span><span></span>
+          <strong>Nova / 文件管理</strong>
+        </div>
+        <div class="app-layout">
+          <aside class="file-tree">
+            <b>工作区</b>
+            <p class="active">产品方案.md</p>
+            <p>会议纪要.md</p>
+            <p>开发计划.md</p>
+            <p>README.md</p>
+          </aside>
+          <div class="editor">
+            <div class="toolbar">
+              <button>AI 总结</button>
+              <button>问当前文档</button>
+              <button>生成待办</button>
+              <button>保存版本</button>
+            </div>
+            <div class="code-lines">
+              <p><span>#</span> Nova Workspace</p>
+              <p><span>##</span> 核心目标</p>
+              <p>连接文档、AI 和任务执行。</p>
+              <p><span>##</span> 功能范围</p>
+              <p>- Markdown 文档管理</p>
+              <p>- 当前文档 AI 问答</p>
+              <p>- AI 生成项目待办</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="floating-label label-one">Auto-save</div>
+      <div class="floating-label label-two">Monaco Editor</div>
+    </section>
+
+    <section id="scene-ai" class="clip scene ai" data-start="15" data-duration="7" data-track-index="4">
+      <div class="scene-header left">
+        <p class="eyebrow">02 / Context AI</p>
+        <h2>AI understands the current document.</h2>
+      </div>
+      <div class="ai-panel glass-card">
+        <div class="ai-status">
+          <span class="dot"></span>
+          Provider / model synced
+        </div>
+        <div class="chat user">根据当前文档，总结这个项目的核心价值。</div>
+        <div class="chat assistant">
+          <b>Nova 的核心价值：</b><br />
+          1. 将 Markdown 文档转化为可执行任务<br />
+          2. 让 AI 基于当前项目上下文工作<br />
+          3. 用项目概览持续追踪进展
+        </div>
+        <div class="action-row">
+          <button>插入文档</button>
+          <button>生成待办</button>
+          <button>保存为新文档</button>
+        </div>
+      </div>
+      <div class="prompt-chip">@当前文档</div>
+      <div class="prompt-chip chip-2">@当前项目</div>
+    </section>
+
+    <section id="scene-todo" class="clip scene todo" data-start="22" data-duration="5.4" data-track-index="5">
+      <div class="scene-header">
+        <p class="eyebrow">03 / AI Todo</p>
+        <h2>Turn ideas into tasks.</h2>
+        <p>AI extracts actionable work and links it back to the source document.</p>
+      </div>
+      <div class="todo-board">
+        <div class="todo-card high">
+          <span>High</span>
+          <b>完成项目概览页</b>
+          <p>来源：产品方案.md</p>
+        </div>
+        <div class="todo-card medium">
+          <span>Medium</span>
+          <b>补充 README 使用说明</b>
+          <p>来源：会议纪要.md</p>
+        </div>
+        <div class="todo-card low">
+          <span>Low</span>
+          <b>整理版本发布说明</b>
+          <p>来源：开发计划.md</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="scene-home" class="clip scene home" data-start="27" data-duration="5.4" data-track-index="6">
+      <div class="scene-header left">
+        <p class="eyebrow">04 / Today Workbench</p>
+        <h2>Know what to do next.</h2>
+      </div>
+      <div class="home-grid">
+        <div class="metric-card"><span>未完成</span><b>7</b></div>
+        <div class="metric-card"><span>今日到期</span><b>2</b></div>
+        <div class="metric-card danger"><span>已逾期</span><b>1</b></div>
+        <div class="metric-card"><span>已完成</span><b>18</b></div>
+      </div>
+      <div class="work-list glass-card">
+        <h3>今日工作台</h3>
+        <p>完成项目概览页 <span>High</span></p>
+        <p>更新 README <span>Today</span></p>
+        <p>测试 Ctrl+K 搜索 <span>Todo</span></p>
+      </div>
+    </section>
+
+    <section id="scene-dashboard" class="clip scene dashboard" data-start="32" data-duration="6.2" data-track-index="7">
+      <div class="app-window dashboard-window">
+        <div class="window-topbar">
+          <span></span><span></span><span></span>
+          <strong>Nova / 项目概览</strong>
+        </div>
+        <div class="dashboard-body">
+          <div class="project-title">
+            <p class="eyebrow">Project Dashboard</p>
+            <h2>Nova Workspace</h2>
+            <p>本地优先的 AI 深度工作台</p>
+          </div>
+          <div class="dashboard-stats">
+            <div><span>Markdown</span><b>24</b></div>
+            <div><span>Files</span><b>86</b></div>
+            <div><span>Todo</span><b>7</b></div>
+            <div><span>Versions</span><b>31</b></div>
+          </div>
+          <div class="activity">
+            <h3>最近活动</h3>
+            <p>AI 创建了 3 个待办</p>
+            <p>保存了 产品方案.md 的版本</p>
+            <p>完成了 首页布局优化</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="scene-version" class="clip scene version" data-start="38" data-duration="4.4" data-track-index="8">
+      <div class="scene-header">
+        <p class="eyebrow">05 / Version Safety</p>
+        <h2>Safe by default.</h2>
+        <p>Auto-save, snapshots, preview, restore and delete history versions.</p>
+      </div>
+      <div class="version-stack">
+        <div class="version-card">自动保存 · 14:20</div>
+        <div class="version-card">AI 插入前备份 · 14:18</div>
+        <div class="version-card">手动保存版本 · 14:10</div>
+      </div>
+    </section>
+
+    <section id="scene-cta" class="clip scene cta" data-start="42" data-duration="3.4" data-track-index="9">
+      <div class="brand-mark final">
+        <img id="nova-logo-final" src="assets/nova-icon-final.png" alt="Nova" />
+      </div>
+      <h2>Nova Workspace</h2>
+      <p>Build your local AI workflow.</p>
+      <div class="github-card">github.com/GongJinCheng/NovaWorkspace</div>
+    </section>
+  </main>
+
+  <script>
+    window.__timelines = window.__timelines || {};
+
+    const tl = gsap.timeline({ paused: true });
+    const scenes = [
+      { id: '#scene-hero', start: 0, duration: 4.2 },
+      { id: '#scene-workspace', start: 4, duration: 5.2 },
+      { id: '#scene-markdown', start: 9, duration: 6.2 },
+      { id: '#scene-ai', start: 15, duration: 7 },
+      { id: '#scene-todo', start: 22, duration: 5.4 },
+      { id: '#scene-home', start: 27, duration: 5.4 },
+      { id: '#scene-dashboard', start: 32, duration: 6.2 },
+      { id: '#scene-version', start: 38, duration: 4.4 },
+      { id: '#scene-cta', start: 42, duration: 3.4 }
+    ];
+
+    tl.set('#nova-showcase', { opacity: 1 }, 0);
+    tl.set('.scene', { opacity: 0, y: 28, scale: 0.985 }, 0);
+    tl.fromTo('.background-grid', { opacity: 0.42 }, { opacity: 0.85, duration: 3, ease: 'power1.out' }, 0);
+    tl.fromTo('.orb-a', { x: 0, y: 0, scale: 1 }, { x: 70, y: 50, scale: 1.12, duration: 45, ease: 'none' }, 0);
+    tl.fromTo('.orb-b', { x: 0, y: 0, scale: 1 }, { x: -80, y: -55, scale: 1.1, duration: 45, ease: 'none' }, 0);
+
+    scenes.forEach((scene) => {
+      const inTime = scene.start + 0.12;
+      const outTime = Math.max(scene.start + scene.duration - 0.62, scene.start + 0.7);
+      tl.fromTo(scene.id, { opacity: 0, y: 28, scale: 0.985 }, { opacity: 1, y: 0, scale: 1, duration: 0.62, ease: 'power3.out' }, inTime);
+      tl.to(scene.id, { opacity: 0, y: -22, scale: 0.99, duration: 0.5, ease: 'power2.inOut' }, outTime);
+    });
+
+    tl.from('#scene-hero .brand-mark', { y: 18, scale: 0.88, opacity: 0, duration: 0.7, ease: 'back.out(1.7)' }, 0.25);
+    tl.from('#scene-hero h1', { y: 24, opacity: 0, duration: 0.7, ease: 'power3.out' }, 0.45);
+    tl.from('#scene-hero .hero-pills span', { y: 18, opacity: 0, stagger: 0.08, duration: 0.42, ease: 'power2.out' }, 0.9);
+
+    tl.from('#scene-workspace .folder-stage', { y: 36, opacity: 0, duration: 0.7, ease: 'power3.out' }, 4.45);
+    tl.from('#scene-workspace .line', { x: -22, opacity: 0, stagger: 0.06, duration: 0.28, ease: 'power2.out' }, 4.95);
+    tl.from('#scene-markdown .app-window', { y: 34, opacity: 0, duration: 0.75, ease: 'power3.out' }, 9.35);
+    tl.from('#scene-markdown .toolbar button', { y: 12, opacity: 0, stagger: 0.08, duration: 0.3, ease: 'power2.out' }, 10.05);
+    tl.from('#scene-ai .ai-panel', { x: 46, opacity: 0, duration: 0.72, ease: 'power3.out' }, 15.45);
+    tl.from('#scene-ai .chat', { y: 20, opacity: 0, stagger: 0.25, duration: 0.45, ease: 'power2.out' }, 16.05);
+    tl.from('#scene-todo .todo-card', { y: 38, opacity: 0, stagger: 0.16, duration: 0.55, ease: 'back.out(1.4)' }, 22.65);
+    tl.from('#scene-home .metric-card', { y: 26, opacity: 0, stagger: 0.1, duration: 0.42, ease: 'power2.out' }, 27.55);
+    tl.from('#scene-dashboard .dashboard-window', { y: 34, opacity: 0, duration: 0.75, ease: 'power3.out' }, 32.45);
+    tl.from('#scene-version .version-card', { x: -40, opacity: 0, stagger: 0.16, duration: 0.48, ease: 'power2.out' }, 38.75);
+    tl.from('#scene-cta .brand-mark', { scale: 0.88, opacity: 0, duration: 0.58, ease: 'back.out(1.7)' }, 42.35);
+    tl.from('#scene-cta h2, #scene-cta p, #scene-cta .github-card', { y: 18, opacity: 0, stagger: 0.12, duration: 0.4, ease: 'power2.out' }, 42.7);
+
+    tl.set({}, {}, 45);
+
+    window.__timelines['nova-workspace-showcase-v2-6'] = tl;
+  </script>
+</body>
+</html>

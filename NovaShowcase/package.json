@@ -1,0 +1,15 @@
+{
+  "name": "nova-showcase",
+  "version": "2.6.2",
+  "private": true,
+  "description": "HyperFrames product showcase for Nova Workspace",
+  "scripts": {
+    "preview": "npx hyperframes preview",
+    "render": "npx hyperframes render --output renders/nova-v2.6-showcase.mp4",
+    "render:vertical": "npx hyperframes render --output renders/nova-v2.6-showcase-vertical.mp4 --width 1080 --height 1920",
+    "skills": "npx skills add heygen-com/hyperframes"
+  },
+  "devDependencies": {
+    "hyperframes": "latest"
+  }
+}
