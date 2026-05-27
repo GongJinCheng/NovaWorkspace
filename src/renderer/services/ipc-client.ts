@@ -2,10 +2,11 @@
  * IPC Client - Type-safe renderer to main communication
  */
 import type { ElectronAPI } from '../../shared/types/ipc';
-import type { FileEntry, DialogResult, RecentProject, RecentMarkdownFile, FileBackupEntry } from '../../shared/types/file';
+import type { FileEntry, DialogResult, RecentProject, RecentMarkdownFile, FileBackupEntry, WorkspaceSearchResult } from '../../shared/types/file';
 import type { TodoData, TodoTask, TodoCategory, CreateTaskInput, UpdateTaskInput } from '../../shared/types/todo';
-import type { Workspace, WorkspaceSession, OpenWorkspaceInput, SaveWorkspaceSessionInput } from '../../shared/types/workspace';
+import type { Workspace, WorkspaceSession, OpenWorkspaceInput, SaveWorkspaceSessionInput, UpdateProjectMetaInput, ProjectMeta, ProjectOverview } from '../../shared/types/workspace';
 import type { AIChatRequest, AIProviderConfig } from '../../shared/types/ai';
+import { getCurrentWorkspaceRoot } from './workspace-context';
 
 const api = (): ElectronAPI => window.electronAPI;
 
@@ -27,6 +28,7 @@ export const ipcClient = {
     showOpenDialog: (options: Record<string, unknown>): Promise<DialogResult> => api().fs.showOpenDialog(options),
     createSampleWorkspace: (): Promise<string> => api().fs.createSampleWorkspace(),
     getRecentMarkdown: (rootPaths?: string[]): Promise<RecentMarkdownFile[]> => api().fs.getRecentMarkdown(rootPaths),
+    searchWorkspace: (input: { rootPath: string; query: string; limit?: number }): Promise<WorkspaceSearchResult[]> => api().fs.searchWorkspace(input),
     createBackup: (input: { workspaceRoot: string; filePath: string; content: string; reason?: string }): Promise<FileBackupEntry> => api().fs.createBackup(input),
     listBackups: (input: { workspaceRoot: string; filePath: string }): Promise<FileBackupEntry[]> => api().fs.listBackups(input),
     readBackup: (input: { workspaceRoot: string; backupPath: string }): Promise<{ content: string }> => api().fs.readBackup(input),
@@ -34,14 +36,14 @@ export const ipcClient = {
     deleteBackup: (input: { workspaceRoot: string; backupPath: string }): Promise<boolean> => api().fs.deleteBackup(input),
   },
   todo: {
-    load: (): Promise<TodoData> => api().todo.load(),
-    save: (data: TodoData): Promise<boolean> => api().todo.save(data),
-    addTask: (task: CreateTaskInput): Promise<TodoTask> => api().todo.addTask(task),
-    updateTask: (taskId: string, updates: UpdateTaskInput): Promise<TodoTask | null> => api().todo.updateTask(taskId, updates),
-    deleteTask: (taskId: string): Promise<boolean> => api().todo.deleteTask(taskId),
-    addCategory: (category: Omit<TodoCategory, 'id'>): Promise<TodoCategory> => api().todo.addCategory(category),
-    deleteCategory: (categoryId: string): Promise<boolean> => api().todo.deleteCategory(categoryId),
-    checkReminders: (): Promise<TodoTask[]> => api().todo.checkReminders(),
+    load: (workspaceRoot = getCurrentWorkspaceRoot()): Promise<TodoData> => api().todo.load(workspaceRoot),
+    save: (data: TodoData, workspaceRoot = getCurrentWorkspaceRoot()): Promise<boolean> => api().todo.save(data, workspaceRoot),
+    addTask: (task: CreateTaskInput, workspaceRoot = getCurrentWorkspaceRoot()): Promise<TodoTask> => api().todo.addTask(task, workspaceRoot),
+    updateTask: (taskId: string, updates: UpdateTaskInput, workspaceRoot = getCurrentWorkspaceRoot()): Promise<TodoTask | null> => api().todo.updateTask(taskId, updates, workspaceRoot),
+    deleteTask: (taskId: string, workspaceRoot = getCurrentWorkspaceRoot()): Promise<boolean> => api().todo.deleteTask(taskId, workspaceRoot),
+    addCategory: (category: Omit<TodoCategory, 'id'>, workspaceRoot = getCurrentWorkspaceRoot()): Promise<TodoCategory> => api().todo.addCategory(category, workspaceRoot),
+    deleteCategory: (categoryId: string, workspaceRoot = getCurrentWorkspaceRoot()): Promise<boolean> => api().todo.deleteCategory(categoryId, workspaceRoot),
+    checkReminders: (workspaceRoot = getCurrentWorkspaceRoot()): Promise<TodoTask[]> => api().todo.checkReminders(workspaceRoot),
   },
   recent: {
     get: (): Promise<RecentProject[]> => api().recent.get(),
@@ -56,6 +58,9 @@ export const ipcClient = {
     clear: (): Promise<Workspace[]> => api().workspace.clear(),
     getSession: (rootPath: string): Promise<WorkspaceSession | null> => api().workspace.getSession(rootPath),
     saveSession: (input: SaveWorkspaceSessionInput): Promise<WorkspaceSession> => api().workspace.saveSession(input),
+    getProjectMeta: (rootPath: string): Promise<ProjectMeta> => api().workspace.getProjectMeta(rootPath),
+    updateProjectMeta: (input: UpdateProjectMetaInput): Promise<ProjectMeta> => api().workspace.updateProjectMeta(input),
+    getProjectOverview: (rootPath: string): Promise<ProjectOverview> => api().workspace.getProjectOverview(rootPath),
   },
   ai: {
     getSettings: () => api().ai.getSettings(),

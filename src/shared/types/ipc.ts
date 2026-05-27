@@ -2,10 +2,10 @@
  * Type-safe IPC interface definition
  * Defines the API exposed to renderer via preload (contextBridge)
  */
-import type { FileEntry, DialogResult, RecentProject, RecentMarkdownFile, FileBackupEntry } from './file';
+import type { FileEntry, DialogResult, RecentProject, RecentMarkdownFile, FileBackupEntry, WorkspaceSearchResult } from './file';
 import type { TodoData, TodoTask, TodoCategory, CreateTaskInput, UpdateTaskInput } from './todo';
 import type { AISettings, AIProviderConfig, AIChatRequest, AIChatResponse, AIConnectionTestResult } from './ai';
-import type { Workspace, WorkspaceSession, OpenWorkspaceInput, SaveWorkspaceSessionInput } from './workspace';
+import type { Workspace, WorkspaceSession, OpenWorkspaceInput, SaveWorkspaceSessionInput, ProjectMeta, ProjectOverview, UpdateProjectMetaInput } from './workspace';
 
 export interface ElectronAPI {
   window: {
@@ -25,6 +25,7 @@ export interface ElectronAPI {
     showOpenDialog(options: Record<string, unknown>): Promise<DialogResult>;
     createSampleWorkspace(): Promise<string>;
     getRecentMarkdown(rootPaths?: string[]): Promise<RecentMarkdownFile[]>;
+    searchWorkspace(input: { rootPath: string; query: string; limit?: number }): Promise<WorkspaceSearchResult[]>;
     createBackup(input: { workspaceRoot: string; filePath: string; content: string; reason?: string }): Promise<FileBackupEntry>;
     listBackups(input: { workspaceRoot: string; filePath: string }): Promise<FileBackupEntry[]>;
     readBackup(input: { workspaceRoot: string; backupPath: string }): Promise<{ content: string }>;
@@ -32,14 +33,14 @@ export interface ElectronAPI {
     deleteBackup(input: { workspaceRoot: string; backupPath: string }): Promise<boolean>;
   };
   todo: {
-    load(): Promise<TodoData>;
-    save(data: TodoData): Promise<boolean>;
-    addTask(task: CreateTaskInput): Promise<TodoTask>;
-    updateTask(taskId: string, updates: UpdateTaskInput): Promise<TodoTask | null>;
-    deleteTask(taskId: string): Promise<boolean>;
-    addCategory(category: Omit<TodoCategory, 'id'>): Promise<TodoCategory>;
-    deleteCategory(categoryId: string): Promise<boolean>;
-    checkReminders(): Promise<TodoTask[]>;
+    load(workspaceRoot?: string | null): Promise<TodoData>;
+    save(data: TodoData, workspaceRoot?: string | null): Promise<boolean>;
+    addTask(task: CreateTaskInput, workspaceRoot?: string | null): Promise<TodoTask>;
+    updateTask(taskId: string, updates: UpdateTaskInput, workspaceRoot?: string | null): Promise<TodoTask | null>;
+    deleteTask(taskId: string, workspaceRoot?: string | null): Promise<boolean>;
+    addCategory(category: Omit<TodoCategory, 'id'>, workspaceRoot?: string | null): Promise<TodoCategory>;
+    deleteCategory(categoryId: string, workspaceRoot?: string | null): Promise<boolean>;
+    checkReminders(workspaceRoot?: string | null): Promise<TodoTask[]>;
   };
   recent: {
     get(): Promise<RecentProject[]>;
@@ -54,6 +55,9 @@ export interface ElectronAPI {
     clear(): Promise<Workspace[]>;
     getSession(rootPath: string): Promise<WorkspaceSession | null>;
     saveSession(input: SaveWorkspaceSessionInput): Promise<WorkspaceSession>;
+    getProjectMeta(rootPath: string): Promise<ProjectMeta>;
+    updateProjectMeta(input: UpdateProjectMetaInput): Promise<ProjectMeta>;
+    getProjectOverview(rootPath: string): Promise<ProjectOverview>;
   };
   ai: {
     getSettings(): Promise<AISettings>;

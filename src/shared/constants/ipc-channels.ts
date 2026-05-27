@@ -20,6 +20,7 @@ export const IPC_CHANNELS = {
     SHOW_OPEN_DIALOG: 'fs:show-open-dialog',
     CREATE_SAMPLE_WORKSPACE: 'fs:create-sample-workspace',
     GET_RECENT_MARKDOWN: 'fs:get-recent-markdown',
+    SEARCH_WORKSPACE: 'fs:search-workspace',
     CREATE_BACKUP: 'fs:create-backup',
     LIST_BACKUPS: 'fs:list-backups',
     READ_BACKUP: 'fs:read-backup',
@@ -49,6 +50,9 @@ export const IPC_CHANNELS = {
     CLEAR: 'workspace:clear',
     GET_SESSION: 'workspace:get-session',
     SAVE_SESSION: 'workspace:save-session',
+    GET_PROJECT_META: 'workspace:get-project-meta',
+    UPDATE_PROJECT_META: 'workspace:update-project-meta',
+    GET_PROJECT_OVERVIEW: 'workspace:get-project-overview',
   },
   AI: {
     GET_SETTINGS: 'ai:get-settings',

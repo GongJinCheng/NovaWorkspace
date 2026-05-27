@@ -27,8 +27,10 @@ export interface TodoTask {
   completedAt?: string;
   /** 任务来源：手动、AI 或文档 */
   sourceType?: 'manual' | 'ai' | 'document';
-  /** 来源文档路径 */
+  /** 来源文档绝对路径 */
   sourceFilePath?: string;
+  /** 来源文档相对当前工作区的路径，用于项目迁移后仍能定位 */
+  sourceRelativePath?: string;
   /** 来源显示标题 */
   sourceTitle?: string;
   /** 来源行号，后续用于精准定位 */

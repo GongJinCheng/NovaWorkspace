@@ -176,6 +176,59 @@ export function registerFsHandlers(): void {
     }
   });
 
+
+  ipcMain.handle(IPC_CHANNELS.FS.SEARCH_WORKSPACE, async (_event, input: { rootPath: string; query: string; limit?: number }) => {
+    const rootPath = path.resolve(input.rootPath || '');
+    const query = String(input.query || '').trim().toLowerCase();
+    const limit = Math.min(Math.max(Number(input.limit || 60), 10), 120);
+    if (!rootPath || !query) return [];
+
+    const ignored = new Set(['node_modules', '.git', '.nova', 'dist', 'release', 'build', 'out', '.next', '.cache', 'coverage']);
+    const textExt = new Set(['.md', '.txt', '.json', '.ts', '.tsx', '.js', '.jsx', '.css', '.html', '.yml', '.yaml']);
+    const results: Array<{ type: 'file' | 'content'; name: string; path: string; workspacePath: string; workspaceName: string; line?: number; snippet?: string; modifiedAt?: string }> = [];
+
+    async function walk(dirPath: string, depth: number): Promise<void> {
+      if (depth > 7 || results.length >= limit) return;
+      let entries: Array<{ name: string; isDirectory(): boolean; isFile(): boolean }>;
+      try { entries = await fs.readdir(dirPath, { withFileTypes: true }); } catch { return; }
+
+      for (const entry of entries) {
+        if (results.length >= limit) return;
+        if (ignored.has(entry.name)) continue;
+        const itemPath = path.join(dirPath, entry.name);
+        if (entry.isDirectory()) { await walk(itemPath, depth + 1); continue; }
+        if (!entry.isFile()) continue;
+
+        const lowerName = entry.name.toLowerCase();
+        const ext = path.extname(entry.name).toLowerCase();
+        let statTime = '';
+        try { statTime = (await fs.stat(itemPath)).mtime.toISOString(); } catch { /* ignore */ }
+
+        if (lowerName.includes(query)) {
+          results.push({ type: 'file', name: entry.name, path: itemPath, workspacePath: rootPath, workspaceName: path.basename(rootPath) || rootPath, modifiedAt: statTime });
+          if (results.length >= limit) return;
+        }
+
+        if (!textExt.has(ext)) continue;
+        try {
+          const raw = await fs.readFile(itemPath, 'utf-8');
+          const lower = raw.toLowerCase();
+          const idx = lower.indexOf(query);
+          if (idx === -1) continue;
+          const before = raw.slice(0, idx);
+          const line = before.split(/\r?\n/).length;
+          const snippetStart = Math.max(0, idx - 50);
+          const snippetEnd = Math.min(raw.length, idx + query.length + 90);
+          const snippet = raw.slice(snippetStart, snippetEnd).replace(/\s+/g, ' ').trim();
+          results.push({ type: 'content', name: entry.name, path: itemPath, workspacePath: rootPath, workspaceName: path.basename(rootPath) || rootPath, line, snippet, modifiedAt: statTime });
+        } catch { /* ignore binary or unreadable */ }
+      }
+    }
+
+    await walk(rootPath, 0);
+    return results.slice(0, limit);
+  });
+
   ipcMain.handle(IPC_CHANNELS.FS.GET_RECENT_MARKDOWN, async (_event, rootPaths?: string[]) => {
     const roots = Array.from(new Set((rootPaths || []).filter((item): item is string => typeof item === 'string' && item.trim().length > 0)));
     const results: Array<{ name: string; path: string; workspacePath: string; workspaceName: string; modifiedAt: string; size: number }> = [];

@@ -440,3 +440,38 @@
   color: var(--text-tertiary);
   font-size: 13px;
 }
+/* === v2.4 Command Palette Enhancements === */
+.global-search-dialog {
+  width: min(760px, 92vw);
+}
+.global-search-results {
+  max-height: min(560px, 62vh);
+}
+.command-palette-item.selected,
+.search-item.selected {
+  background: rgba(99, 102, 241, 0.12);
+  color: var(--text-primary);
+  outline: 1px solid rgba(99, 102, 241, 0.26);
+}
+.search-item-main {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.search-item-subtitle {
+  font-size: 11px;
+  line-height: 1.35;
+  color: var(--text-tertiary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.search-footer {
+  padding: 8px 10px 2px;
+  font-size: 11px;
+  color: var(--text-tertiary);
+  border-top: 1px solid var(--border-subtle);
+  margin-top: 6px;
+}

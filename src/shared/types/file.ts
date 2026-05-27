@@ -42,3 +42,16 @@ export interface FileBackupEntry {
   createdAt: string;
   size: number;
 }
+
+
+/** 全局搜索结果 */
+export interface WorkspaceSearchResult {
+  type: 'file' | 'content';
+  name: string;
+  path: string;
+  workspacePath: string;
+  workspaceName: string;
+  line?: number;
+  snippet?: string;
+  modifiedAt?: string;
+}

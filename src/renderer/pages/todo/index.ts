@@ -29,6 +29,7 @@ import { startReminderCheck } from './reminders';
 import { registerPageInit, switchPage } from '../../app/router';
 import { measure, measureAsync } from '../../utils/performance';
 import type { TodoTask } from '@shared/types/todo';
+import { getCurrentWorkspaceRoot, resolveWorkspacePath } from '../../services/workspace-context';
 
 let initialized = false;
 let refreshTimer: ReturnType<typeof setTimeout> | null = null;
@@ -52,6 +53,14 @@ async function initTodoPage(): Promise<void> {
   window.addEventListener('nova:todo-data-changed', () => {
     void refreshAll();
   });
+
+  (window as any).__openTodoTask = async (taskId: string) => {
+    await refreshAll();
+    openDrawer(taskId);
+  };
+  (window as any).__focusTodoQuickInput = () => {
+    (document.getElementById('todo-quick-input') as HTMLInputElement | null)?.focus();
+  };
 
   // Bind details drawer close trigger
   document.getElementById('todo-drawer-close')?.addEventListener('click', () => {
@@ -334,12 +343,13 @@ function bindDrawerEvents(taskId: string): void {
 
   sourceBtn?.addEventListener('click', () => {
     const task = getTaskById(taskId);
-    if (!task?.sourceFilePath) return;
+    const sourcePath = task?.sourceFilePath || resolveWorkspacePath(getCurrentWorkspaceRoot(), task?.sourceRelativePath);
+    if (!sourcePath) return;
     switchPage('files');
     setTimeout(() => {
       const openFilePath = (window as any).__openFilePath;
       if (typeof openFilePath === 'function') {
-        void openFilePath(task.sourceFilePath);
+        void openFilePath(sourcePath);
       }
     }, 250);
   });

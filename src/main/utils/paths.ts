@@ -1,8 +1,19 @@
 import path from 'path';
 import { app } from 'electron';
 
-/** 获取待办数据文件路径 */
-export function getTodoDataPath(): string {
+/** 获取待办数据文件路径。
+ * 有工作区时，待办保存到当前工作区的 .nova/todos.json；
+ * 没有工作区时，退回到应用级全局 todos.json。
+ */
+export function getTodoDataPath(workspaceRoot?: string | null): string {
+  if (workspaceRoot && typeof workspaceRoot === 'string' && workspaceRoot.trim()) {
+    return path.join(workspaceRoot, '.nova', 'todos.json');
+  }
+  return path.join(app.getPath('userData'), 'todos.json');
+}
+
+/** 旧版本全局待办数据路径，用于后续迁移或无工作区场景。 */
+export function getLegacyTodoDataPath(): string {
   return path.join(app.getPath('userData'), 'todos.json');
 }
 

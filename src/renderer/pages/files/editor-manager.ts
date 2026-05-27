@@ -10,6 +10,7 @@ import type { FilesStore } from './files-store';
 import { isMarkdownFile, renderMarkdownToHtml } from './markdown-preview';
 import { showInputPrompt, showConfirmDialog, showTaskConfirmDialog } from '../../components/modal';
 import { switchPage } from '../../app/router';
+import { getCurrentWorkspaceRoot, getRelativePath } from '../../services/workspace-context';
 
 
 interface MonacoEditor {
@@ -310,6 +311,21 @@ export class EditorManager {
     this.markdownPreview.innerHTML = renderMarkdownToHtml(tab.model.getValue());
   }
 
+  async runMarkdownCommand(action: string): Promise<void> {
+    const labelMap: Record<string, string> = {
+      summary: 'AI 总结',
+      outline: '生成大纲',
+      rewrite: '改写选中',
+      askdoc: '问当前文档',
+      todo: '生成待办',
+      saveversion: '保存版本',
+      history: '版本历史',
+    };
+    const button = document.createElement('button');
+    button.textContent = labelMap[action] || action;
+    await this.runMarkdownAiAction(action, button as HTMLButtonElement);
+  }
+
   private async runMarkdownAiAction(action: string, button: HTMLButtonElement): Promise<void> {
     if (this.markdownAiBusy) return;
     if (!this.activeEditorPath) return;
@@ -546,6 +562,7 @@ ${content}
           reminded: false,
           sourceType: tab ? 'document' : 'ai',
           sourceFilePath: tab?.filePath,
+          sourceRelativePath: getRelativePath(getCurrentWorkspaceRoot(), tab?.filePath),
           sourceTitle: tab?.fileName,
         });
         created.push(createdTask);
