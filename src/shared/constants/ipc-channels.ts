@@ -26,6 +26,7 @@ export const IPC_CHANNELS = {
     READ_BACKUP: 'fs:read-backup',
     RESTORE_BACKUP: 'fs:restore-backup',
     DELETE_BACKUP: 'fs:delete-backup',
+    EXPORT_DOCUMENT: 'fs:export-document',
   },
   TODO: {
     LOAD: 'todo:load',

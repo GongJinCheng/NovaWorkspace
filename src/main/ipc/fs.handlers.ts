@@ -3,6 +3,7 @@ import fs from 'fs/promises';
 import path from 'path';
 import { IPC_CHANNELS } from '@shared/constants/ipc-channels';
 import { getMainWindow } from '../windows/main-window';
+import { handleExportDocument } from '../services/export-service';
 
 
 function normalizePathForCompare(value: string): string {
@@ -25,6 +26,10 @@ function safeHistoryName(filePath: string, workspaceRoot: string): string {
 function timestampForFileName(date = new Date()): string {
   return date.toISOString().replace(/[:.]/g, '-');
 }
+
+
+
+
 
 export function registerFsHandlers(): void {
   ipcMain.handle(IPC_CHANNELS.FS.READ_DIR, async (_event, dirPath: string) => {
@@ -408,5 +413,10 @@ export function registerFsHandlers(): void {
       throw new Error('无法恢复版本: ' + msg);
     }
   });
+
+  ipcMain.handle(IPC_CHANNELS.FS.EXPORT_DOCUMENT, async (_event, input) => {
+    return await handleExportDocument(input);
+  });
+
 
 }

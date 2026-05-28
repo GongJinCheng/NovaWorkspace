@@ -11,6 +11,7 @@ import { isMarkdownFile, renderMarkdownToHtml } from './markdown-preview';
 import { showInputPrompt, showConfirmDialog, showTaskConfirmDialog } from '../../components/modal';
 import { switchPage } from '../../app/router';
 import { getCurrentWorkspaceRoot, getRelativePath } from '../../services/workspace-context';
+import { exportMarkdownDocument, type ExportFormat } from '../../services/export-service';
 
 
 interface MonacoEditor {
@@ -23,6 +24,8 @@ interface MonacoEditorInstance {
   setModel(model: MonacoModel | null): void;
   getModel(): MonacoModel | null;
   layout(): void;
+  focus(): void;
+  updateOptions(options: Record<string, unknown>): void;
   getPosition(): { lineNumber: number; column: number } | null;
   saveViewState(): unknown;
   restoreViewState(state: unknown): void;
@@ -208,6 +211,10 @@ export class EditorManager {
           '<button class="markdown-tool-btn" data-md-action="saveversion">保存版本</button>' +
           '<button class="markdown-tool-btn" data-md-action="history">版本历史</button>' +
         '</div>' +
+        '<div class="markdown-export-group">' +
+          '<button class="markdown-tool-btn" data-md-action="exporthtml">导出 HTML</button>' +
+          '<button class="markdown-tool-btn" data-md-action="exportpdf">导出 PDF</button>' +
+        '</div>' +
       '</div>' +
       '<div class="markdown-workspace">' +
         '<div class="monaco-editor-host"></div>' +
@@ -223,6 +230,8 @@ export class EditorManager {
       value: '',
       language: 'plaintext',
       theme: this.getCurrentTheme(),
+      readOnly: false,
+      domReadOnly: false,
       automaticLayout: true,
       fontSize: 14,
       minimap: { enabled: false },
@@ -295,7 +304,33 @@ export class EditorManager {
     }
 
     if (isMd) this.updateMarkdownPreview();
-    setTimeout(() => this.editor?.layout(), 50);
+    this.restoreEditorInteractivity();
+  }
+
+  private restoreEditorInteractivity(options: { focus?: boolean } = {}): void {
+    if (!this.editor) return;
+    try {
+      this.editor.updateOptions({ readOnly: false, domReadOnly: false });
+    } catch (error) {
+      console.warn('[EditorManager] restore editor options failed:', error);
+    }
+
+    if (this.editorHost && this.markdownMode !== 'preview') {
+      this.editorHost.hidden = false;
+      this.editorHost.style.pointerEvents = '';
+    }
+
+    const workspace = this.container.querySelector('.markdown-workspace') as HTMLElement | null;
+    if (workspace) {
+      workspace.style.pointerEvents = '';
+    }
+
+    setTimeout(() => {
+      this.editor?.layout();
+      if (options.focus && this.markdownMode !== 'preview') {
+        try { this.editor?.focus(); } catch {}
+      }
+    }, 50);
   }
 
   private scheduleMarkdownPreviewUpdate(): void {
@@ -320,10 +355,48 @@ export class EditorManager {
       todo: '生成待办',
       saveversion: '保存版本',
       history: '版本历史',
+      exporthtml: '导出 HTML',
+      exportpdf: '导出 PDF',
     };
     const button = document.createElement('button');
     button.textContent = labelMap[action] || action;
     await this.runMarkdownAiAction(action, button as HTMLButtonElement);
+  }
+
+  async exportCurrentMarkdown(format: ExportFormat): Promise<void> {
+    if (!this.activeEditorPath) {
+      window.alert('请先打开一个 Markdown 文档');
+      return;
+    }
+    const tab = this.editors.get(this.activeEditorPath);
+    if (!tab || !isMarkdownFile(tab.fileName)) {
+      window.alert('当前文件不是 Markdown 文档');
+      return;
+    }
+    await this.exportActiveMarkdown(tab, format);
+  }
+
+  private async exportActiveMarkdown(tab: EditorTab, format: ExportFormat): Promise<void> {
+    const previousMode = this.markdownMode;
+    try {
+      await this.saveFilePath(tab.filePath, 'manual').catch(() => undefined);
+      const filePath = await exportMarkdownDocument(format, {
+        title: tab.fileName.replace(/\.[^.]+$/, ''),
+        fileName: tab.fileName,
+        markdown: tab.model.getValue(),
+      });
+      if (filePath) {
+        this.updateSaveStatus(format === 'pdf' ? 'PDF 已导出' : format === 'html' ? 'HTML 已导出' : 'Markdown 已导出');
+      }
+    } catch (error) {
+      window.alert('导出失败：' + (error instanceof Error ? error.message : String(error)));
+    } finally {
+      // 导出会打开系统保存弹窗和隐藏打印窗口。结束后主动恢复 Monaco 的编辑能力，
+      // 避免焦点、hidden 状态或只读状态异常导致“编辑失效”。
+      this.markdownMode = previousMode === 'preview' ? 'edit' : previousMode;
+      this.applyMarkdownMode();
+      this.restoreEditorInteractivity({ focus: true });
+    }
   }
 
   private async runMarkdownAiAction(action: string, button: HTMLButtonElement): Promise<void> {
@@ -339,6 +412,14 @@ export class EditorManager {
     }
     if (action === 'history') {
       await this.showVersionHistory(tab);
+      return;
+    }
+    if (action === 'exporthtml') {
+      await this.exportActiveMarkdown(tab, 'html');
+      return;
+    }
+    if (action === 'exportpdf') {
+      await this.exportActiveMarkdown(tab, 'pdf');
       return;
     }
 

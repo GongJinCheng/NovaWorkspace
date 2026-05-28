@@ -4,6 +4,7 @@ import { ipcClient } from '../services/ipc-client';
 import { getCurrentWorkspaceRoot } from '../services/workspace-context';
 import { showInputPrompt } from '../components/modal';
 import { getBuiltInTemplates } from '../services/template-service';
+import { exportProjectReport, type ExportFormat } from '../services/export-service';
 import type { ProjectOverview, ProjectActivityItem, ProjectRecentDocument } from '@shared/types/workspace';
 
 let currentOverview: ProjectOverview | null = null;
@@ -27,9 +28,13 @@ function bindOnce(): void {
   document.getElementById('btn-project-ai')?.addEventListener('click', () => switchPage('ai'));
   document.getElementById('btn-project-summary')?.addEventListener('click', () => runProjectAI('summary'));
   document.getElementById('btn-project-plan')?.addEventListener('click', () => runProjectAI('plan'));
+  document.getElementById('btn-project-export-report-md')?.addEventListener('click', () => { void exportCurrentProjectReport('markdown'); });
+  document.getElementById('btn-project-export-report-pdf')?.addEventListener('click', () => { void exportCurrentProjectReport('pdf'); });
 
   window.addEventListener('nova:todo-data-changed', () => { void renderProjectDashboard(); });
   window.addEventListener('nova:workspace-changed', () => { void renderProjectDashboard(); });
+
+  (window as any).__exportProjectReport = (format: ExportFormat = 'markdown') => exportCurrentProjectReport(format);
 }
 
 async function renderProjectDashboard(): Promise<void> {
@@ -157,6 +162,29 @@ async function openWorkspacePicker(): Promise<void> {
     if (typeof chooseWorkspace === 'function') await chooseWorkspace();
     else if (ft?.openFolder) await ft.openFolder();
   }, 200);
+}
+
+async function exportCurrentProjectReport(format: ExportFormat): Promise<void> {
+  if (!currentOverview) {
+    alert('请先打开一个工作区');
+    return;
+  }
+  try {
+    const filePath = await exportProjectReport(format, {
+      name: currentOverview.meta.name,
+      description: currentOverview.meta.description,
+      rootPath: currentOverview.meta.rootPath,
+      documentStat: currentOverview.documentStat,
+      todoStat: currentOverview.todoStat,
+      historyStat: currentOverview.historyStat,
+      recentDocuments: currentOverview.recentDocuments,
+      activities: currentOverview.activities,
+      ai: currentOverview.ai,
+    });
+    if (filePath) alert('项目报告已导出：\n' + filePath);
+  } catch (error) {
+    alert('导出项目报告失败：' + (error instanceof Error ? error.message : String(error)));
+  }
 }
 
 function runProjectAI(mode: 'summary' | 'plan'): void {

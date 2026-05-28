@@ -31,6 +31,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     readBackup: (input: { workspaceRoot: string; backupPath: string }) => ipcRenderer.invoke(IPC_CHANNELS.FS.READ_BACKUP, input),
     restoreBackup: (input: { workspaceRoot: string; filePath: string; backupPath: string }) => ipcRenderer.invoke(IPC_CHANNELS.FS.RESTORE_BACKUP, input),
     deleteBackup: (input: { workspaceRoot: string; backupPath: string }) => ipcRenderer.invoke(IPC_CHANNELS.FS.DELETE_BACKUP, input),
+    exportDocument: (input) => ipcRenderer.invoke(IPC_CHANNELS.FS.EXPORT_DOCUMENT, input),
   },
   todo: {
     load: (workspaceRoot?: string | null) => ipcRenderer.invoke(IPC_CHANNELS.TODO.LOAD, workspaceRoot),

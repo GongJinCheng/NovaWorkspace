@@ -55,3 +55,22 @@ export interface WorkspaceSearchResult {
   snippet?: string;
   modifiedAt?: string;
 }
+
+
+/** 导出格式 */
+export type ExportDocumentFormat = 'markdown' | 'html' | 'pdf';
+
+/** 文档导出输入 */
+export interface ExportDocumentInput {
+  format: ExportDocumentFormat;
+  defaultFileName: string;
+  title?: string;
+  markdown?: string;
+  html?: string;
+}
+
+/** 文档导出结果 */
+export interface ExportDocumentResult {
+  canceled: boolean;
+  filePath?: string;
+}

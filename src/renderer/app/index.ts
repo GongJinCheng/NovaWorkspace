@@ -83,36 +83,67 @@ function bindNavEvents(): void {
   });
 }
 
+let globalShortcutBound = false;
+
 function bindKeyboardShortcuts(): void {
-  document.addEventListener('keydown', (e) => {
-    if (e.ctrlKey && e.key === 's') {
+  if (globalShortcutBound) return;
+  globalShortcutBound = true;
+
+  const handleGlobalShortcut = (e: KeyboardEvent) => {
+    const key = e.key.toLowerCase();
+    const isMod = e.ctrlKey || e.metaKey;
+    if (!isMod) return;
+
+    // Ctrl+K is Nova's command palette. Bind it in capture phase so it works
+    // immediately after startup and is not swallowed by focused inputs/editors.
+    if (key === 'k') {
+      e.preventDefault();
+      e.stopPropagation();
+      openSearchOverlay();
+      return;
+    }
+
+    if (key === 's') {
       e.preventDefault();
       const em = (window as any).__editorManager;
       if (em) em.saveFile();
+      return;
     }
-    if (e.ctrlKey && e.key === 'o') {
+
+    if (key === 'o') {
       e.preventDefault();
       switchPage('files');
       setTimeout(() => {
         const ft = (window as any).__fileTree;
         if (ft) ft.openFolder();
       }, 200);
+      return;
     }
-    if (e.ctrlKey && e.key === 'n') {
+
+    if (key === 'n') {
       e.preventDefault();
       switchPage('files');
       setTimeout(() => { (window as any).__handleNewFile?.(); }, 200);
+      return;
     }
-    if (e.ctrlKey && e.key === 'w') {
+
+    if (key === 'w') {
       e.preventDefault();
       const em = (window as any).__editorManager;
       if (em?.activeEditor) em.closeTab(em.activeEditor);
     }
-    if (e.ctrlKey && e.key === 'k') {
-      e.preventDefault();
-      toggleSearchOverlay();
-    }
+  };
+
+  document.addEventListener('keydown', handleGlobalShortcut, true);
+  window.addEventListener('keydown', handleGlobalShortcut, true);
+
+  // Some Electron/Chromium focus paths can miss the first document listener after
+  // launch. Re-asserting focus and exposing an imperative hook gives both the
+  // sidebar search box and tests a reliable command-palette entry point.
+  window.addEventListener('focus', () => {
+    document.body?.setAttribute('data-shortcuts-ready', 'true');
   });
+  (window as any).__openCommandPalette = openSearchOverlay;
 }
 
 
@@ -211,6 +242,10 @@ function getCommandActions(): PaletteResult[] {
     { id: 'cmd-ai-summary', group: 'AI 命令', title: 'AI 总结当前文档', subtitle: '基于当前 Markdown 生成总结', icon: '✨', action: () => runActiveMarkdownCommand('summary') },
     { id: 'cmd-ai-todo', group: 'AI 命令', title: 'AI 根据当前文档生成待办', subtitle: '从当前 Markdown 提取任务', icon: '✅', action: () => runActiveMarkdownCommand('todo') },
     { id: 'cmd-ask-doc', group: 'AI 命令', title: '问当前文档', subtitle: '基于当前 Markdown 向 AI 提问', icon: '💬', action: () => runActiveMarkdownCommand('askdoc') },
+    { id: 'cmd-export-current-html', group: '导出', title: '导出当前文档为 HTML', subtitle: '把当前 Markdown 导出为网页文件', icon: '🌐', action: () => runActiveMarkdownCommand('exporthtml') },
+    { id: 'cmd-export-current-pdf', group: '导出', title: '导出当前文档为 PDF', subtitle: '把当前 Markdown 导出为 PDF', icon: '📄', action: () => runActiveMarkdownCommand('exportpdf') },
+    { id: 'cmd-export-project-md', group: '导出', title: '导出项目报告 Markdown', subtitle: '基于当前项目概览生成报告', icon: '📋', action: () => runProjectExportCommand('markdown') },
+    { id: 'cmd-export-project-pdf', group: '导出', title: '导出项目报告 PDF', subtitle: '基于当前项目概览生成 PDF 报告', icon: '📕', action: () => runProjectExportCommand('pdf') },
     { id: 'cmd-save-version', group: '文档命令', title: '保存当前版本', subtitle: '为当前文档创建历史版本', icon: '🕘', action: () => runActiveMarkdownCommand('saveversion') },
     { id: 'cmd-history', group: '文档命令', title: '查看版本历史', subtitle: '预览、恢复或删除历史版本', icon: '📚', action: () => runActiveMarkdownCommand('history') },
   ];
@@ -279,6 +314,13 @@ function runActiveMarkdownCommand(action: string): void {
     }
     void em.runMarkdownCommand?.(action);
   }, 220);
+}
+
+function runProjectExportCommand(format: 'markdown' | 'pdf' | 'html'): void {
+  switchPage('project');
+  setTimeout(() => {
+    void (window as any).__exportProjectReport?.(format);
+  }, 260);
 }
 
 async function createQuickTodo(): Promise<void> {
