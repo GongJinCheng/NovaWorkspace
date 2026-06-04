@@ -7,7 +7,7 @@
 import { ipcClient } from '../../services/ipc-client';
 import { aiService } from '../ai/ai-service';
 import type { FilesStore } from './files-store';
-import { isMarkdownFile, renderMarkdownToHtml } from './markdown-preview';
+import { isMarkdownFile, renderMarkdownToHtml, renderMermaidBlocks } from './markdown-preview';
 import { showInputPrompt, showConfirmDialog, showTaskConfirmDialog } from '../../components/modal';
 import { switchPage } from '../../app/router';
 import { getCurrentWorkspaceRoot, getRelativePath } from '../../services/workspace-context';
@@ -344,6 +344,7 @@ export class EditorManager {
     const tab = this.editors.get(this.activeEditorPath);
     if (!tab || !this.isActiveMarkdown()) return;
     this.markdownPreview.innerHTML = renderMarkdownToHtml(tab.model.getValue());
+    void renderMermaidBlocks(this.markdownPreview);
   }
 
   async runMarkdownCommand(action: string): Promise<void> {

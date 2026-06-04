@@ -6,12 +6,19 @@
 import { registerPageInit } from '../../app/router';
 import { getThemeMode, setThemeMode } from '../../app/theme';
 import { AI_PROVIDER_PRESETS } from '../../../shared/constants/ai-providers';
-import type { AIProviderConfig, AIProviderType, AISettings } from '../../../shared/types/ai';
+import type { AIModelCapabilities, AIProviderConfig, AIProviderType, AISettings } from '../../../shared/types/ai';
+import {
+  AI_CAPABILITY_LABELS,
+  describeAIModelCapabilities,
+  inferAIModelCapabilities,
+  normalizeAIModelCapabilities,
+} from '../../../shared/utils/ai-capabilities';
 import { aiService } from '../ai/ai-service';
 
 let settingsPageBound = false;
 let currentAISettings: AISettings | null = null;
 let editingProviderId: string | null = null;
+const CAPABILITY_KEYS: Array<keyof AIModelCapabilities> = ['vision', 'files', 'reasoning', 'tools'];
 
 function initSettingsPage(): void {
   ensureAISettingsSection();
@@ -57,6 +64,9 @@ function bindSettingsPageOnce(): void {
         break;
       case 'fetch-provider-models':
         void fetchModelsFromForm();
+        break;
+      case 'infer-provider-capabilities':
+        applyInferredCapabilitiesToForm(true);
         break;
     }
   });
@@ -114,6 +124,18 @@ function ensureAISettingsSection(): void {
           '<label class="settings-ai-span-2">API Key<input id="settings-ai-api-key" type="password" placeholder="Ollama 可留空" /></label>' +
           '<label>默认模型<input id="settings-ai-model" type="text" placeholder="例如 deepseek-chat" /></label>' +
           '<label class="settings-ai-enabled"><input id="settings-ai-enabled" type="checkbox" /> 启用当前供应商</label>' +
+          '<div class="settings-ai-capabilities settings-ai-span-2">' +
+            '<div class="settings-ai-capability-head">' +
+              '<div><strong>模型能力</strong><span>发送前按这里校验，避免把图片发给纯文本模型。</span></div>' +
+              '<button type="button" class="settings-mini-btn ghost" data-ai-settings-action="infer-provider-capabilities">按模型名识别</button>' +
+            '</div>' +
+            '<div class="settings-ai-capability-grid">' +
+              '<label class="settings-ai-capability"><input id="settings-ai-cap-vision" type="checkbox" /> <span>支持图片输入</span><small>允许发送 image_url/base64 图片</small></label>' +
+              '<label class="settings-ai-capability"><input id="settings-ai-cap-files" type="checkbox" /> <span>支持文件输入</span><small>预留文档/附件能力</small></label>' +
+              '<label class="settings-ai-capability"><input id="settings-ai-cap-reasoning" type="checkbox" /> <span>支持思考过程</span><small>兼容 reasoning_content / think</small></label>' +
+              '<label class="settings-ai-capability"><input id="settings-ai-cap-tools" type="checkbox" /> <span>支持工具调用</span><small>预留 tools/function calling</small></label>' +
+            '</div>' +
+          '</div>' +
         '</div>' +
         '<div class="settings-ai-actions">' +
           '<button class="settings-action-btn primary" data-ai-settings-action="save-provider">保存配置</button>' +
@@ -160,6 +182,7 @@ function renderProviderList(): void {
           (isDefault ? '<span class="settings-ai-default-badge">默认</span>' : '') +
         '</div>' +
         '<span>' + escHTML(provider.defaultModel || '-') + ' · ' + status + '</span>' +
+        renderCapabilityBadges(provider) +
       '</div>' +
       '<div class="settings-ai-provider-actions">' +
         (!isDefault ? '<button data-ai-settings-action="set-default-provider" data-provider-id="' + escHTML(provider.id) + '">设为默认</button>' : '<button class="is-muted" data-ai-settings-action="edit-provider" data-provider-id="' + escHTML(provider.id) + '">正在使用</button>') +
@@ -180,6 +203,7 @@ function selectProviderForEdit(provider: AIProviderConfig | null, clearModels = 
   setValue('settings-ai-model', provider.defaultModel);
   const enabled = document.getElementById('settings-ai-enabled') as HTMLInputElement | null;
   if (enabled) enabled.checked = provider.enabled !== false;
+  setCapabilityChecks(normalizeAIModelCapabilities(provider.capabilities, provider));
   if (clearModels) setModelsMessage('');
 }
 
@@ -187,13 +211,18 @@ async function saveProviderFromForm(): Promise<void> {
   const presetType = getValue('settings-ai-preset') as AIProviderType;
   const existing = getProvider(editingProviderId || '');
   const now = Date.now();
-  const provider: AIProviderConfig = {
-    id: existing?.id || 'provider-' + now.toString(36) + '-' + Math.random().toString(36).slice(2, 8),
+  const providerDraft = {
     name: getValue('settings-ai-name') || getPreset(presetType)?.name || 'AI Provider',
     type: presetType,
     baseUrl: getValue('settings-ai-base-url'),
-    apiKey: getValue('settings-ai-api-key'),
     defaultModel: getValue('settings-ai-model'),
+  };
+
+  const provider: AIProviderConfig = {
+    id: existing?.id || 'provider-' + now.toString(36) + '-' + Math.random().toString(36).slice(2, 8),
+    ...providerDraft,
+    apiKey: getValue('settings-ai-api-key'),
+    capabilities: getCapabilitiesFromForm(providerDraft),
     enabled: (document.getElementById('settings-ai-enabled') as HTMLInputElement | null)?.checked !== false,
     createdAt: existing?.createdAt || now,
     updatedAt: now,
@@ -271,7 +300,12 @@ async function fetchModelsFromForm(): Promise<void> {
       setModelsMessage(models.slice(0, 30).map(model => '<button class="settings-model-chip" data-model="' + escHTML(model) + '">' + escHTML(model) + '</button>').join(''));
       const modelsEl = document.getElementById('settings-ai-models');
       modelsEl?.querySelectorAll('.settings-model-chip').forEach(chip => {
-        chip.addEventListener('click', () => setValue('settings-ai-model', (chip as HTMLElement).dataset.model || ''), { once: false });
+        chip.addEventListener('click', () => {
+          const model = (chip as HTMLElement).dataset.model || '';
+          setValue('settings-ai-model', model);
+          applyInferredCapabilitiesToForm(false, model);
+          setStatus('已选择模型，并按模型名预填能力；如中转平台能力不同，可手动调整。', 'info');
+        }, { once: false });
       });
     }
     setStatus('获取到 ' + models.length + ' 个模型', 'success');
@@ -302,6 +336,12 @@ function createProviderFromPreset(type: AIProviderType): AIProviderConfig {
     baseUrl: preset.baseUrl,
     apiKey: '',
     defaultModel: preset.defaultModel,
+    capabilities: inferAIModelCapabilities({
+      name: preset.name,
+      type: preset.type,
+      baseUrl: preset.baseUrl,
+      defaultModel: preset.defaultModel,
+    }),
     enabled: true,
     createdAt: now,
     updatedAt: now,
@@ -311,6 +351,50 @@ function createProviderFromPreset(type: AIProviderType): AIProviderConfig {
 function getPreset(type: AIProviderType) {
   return AI_PROVIDER_PRESETS.find(preset => preset.type === type);
 }
+
+function getCapabilitiesFromForm(provider: Pick<AIProviderConfig, 'name' | 'type' | 'baseUrl' | 'defaultModel'>): AIModelCapabilities {
+  const formCapabilities = CAPABILITY_KEYS.reduce((acc, key) => {
+    const checkbox = document.getElementById(getCapabilityCheckboxId(key)) as HTMLInputElement | null;
+    acc[key] = checkbox?.checked === true;
+    return acc;
+  }, {} as AIModelCapabilities);
+  return normalizeAIModelCapabilities(formCapabilities, provider);
+}
+
+function setCapabilityChecks(capabilities: AIModelCapabilities): void {
+  CAPABILITY_KEYS.forEach((key) => {
+    const checkbox = document.getElementById(getCapabilityCheckboxId(key)) as HTMLInputElement | null;
+    if (checkbox) checkbox.checked = capabilities[key] === true;
+  });
+}
+
+function applyInferredCapabilitiesToForm(showStatus: boolean, modelOverride?: string): void {
+  const presetType = getValue('settings-ai-preset') as AIProviderType;
+  const provider = {
+    name: getValue('settings-ai-name') || getPreset(presetType)?.name || 'AI Provider',
+    type: presetType,
+    baseUrl: getValue('settings-ai-base-url'),
+    defaultModel: modelOverride || getValue('settings-ai-model'),
+  };
+  const capabilities = inferAIModelCapabilities(provider);
+  setCapabilityChecks(capabilities);
+  if (showStatus) {
+    setStatus('已按模型名识别能力：' + describeAIModelCapabilities(capabilities) + '。自定义中转不一定准确，可手动调整。', 'info');
+  }
+}
+
+function renderCapabilityBadges(provider: AIProviderConfig): string {
+  const capabilities = normalizeAIModelCapabilities(provider.capabilities, provider);
+  return '<div class="settings-ai-capability-badges">' + CAPABILITY_KEYS.map(key => {
+    const on = capabilities[key] === true;
+    return '<span class="settings-ai-capability-badge ' + (on ? 'on' : 'off') + '">' + escHTML(AI_CAPABILITY_LABELS[key]) + '</span>';
+  }).join('') + '</div>';
+}
+
+function getCapabilityCheckboxId(key: keyof AIModelCapabilities): string {
+  return 'settings-ai-cap-' + key;
+}
+
 
 function setStatus(message: string, type: 'success' | 'error' | 'info' = 'info'): void {
   const el = document.getElementById('settings-ai-status');

@@ -23,6 +23,7 @@ import type { TodoTask } from '@shared/types/todo';
 let currentRefresh: () => Promise<void> = async () => {};
 let currentSelectTask: ((id: string) => void) | undefined;
 let boundTaskArea: HTMLElement | null = null;
+let boundTimelineList: HTMLElement | null = null;
 let inlineCommitInProgress = false;
 
 export function renderTaskList(onRefresh: () => Promise<void>, onSelectTask?: (id: string) => void): void {
@@ -32,6 +33,7 @@ export function renderTaskList(onRefresh: () => Promise<void>, onSelectTask?: (i
   currentRefresh = onRefresh;
   currentSelectTask = onSelectTask;
   ensureTaskEventsBound(area);
+  ensureTimelineEventsBound();
 
   measure('todo.renderTaskList', () => {
     const store = getStore();
@@ -43,25 +45,68 @@ export function renderTaskList(onRefresh: () => Promise<void>, onSelectTask?: (i
   });
 }
 
+/** Render recently completed tasks into the timeline list at the bottom. */
+export function renderCompletedTasks(): void {
+  const list = document.getElementById('todo-timeline-list');
+  if (!list) return;
+
+  const tasks = getStore().data.tasks;
+  const completed = tasks
+    .filter(t => t.completed)
+    .sort((a, b) => {
+      const aTime = a.completedAt ? new Date(a.completedAt).getTime() : 0;
+      const bTime = b.completedAt ? new Date(b.completedAt).getTime() : 0;
+      return bTime - aTime;
+    })
+    .slice(0, 10);
+
+  if (completed.length === 0) {
+    list.innerHTML = '<div class="todo-timeline-empty">暂无最近完成的任务</div>';
+    return;
+  }
+
+  let html = '';
+  for (const task of completed) {
+    const cat = task.categoryId ? getCategoryById(task.categoryId) : undefined;
+    html += '<div class="todo-timeline-item" data-id="' + task.id + '" title="' + esc(task.title) + '">' +
+      '<span class="todo-timeline-check">' + SMALL_CHECK_ICON + '</span>' +
+      '<span class="todo-timeline-title">' + esc(task.title) + '</span>' +
+      (cat ? '<span class="todo-timeline-cat" style="color:' + cat.color + '">' + esc(cat.name) + '</span>' : '') +
+    '</div>';
+  }
+  list.innerHTML = html;
+}
+
 function renderPlanboard(area: HTMLElement): void {
   const groups = getPlanboardGroups();
   let hasAnyTask = false;
 
-  let html = '<div class="todo-planboard">';
+  let html = '<div class="timeline-container">';
   for (const bucket of PLANBOARD_BUCKETS) {
     const bucketTasks = groups.get(bucket) || [];
     hasAnyTask = hasAnyTask || bucketTasks.length > 0;
 
-    html += '<div class="todo-bucket" id="todo-bucket-' + bucketId(bucket) + '">' +
-      '<div class="todo-bucket-header">' +
-        '<span class="todo-bucket-label">' + esc(bucket) + '</span>' +
-        '<span class="todo-bucket-count">' + bucketTasks.length + '</span>' +
+    const dotClass = BUCKET_DOT_CLASS[bucket] || 'later';
+
+    html += '<div class="timeline-group' + (bucketTasks.length === 0 ? ' empty' : '') + '" data-group="' + dotClass + '">' +
+      '<div class="timeline-dot ' + dotClass + '"></div>' +
+      '<div class="group-header" data-action="toggle-group" data-bucket="' + esc(bucket) + '">' +
+        '<div class="group-title">' +
+          '<span class="group-label">' + esc(bucket) + '</span>' +
+          '<span class="count-badge">' + bucketTasks.length + ' 项</span>' +
+        '</div>' +
+        '<div class="group-toggle">' + CHEVRON_DOWN_ICON + '</div>' +
       '</div>' +
-      '<div class="todo-bucket-list">';
+      '<div class="group-cards">';
 
     for (const task of bucketTasks) html += renderTaskCard(task);
 
-    if (bucketTasks.length === 0) html += '<div class="todo-bucket-empty">暂无任务</div>';
+    if (bucketTasks.length === 0) {
+      html += '<div class="todo-bucket-empty">' +
+        '<span class="todo-bucket-empty-line"></span>' +
+        '<span>暂无任务</span>' +
+      '</div>';
+    }
     html += '</div></div>';
   }
   html += '</div>';
@@ -142,6 +187,21 @@ function ensureTaskEventsBound(area: HTMLElement): void {
   area.addEventListener('click', handleTaskAreaClick);
 }
 
+function ensureTimelineEventsBound(): void {
+  const list = document.getElementById('todo-timeline-list');
+  if (!list || boundTimelineList === list) return;
+
+  boundTimelineList = list;
+  list.addEventListener('click', (e) => {
+    const target = e.target as HTMLElement;
+    const item = target.closest('.todo-timeline-item') as HTMLElement | null;
+    if (item) {
+      const taskId = item.dataset.id;
+      if (taskId && currentSelectTask) currentSelectTask(taskId);
+    }
+  });
+}
+
 async function handleTaskAreaClick(e: MouseEvent): Promise<void> {
   const area = e.currentTarget as HTMLElement;
   const target = e.target as HTMLElement;
@@ -150,6 +210,14 @@ async function handleTaskAreaClick(e: MouseEvent): Promise<void> {
   if (actionBtn) {
     e.stopPropagation();
     const action = actionBtn.dataset.action;
+
+    // toggle-group doesn't need a task id — handle it first
+    if (action === 'toggle-group') {
+      const group = actionBtn.closest('.timeline-group') as HTMLElement | null;
+      if (group) group.classList.toggle('collapsed');
+      return;
+    }
+
     const id = actionBtn.dataset.id || actionBtn.dataset.taskId;
     if (!id) return;
 
@@ -332,17 +400,6 @@ function patchSubtask(actionBtn: HTMLElement, done: boolean, subtasks: TodoTask[
 }
 
 
-function bucketId(bucket: string): string {
-  const map: Record<string, string> = {
-    '已逾期': 'overdue',
-    '今天': 'today',
-    '明天': 'tomorrow',
-    '本周': 'week',
-    '更后': 'later',
-  };
-  return map[bucket] || bucket;
-}
-
 function formatDueDate(dueDate: string) {
   if (!dueDate) return null;
   const diff = new Date(dueDate).getTime() - Date.now();
@@ -383,3 +440,12 @@ function esc(text: string): string {
 const CHECK_ICON = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>';
 const SMALL_CHECK_ICON = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>';
 const DELETE_ICON = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>';
+const CHEVRON_DOWN_ICON = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M4 5l3 3 3-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+const BUCKET_DOT_CLASS: Record<string, string> = {
+  '已逾期': 'overdue',
+  '今天': 'today',
+  '明天': 'tomorrow',
+  '本周': 'week',
+  '更后': 'later',
+};

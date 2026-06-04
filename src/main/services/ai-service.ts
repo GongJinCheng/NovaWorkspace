@@ -2,11 +2,13 @@ import type {
   AIChatRequest,
   AIChatResponse,
   AIConnectionTestResult,
+  AIContentPart,
   AIMessage,
   AIModelInfo,
   AIProviderConfig,
 } from '@shared/types/ai';
 import { getAISettings, getDefaultAIProvider } from './settings-store';
+import { providerSupportsCapability } from '@shared/utils/ai-capabilities';
 
 type StreamCallbacks = {
   onChunk(chunk: string): void;
@@ -36,7 +38,8 @@ export async function chat(request: AIChatRequest): Promise<AIChatResponse> {
     await assertOk(response, 'AI 请求失败');
 
     const data = await response.json() as any;
-    const content = data.choices?.[0]?.message?.content ?? '';
+    const message = data.choices?.[0]?.message ?? {};
+    const content = mergeReasoningWithContent(message.reasoning_content ?? message.reasoning, message.content ?? '');
 
     return {
       content,
@@ -59,6 +62,11 @@ export async function chatStream(request: AIChatRequest, callbacks: StreamCallba
   ensureProviderReady(provider);
 
   let fullText = '';
+  let reasoningOpen = false;
+  const emitStreamChunk = (chunk: string) => {
+    fullText += chunk;
+    callbacks.onChunk(chunk);
+  };
   const timeout = request.timeout ?? DEFAULT_TIMEOUT * 2;
   const controller = new AbortController();
   const timer = timeout > 0 ? setTimeout(() => controller.abort(), timeout) : null;
@@ -99,6 +107,10 @@ export async function chatStream(request: AIChatRequest, callbacks: StreamCallba
         const payload = trimmed.slice(5).trim();
         if (!payload) continue;
         if (payload === '[DONE]') {
+          if (reasoningOpen) {
+            emitStreamChunk('</think>');
+            reasoningOpen = false;
+          }
           callbacks.onDone(fullText);
           return;
         }
@@ -106,10 +118,23 @@ export async function chatStream(request: AIChatRequest, callbacks: StreamCallba
         try {
           const parsed = JSON.parse(payload);
           const delta = parsed.choices?.[0]?.delta;
-          const content = delta?.content ?? delta?.reasoning_content ?? parsed.choices?.[0]?.message?.content;
+          const reasoning = delta?.reasoning_content ?? delta?.reasoning;
+          const content = delta?.content ?? parsed.choices?.[0]?.message?.content;
+
+          if (reasoning) {
+            if (!reasoningOpen) {
+              emitStreamChunk('<think>');
+              reasoningOpen = true;
+            }
+            emitStreamChunk(stringifyMessageContent(reasoning));
+          }
+
           if (content) {
-            fullText += content;
-            callbacks.onChunk(content);
+            if (reasoningOpen) {
+              emitStreamChunk('</think>\n\n');
+              reasoningOpen = false;
+            }
+            emitStreamChunk(stringifyMessageContent(content));
           }
         } catch {
           // Ignore partial/non-JSON server-sent event lines.
@@ -117,6 +142,10 @@ export async function chatStream(request: AIChatRequest, callbacks: StreamCallba
       }
     }
 
+    if (reasoningOpen) {
+      emitStreamChunk('</think>');
+      reasoningOpen = false;
+    }
     callbacks.onDone(fullText);
   } catch (error: any) {
     if (error?.name === 'AbortError') {
@@ -177,6 +206,7 @@ async function resolveProvider(providerId?: string): Promise<AIProviderConfig> {
 }
 
 function buildChatBody(provider: AIProviderConfig, request: AIChatRequest, stream: boolean): Record<string, unknown> {
+  assertRequestCapabilities(provider, request.messages);
   return {
     model: request.model || provider.defaultModel,
     messages: normalizeMessages(request.messages),
@@ -186,10 +216,59 @@ function buildChatBody(provider: AIProviderConfig, request: AIChatRequest, strea
   };
 }
 
+
+function assertRequestCapabilities(provider: AIProviderConfig, messages: AIMessage[]): void {
+  const hasImageInput = messages.some(message => {
+    const content = message.content;
+    return Array.isArray(content) && content.some(part => part?.type === 'image_url' && part.image_url?.url);
+  });
+
+  if (hasImageInput && !providerSupportsCapability(provider, 'vision')) {
+    throw new Error('当前模型配置未开启“图片输入”能力，已阻止发送图片内容。请在设置页确认模型支持视觉/多模态后再开启。');
+  }
+}
+
 function normalizeMessages(messages: AIMessage[]): AIMessage[] {
   return messages
-    .filter(message => message && message.role && typeof message.content === 'string')
-    .map(message => ({ role: message.role, content: message.content }));
+    .filter(message => message && message.role && message.content !== undefined && message.content !== null)
+    .map(message => ({
+      role: message.role,
+      content: normalizeMessageContent(message.content),
+    }))
+    .filter(message => typeof message.content === 'string' ? message.content.trim().length > 0 : message.content.length > 0);
+}
+
+function normalizeMessageContent(content: AIMessage['content']): string | AIContentPart[] {
+  if (typeof content === 'string') return content;
+  if (!Array.isArray(content)) return '';
+
+  return content
+    .map((part) => {
+      if (part?.type === 'text') {
+        return { type: 'text' as const, text: String(part.text || '') };
+      }
+      if (part?.type === 'image_url' && part.image_url?.url) {
+        return { type: 'image_url' as const, image_url: { url: String(part.image_url.url) } };
+      }
+      return null;
+    })
+    .filter(Boolean) as AIContentPart[];
+}
+
+function stringifyMessageContent(content: unknown): string {
+  if (typeof content === 'string') return content;
+  if (Array.isArray(content)) {
+    return content.map((part: any) => part?.type === 'text' ? String(part.text || '') : '').join('');
+  }
+  if (content === undefined || content === null) return '';
+  return String(content);
+}
+
+function mergeReasoningWithContent(reasoning: unknown, content: unknown): string {
+  const reasoningText = stringifyMessageContent(reasoning).trim();
+  const answerText = stringifyMessageContent(content);
+  if (!reasoningText) return answerText;
+  return `<think>${reasoningText}</think>${answerText ? '\n\n' + answerText : ''}`;
 }
 
 function buildHeaders(provider: AIProviderConfig): Record<string, string> {

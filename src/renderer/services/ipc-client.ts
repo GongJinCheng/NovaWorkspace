@@ -5,7 +5,7 @@ import type { ElectronAPI } from '../../shared/types/ipc';
 import type { FileEntry, DialogResult, RecentProject, RecentMarkdownFile, FileBackupEntry, WorkspaceSearchResult, ExportDocumentInput, ExportDocumentResult } from '../../shared/types/file';
 import type { TodoData, TodoTask, TodoCategory, CreateTaskInput, UpdateTaskInput } from '../../shared/types/todo';
 import type { Workspace, WorkspaceSession, OpenWorkspaceInput, SaveWorkspaceSessionInput, UpdateProjectMetaInput, ProjectMeta, ProjectOverview } from '../../shared/types/workspace';
-import type { AIChatRequest, AIProviderConfig } from '../../shared/types/ai';
+import type { AIChatRequest, AIProviderConfig, AIImageAttachment } from '../../shared/types/ai';
 import { getCurrentWorkspaceRoot } from './workspace-context';
 
 const api = (): ElectronAPI => window.electronAPI;
@@ -35,6 +35,7 @@ export const ipcClient = {
     restoreBackup: (input: { workspaceRoot: string; filePath: string; backupPath: string }): Promise<{ content: string; restoredAt: string }> => api().fs.restoreBackup(input),
     deleteBackup: (input: { workspaceRoot: string; backupPath: string }): Promise<boolean> => api().fs.deleteBackup(input),
     exportDocument: (input: ExportDocumentInput): Promise<ExportDocumentResult> => api().fs.exportDocument(input),
+    readImageAsDataUrl: (filePath: string): Promise<AIImageAttachment> => api().fs.readImageAsDataUrl(filePath),
   },
   todo: {
     load: (workspaceRoot = getCurrentWorkspaceRoot()): Promise<TodoData> => api().todo.load(workspaceRoot),
@@ -62,6 +63,12 @@ export const ipcClient = {
     getProjectMeta: (rootPath: string): Promise<ProjectMeta> => api().workspace.getProjectMeta(rootPath),
     updateProjectMeta: (input: UpdateProjectMetaInput): Promise<ProjectMeta> => api().workspace.updateProjectMeta(input),
     getProjectOverview: (rootPath: string): Promise<ProjectOverview> => api().workspace.getProjectOverview(rootPath),
+  },
+  update: {
+    checkForUpdates: (manual?: boolean) => api().update.checkForUpdates(manual),
+    downloadUpdate: () => api().update.downloadUpdate(),
+    installUpdate: () => api().update.installUpdate(),
+    onStatus: (callback: Parameters<ElectronAPI['update']['onStatus']>[0]) => api().update.onStatus(callback),
   },
   ai: {
     getSettings: () => api().ai.getSettings(),

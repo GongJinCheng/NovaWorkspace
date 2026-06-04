@@ -4,8 +4,9 @@
  */
 import type { FileEntry, DialogResult, RecentProject, RecentMarkdownFile, FileBackupEntry, WorkspaceSearchResult, ExportDocumentInput, ExportDocumentResult } from './file';
 import type { TodoData, TodoTask, TodoCategory, CreateTaskInput, UpdateTaskInput } from './todo';
-import type { AISettings, AIProviderConfig, AIChatRequest, AIChatResponse, AIConnectionTestResult } from './ai';
+import type { AISettings, AIProviderConfig, AIChatRequest, AIChatResponse, AIConnectionTestResult, AIImageAttachment } from './ai';
 import type { Workspace, WorkspaceSession, OpenWorkspaceInput, SaveWorkspaceSessionInput, ProjectMeta, ProjectOverview, UpdateProjectMetaInput } from './workspace';
+import type { UpdateState } from './update';
 
 export interface ElectronAPI {
   window: {
@@ -32,6 +33,7 @@ export interface ElectronAPI {
     restoreBackup(input: { workspaceRoot: string; filePath: string; backupPath: string }): Promise<{ content: string; restoredAt: string }>;
     deleteBackup(input: { workspaceRoot: string; backupPath: string }): Promise<boolean>;
     exportDocument(input: ExportDocumentInput): Promise<ExportDocumentResult>;
+    readImageAsDataUrl(filePath: string): Promise<AIImageAttachment>;
   };
   todo: {
     load(workspaceRoot?: string | null): Promise<TodoData>;
@@ -59,6 +61,12 @@ export interface ElectronAPI {
     getProjectMeta(rootPath: string): Promise<ProjectMeta>;
     updateProjectMeta(input: UpdateProjectMetaInput): Promise<ProjectMeta>;
     getProjectOverview(rootPath: string): Promise<ProjectOverview>;
+  };
+  update: {
+    checkForUpdates(manual?: boolean): Promise<UpdateState>;
+    downloadUpdate(): Promise<UpdateState>;
+    installUpdate(): void;
+    onStatus(callback: (status: UpdateState) => void): () => void;
   };
   ai: {
     getSettings(): Promise<AISettings>;

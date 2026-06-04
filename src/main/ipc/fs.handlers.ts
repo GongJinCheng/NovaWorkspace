@@ -28,6 +28,21 @@ function timestampForFileName(date = new Date()): string {
 }
 
 
+const IMAGE_MIME_BY_EXT: Record<string, string> = {
+  '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.webp': 'image/webp',
+  '.gif': 'image/gif',
+  '.bmp': 'image/bmp',
+};
+
+function getImageMimeType(filePath: string): string | null {
+  return IMAGE_MIME_BY_EXT[path.extname(filePath).toLowerCase()] || null;
+}
+
+
+
 
 
 
@@ -411,6 +426,32 @@ export function registerFsHandlers(): void {
     } catch (error: unknown) {
       const msg = error instanceof Error ? error.message : String(error);
       throw new Error('无法恢复版本: ' + msg);
+    }
+  });
+
+  ipcMain.handle(IPC_CHANNELS.FS.READ_IMAGE_AS_DATA_URL, async (_event, filePath: string) => {
+    try {
+      const target = path.resolve(filePath.replace(/^file:\/\//i, ''));
+      const mimeType = getImageMimeType(target);
+      if (!mimeType) throw new Error('只支持 PNG、JPG、JPEG、WEBP、GIF、BMP 图片');
+
+      const stat = await fs.stat(target);
+      if (!stat.isFile()) throw new Error('目标不是文件');
+      const maxBytes = 20 * 1024 * 1024;
+      if (stat.size > maxBytes) throw new Error('图片超过 20MB，建议先压缩后再发送给 AI');
+
+      const buffer = await fs.readFile(target);
+      return {
+        id: `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
+        name: path.basename(target),
+        mimeType,
+        dataUrl: `data:${mimeType};base64,${buffer.toString('base64')}`,
+        size: stat.size,
+        path: target,
+      };
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : String(error);
+      throw new Error('无法读取图片: ' + msg);
     }
   });
 

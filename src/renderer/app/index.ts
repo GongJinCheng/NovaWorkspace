@@ -33,6 +33,8 @@ async function initApp(): Promise<void> {
   registerPageInits();
   initializeActivePage();
   initSidebarCollapse();
+  initLocalLogin();
+  initAutoUpdateStatus();
   console.log('[App] \u521D\u59CB\u5316\u5B8C\u6210');
 }
 
@@ -485,6 +487,123 @@ function initSidebarCollapse(): void {
       : '<path d="m11 17-5-5 5-5"/><path d="m18 17-5-5 5-5"/>';
     btn!.setAttribute('title', c ? '展开侧边栏' : '收起侧边栏');
   }
+}
+
+
+// --- Local user login (localStorage only) ---
+type LocalUser = {
+  name: string;
+  role: string;
+  loggedIn: boolean;
+  updatedAt: number;
+};
+
+const LOCAL_USER_KEY = 'nova-local-user';
+
+function initLocalLogin(): void {
+  renderLocalUser();
+  document.getElementById('local-user-card')?.addEventListener('click', showLocalLoginModal);
+}
+
+function getLocalUser(): LocalUser {
+  try {
+    const raw = localStorage.getItem(LOCAL_USER_KEY);
+    if (raw) return JSON.parse(raw) as LocalUser;
+  } catch { /* ignore */ }
+  return { name: '', role: '', loggedIn: false, updatedAt: Date.now() };
+}
+
+function saveLocalUser(user: LocalUser): void {
+  localStorage.setItem(LOCAL_USER_KEY, JSON.stringify(user));
+  renderLocalUser();
+}
+
+function clearLocalUser(): void {
+  localStorage.removeItem(LOCAL_USER_KEY);
+  renderLocalUser();
+}
+
+function renderLocalUser(): void {
+  const user = getLocalUser();
+  const nameEl = document.getElementById('local-user-name');
+  const roleEl = document.getElementById('local-user-role');
+  const avatarEl = document.getElementById('local-user-avatar');
+  const card = document.getElementById('local-user-card');
+
+  const name = user.loggedIn && user.name ? user.name : '未登录';
+  const role = user.loggedIn ? (user.role || '本地用户') : '点击本地登录';
+  if (nameEl) nameEl.textContent = name;
+  if (roleEl) roleEl.textContent = role;
+  if (avatarEl) avatarEl.textContent = user.loggedIn ? getInitial(name) : '?';
+  card?.classList.toggle('logged-in', user.loggedIn);
+}
+
+function showLocalLoginModal(): void {
+  const current = getLocalUser();
+  const modal = document.createElement('div');
+  modal.className = 'local-login-modal';
+  modal.innerHTML =
+    '<div class="local-login-card">' +
+      '<div class="local-login-header">' +
+        '<div><h3>本地登录</h3><p>仅保存在当前电脑，不连接服务器。</p></div>' +
+        '<button class="local-login-close" data-action="close" title="关闭">×</button>' +
+      '</div>' +
+      '<label>用户名</label>' +
+      '<input class="local-login-input" id="local-login-name" value="' + escAttr(current.name || '') + '" placeholder="例如：GJC" maxlength="24">' +
+      '<label>身份 / 备注</label>' +
+      '<input class="local-login-input" id="local-login-role" value="' + escAttr(current.role || '') + '" placeholder="例如：开发者" maxlength="30">' +
+      '<div class="local-login-actions">' +
+        (current.loggedIn ? '<button class="local-login-secondary" data-action="logout">退出登录</button>' : '') +
+        '<button class="local-login-secondary" data-action="close">取消</button>' +
+        '<button class="local-login-primary" data-action="save">保存登录</button>' +
+      '</div>' +
+    '</div>';
+  document.body.appendChild(modal);
+
+  const close = () => modal.remove();
+  modal.addEventListener('click', (event) => {
+    const target = event.target as HTMLElement;
+    if (target === modal || target.dataset.action === 'close') close();
+    if (target.dataset.action === 'logout') {
+      clearLocalUser();
+      close();
+    }
+    if (target.dataset.action === 'save') {
+      const name = (document.getElementById('local-login-name') as HTMLInputElement | null)?.value.trim() || '本地用户';
+      const role = (document.getElementById('local-login-role') as HTMLInputElement | null)?.value.trim() || '本地用户';
+      saveLocalUser({ name, role, loggedIn: true, updatedAt: Date.now() });
+      close();
+    }
+  });
+  window.setTimeout(() => (document.getElementById('local-login-name') as HTMLInputElement | null)?.focus(), 0);
+}
+
+function getInitial(name: string): string {
+  const trimmed = name.trim();
+  if (!trimmed) return '?';
+  const first = trimmed[0];
+  return /[a-z]/i.test(first) ? first.toUpperCase() : first;
+}
+
+function initAutoUpdateStatus(): void {
+  const updateApi = window.electronAPI.update;
+  if (!updateApi?.onStatus) return;
+  updateApi.onStatus((state) => {
+    if (state.status === 'error') console.warn('[Updater]', state.message);
+    if (state.status === 'downloaded') showMiniToast(state.message + '，可在重启后安装。');
+  });
+}
+
+function showMiniToast(message: string): void {
+  const toast = document.createElement('div');
+  toast.className = 'mini-toast';
+  toast.textContent = message;
+  document.body.appendChild(toast);
+  requestAnimationFrame(() => toast.classList.add('show'));
+  window.setTimeout(() => {
+    toast.classList.remove('show');
+    window.setTimeout(() => toast.remove(), 220);
+  }, 4200);
 }
 
 // Start app when DOM is ready

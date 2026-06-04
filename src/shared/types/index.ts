@@ -3,5 +3,6 @@ export * from './file';
 export * from './ai';
 export * from './workspace';
 export * from './ipc';
+export * from './update';
 
 export type { Logger } from "../utils/logger";

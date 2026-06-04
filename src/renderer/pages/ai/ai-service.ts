@@ -7,6 +7,7 @@
 
 import { Logger } from '../../../shared/utils/logger';
 import type { AIMessage, AIProviderConfig, AISettings } from '../../../shared/types/ai';
+import { normalizeAIModelCapabilities } from '../../../shared/utils/ai-capabilities';
 
 const aiLog = new Logger('AIService');
 
@@ -248,11 +249,13 @@ class AIService {
     if (!legacyApiKey && !legacyBaseUrl && !legacyModel) return;
 
     const provider = this.getDefaultProviderFromSettings() || this.createDefaultProvider();
+    const migratedModel = legacyModel || provider.defaultModel;
     const migrated: AIProviderConfig = {
       ...provider,
       apiKey: legacyApiKey || provider.apiKey,
       baseUrl: trimTrailingSlash(legacyBaseUrl || provider.baseUrl),
-      defaultModel: legacyModel || provider.defaultModel,
+      defaultModel: migratedModel,
+      capabilities: normalizeAIModelCapabilities(provider.capabilities, { ...provider, defaultModel: migratedModel }),
       updatedAt: Date.now(),
     };
 
@@ -280,6 +283,7 @@ class AIService {
       baseUrl: 'https://api.openai.com/v1',
       apiKey: '',
       defaultModel: 'gpt-3.5-turbo',
+      capabilities: normalizeAIModelCapabilities(null, { type: 'custom', defaultModel: 'gpt-3.5-turbo' }),
       enabled: true,
       createdAt: now,
       updatedAt: now,

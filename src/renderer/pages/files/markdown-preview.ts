@@ -68,11 +68,15 @@ export function renderMarkdownToHtml(markdown: string): string {
         codeLang = trimmed.slice(3).trim();
         codeLines = [];
       } else {
-        html.push(
-          '<pre><code' + (codeLang ? ' class="language-' + escapeAttr(codeLang) + '"' : '') + '>' +
-          escapeHtml(codeLines.join('\n')) +
-          '</code></pre>'
-        );
+        if (codeLang.trim().toLowerCase() === 'mermaid') {
+          html.push('<div class="nova-mermaid mermaid">' + escapeHtml(codeLines.join('\n')) + '</div>');
+        } else {
+          html.push(
+            '<pre><code' + (codeLang ? ' class="language-' + escapeAttr(codeLang) + '"' : '') + '>' +
+            escapeHtml(codeLines.join('\n')) +
+            '</code></pre>'
+          );
+        }
         inCode = false;
         codeLang = '';
         codeLines = [];
@@ -156,11 +160,54 @@ export function renderMarkdownToHtml(markdown: string): string {
   }
 
   if (inCode) {
-    html.push('<pre><code' + (codeLang ? ' class="language-' + escapeAttr(codeLang) + '"' : '') + '>' + escapeHtml(codeLines.join('\n')) + '</code></pre>');
+    if (codeLang.trim().toLowerCase() === 'mermaid') {
+      html.push('<div class="nova-mermaid mermaid">' + escapeHtml(codeLines.join('\n')) + '</div>');
+    } else {
+      html.push('<pre><code' + (codeLang ? ' class="language-' + escapeAttr(codeLang) + '"' : '') + '>' + escapeHtml(codeLines.join('\n')) + '</code></pre>');
+    }
   }
   flushBlocks();
 
   return html.join('\n') || '<p class="markdown-empty">暂无内容</p>';
+}
+
+
+let mermaidModulePromise: Promise<any> | null = null;
+let mermaidRenderSeq = 0;
+
+async function getMermaidModule(): Promise<any> {
+  if (!mermaidModulePromise) {
+    mermaidModulePromise = import('mermaid').then((mod: any) => {
+      const mermaid = mod.default || mod;
+      mermaid.initialize({
+        startOnLoad: false,
+        securityLevel: 'strict',
+        theme: document.documentElement.dataset.theme === 'dark' ? 'dark' : 'default',
+      });
+      return mermaid;
+    });
+  }
+  return mermaidModulePromise;
+}
+
+export async function renderMermaidBlocks(root: ParentNode): Promise<void> {
+  const blocks = Array.from(root.querySelectorAll<HTMLElement>('.nova-mermaid:not([data-rendered])'));
+  if (blocks.length === 0) return;
+
+  const mermaid = await getMermaidModule();
+  for (const block of blocks) {
+    const source = block.textContent || '';
+    if (!source.trim()) continue;
+    const id = 'nova-mermaid-' + Date.now().toString(36) + '-' + (mermaidRenderSeq++);
+    try {
+      const result = await mermaid.render(id, source);
+      block.innerHTML = result.svg || '';
+      block.dataset.rendered = 'true';
+    } catch (error) {
+      block.dataset.rendered = 'error';
+      block.innerHTML = '<pre><code>' + escapeHtml(source) + '</code></pre><div class="mermaid-error">Mermaid 渲染失败：' + escapeHtml(error instanceof Error ? error.message : String(error)) + '</div>';
+    }
+  }
 }
 
 function renderTable(lines: string[]): string | null {

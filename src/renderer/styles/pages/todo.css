@@ -587,63 +587,20 @@
 .todo-add-cat-btn:hover { color: #6366f1; background: rgba(99,102,241,0.08); }
 
 /* --- Task Area --- */
+/* --- Task Area --- */
 .todo-task-area {
   flex: 1;
   min-height: 120px;
-  overflow-y: overlay;
+  overflow-y: auto;
   overflow-x: hidden;
   padding: 0 4px;
 }
 
-.todo-planboard {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(220px, 1fr));
-  gap: 14px;
-  align-items: start;
-}
-
-.todo-bucket {
-  background: var(--bg-elevated, #12121a);
-  border: 1px solid var(--border-subtle, rgba(255,255,255,0.06));
-  border-radius: 14px;
-  padding: 12px;
-}
-
-.todo-bucket-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 10px;
-}
-
-.todo-bucket-label {
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--text-secondary, #aaa);
-}
-
-.todo-bucket-count {
-  font-size: 10px;
-  padding: 2px 8px;
-  border-radius: 10px;
-  background: var(--bg-hover, rgba(255,255,255,0.04));
-  color: var(--text-tertiary, #666);
-}
-
-.todo-bucket-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.todo-bucket-empty {
-  padding: 16px;
-  border-radius: 10px;
-  background: var(--bg-surface, #0a0a0f);
-  color: var(--text-tertiary, #666);
-  font-size: 12px;
-  text-align: center;
-}
+/* ============================================================
+ * OLD PLANBOARD STYLES — REPLACED BY TIMELINE LAYOUT ABOVE
+ * The following block is intentionally removed.
+ * New timeline styles are at the end of this file.
+ * ============================================================ */
 
 /* Task groups */
 .todo-group { margin-bottom: 16px; }
@@ -666,6 +623,287 @@
   background: var(--bg-hover, rgba(255,255,255,0.04));
   padding: 1px 6px;
   border-radius: 10px;
+}
+
+/* ============================================================
+ * Timeline Board — v2.10 Optimized Layout
+ * Left-side vertical timeline with colored dots + collapsible groups
+ * ============================================================ */
+
+.timeline-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 4px 0;
+}
+
+/* Each timeline group: left indicator + dot + cards */
+.timeline-group {
+  position: relative;
+  padding-left: 32px;
+  margin-bottom: 4px;
+}
+
+/* Vertical connecting line */
+.timeline-group::before {
+  content: '';
+  position: absolute;
+  left: 9px;
+  top: 32px;
+  bottom: -4px;
+  width: 2px;
+  background: var(--border-subtle, rgba(255,255,255,0.08));
+  border-radius: 1px;
+}
+[data-theme="light"] .timeline-group::before {
+  background: rgba(0,0,0,0.06);
+}
+.timeline-group:last-child::before {
+  display: none;
+}
+.timeline-group.empty::before {
+  opacity: 0.4;
+}
+
+/* Timeline dot — color set by bucket class */
+.timeline-dot {
+  position: absolute;
+  left: 0;
+  top: 22px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 3px solid var(--bg-surface, #0a0a0f);
+  z-index: 2;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  flex-shrink: 0;
+}
+[data-theme="light"] .timeline-dot {
+  border-color: var(--bg-surface, #ffffff);
+}
+.timeline-group:hover .timeline-dot {
+  transform: scale(1.15);
+  box-shadow: 0 0 0 4px var(--accent-soft, rgba(99,102,241,0.15));
+}
+
+/* Dot colors per bucket */
+.timeline-dot.overdue  { background: var(--red, #ef4444); }
+.timeline-dot.today    { background: var(--accent, #6366f1); }
+.timeline-dot.tomorrow { background: var(--blue, #60a5fa); }
+.timeline-dot.week     { background: var(--orange, #fb923c); }
+.timeline-dot.later    { background: var(--green, #34d399); }
+
+/* Group header — clickable row to collapse/expand */
+.group-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0;
+  cursor: pointer;
+  user-select: none;
+  border-radius: 8px;
+  transition: background 0.15s;
+}
+.group-header:hover {
+  background: var(--bg-hover, rgba(255,255,255,0.03));
+}
+
+.group-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary, #f0f0f5);
+}
+
+.group-label {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.count-badge {
+  font-size: 11px;
+  font-weight: 500;
+  padding: 1px 8px;
+  border-radius: 10px;
+  background: var(--bg-hover, rgba(255,255,255,0.06));
+  color: var(--text-tertiary, #666);
+}
+[data-theme="light"] .count-badge {
+  background: rgba(0,0,0,0.04);
+  color: var(--text-tertiary, #999);
+}
+
+/* Collapse toggle chevron */
+.group-toggle {
+  margin-left: auto;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  color: var(--text-tertiary, #666);
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+.group-toggle:hover {
+  background: var(--bg-hover, rgba(255,255,255,0.06));
+  color: var(--text-primary, #f0f0f5);
+}
+.timeline-group.collapsed .group-toggle svg {
+  transform: rotate(-90deg);
+}
+.group-toggle svg {
+  transition: transform 0.2s ease;
+}
+
+/* Cards grid within each group — responsive auto-fill */
+.group-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 10px;
+  padding-bottom: 16px;
+  animation: todoFadeIn 0.25s ease;
+}
+.timeline-group.collapsed .group-cards {
+  display: none;
+}
+
+/* --- Task Area (updated for timeline) --- */
+.todo-task-area {
+  flex: 1;
+  min-height: 120px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 0 4px;
+}
+
+/* --- Task Cards (updated for grid) --- */
+.todo-task-card {
+  background: var(--bg-elevated, #1a1a24);
+  border: 1px solid var(--border-subtle, rgba(255,255,255,0.06));
+  border-radius: 12px;
+  display: flex;
+  align-items: stretch;
+  overflow: hidden;
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1),
+              box-shadow 0.2s,
+              border-color 0.2s,
+              opacity 0.3s;
+  position: relative;
+  cursor: pointer;
+  /* Ensure card doesn't break grid */
+  min-width: 0;
+}
+
+.todo-task-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0,0,0,0.25), 0 0 0 1px rgba(99,102,241,0.12);
+  border-color: rgba(99,102,241,0.25);
+}
+
+/* Left accent bar on hover */
+.todo-task-card::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: transparent;
+  transition: background 0.2s;
+  border-radius: 12px 0 0 12px;
+}
+.todo-task-card:hover::before {
+  background: var(--accent, #6366f1);
+}
+/* Keep priority color bar functional too */
+.todo-task-pri-bar {
+  width: 3px;
+  flex-shrink: 0;
+  transition: width 0.2s;
+  z-index: 1;
+}
+.todo-task-card:hover .todo-task-pri-bar {
+  width: 0;  /* hide pri bar when hover accent shows */
+}
+
+.todo-task-card.selected {
+  border-color: var(--accent, #6366f1);
+  box-shadow: 0 0 14px rgba(99, 102, 241, 0.22);
+}
+
+.todo-task-card.completed {
+  opacity: 0.45;
+}
+.todo-task-card.completed:hover {
+  opacity: 0.65;
+}
+
+/* Empty state inside a bucket */
+.todo-bucket-empty {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 16px;
+  border-radius: 10px;
+  background: var(--bg-surface, #0a0a0f);
+  color: var(--text-tertiary, #666);
+  font-size: 12px;
+}
+.todo-bucket-empty-line {
+  height: 1px;
+  flex: 1;
+  background: linear-gradient(90deg, var(--border-subtle, rgba(255,255,255,0.08)), transparent);
+}
+
+/* Fade-in animation for group cards */
+@keyframes todoFadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ============================================================
+ * Responsive — Timeline Board
+ * ============================================================ */
+@media (max-width: 1280px) {
+  .group-cards {
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  }
+}
+
+@media (max-width: 980px) {
+  .timeline-group {
+    padding-left: 28px;
+  }
+  .timeline-dot {
+    width: 16px;
+    height: 16px;
+    left: 0;
+  }
+  .group-cards {
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  .timeline-container {
+    padding: 0;
+  }
+  .timeline-group {
+    padding-left: 24px;
+  }
+  .group-cards {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+  .timeline-dot {
+    width: 14px;
+    height: 14px;
+    border-width: 2px;
+  }
 }
 
 /* Task cards */
@@ -816,13 +1054,13 @@
 .todo-empty-state svg { opacity: 0.3; }
 .todo-empty-state p { font-size: 14px; }
 
-/* --- Timeline --- */
+/* --- Timeline (Recently Completed) --- */
 .todo-timeline {
   flex-shrink: 0;
   border-top: 1px solid var(--border-subtle, rgba(255,255,255,0.06));
-  padding-top: 10px;
+  padding: 10px 0 6px;
   min-height: 0;
-  max-height: 120px;
+  max-height: 160px;
   overflow-y: auto;
 }
 .todo-timeline-header {
@@ -832,11 +1070,64 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  padding: 0 4px;
 }
 .todo-timeline-list {
   display: flex; gap: 8px;
   overflow-x: auto;
-  padding-bottom: 4px;
+  padding-bottom: 6px;
+  padding-left: 4px;
+}
+
+/* Completed task item chips */
+.todo-timeline-item {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 10px;
+  background: var(--bg-elevated, #1a1a24);
+  border: 1px solid var(--border-subtle, rgba(255,255,255,0.06));
+  cursor: pointer;
+  transition: all 0.15s;
+  max-width: 260px;
+}
+.todo-timeline-item:hover {
+  background: var(--bg-hover, rgba(255,255,255,0.04));
+  border-color: var(--accent, rgba(99,102,241,0.3));
+  transform: translateY(-1px);
+}
+.todo-timeline-check {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: rgba(52, 211, 153, 0.12);
+  color: var(--green, #34d399);
+  flex-shrink: 0;
+}
+.todo-timeline-title {
+  font-size: 12px;
+  color: var(--text-secondary, #aaa);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.todo-timeline-cat {
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 6px;
+  background: var(--bg-hover, rgba(255,255,255,0.04));
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.todo-timeline-empty {
+  font-size: 12px;
+  color: var(--text-tertiary, #666);
+  padding: 6px 4px;
 }
 
 /* --- Nav Badge --- */
@@ -1258,3 +1549,87 @@
   color: var(--text-tertiary);
   word-break: break-all;
 }
+
+/* === Responsive: Sidebar & Layout === */
+/* (Non-planboard responsive rules only) */
+
+@media (max-width: 1280px) {
+  .todo-sidebar {
+    width: 210px;
+    padding: 16px 12px;
+  }
+
+  .todo-workspace {
+    padding: 14px 16px;
+  }
+
+  .todo-command-bar {
+    grid-template-columns: 1fr;
+  }
+
+  .todo-command-metrics {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(68px, 1fr));
+  }
+}
+
+@media (max-width: 980px) {
+  .todo-workstation {
+    flex-direction: column;
+    overflow-y: auto;
+  }
+
+  .todo-sidebar {
+    width: 100%;
+    max-height: 176px;
+    border-right: 0;
+    border-bottom: 1px solid var(--border-subtle);
+    padding: 12px;
+    gap: 12px;
+  }
+
+  .todo-smart-filters,
+  .todo-sidebar-categories {
+    display: flex;
+    flex-direction: row;
+    gap: 8px;
+    overflow-x: auto;
+    padding-bottom: 2px;
+  }
+
+  .todo-filter-item,
+  .todo-sidebar-cat-item {
+    flex: 0 0 auto;
+  }
+
+  .todo-workspace {
+    flex: 1 0 auto;
+    min-height: 640px;
+  }
+
+  .todo-inline-bar,
+  .todo-toolbar {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .todo-quick-dates,
+  .todo-view-controls {
+    overflow-x: auto;
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 720px) {
+  .todo-command-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .todo-detail-drawer {
+    width: min(100%, 380px);
+  }
+}
+
+/* === v2.10 Optimized Timeline Layout — Responsive === */
+/* (All timeline styles are defined above in the Timeline Board section) */
+

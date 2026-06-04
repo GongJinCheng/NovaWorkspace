@@ -27,6 +27,7 @@ export const IPC_CHANNELS = {
     RESTORE_BACKUP: 'fs:restore-backup',
     DELETE_BACKUP: 'fs:delete-backup',
     EXPORT_DOCUMENT: 'fs:export-document',
+    READ_IMAGE_AS_DATA_URL: 'fs:read-image-as-data-url',
   },
   TODO: {
     LOAD: 'todo:load',
@@ -54,6 +55,12 @@ export const IPC_CHANNELS = {
     GET_PROJECT_META: 'workspace:get-project-meta',
     UPDATE_PROJECT_META: 'workspace:update-project-meta',
     GET_PROJECT_OVERVIEW: 'workspace:get-project-overview',
+  },
+  UPDATE: {
+    CHECK: 'update:check',
+    DOWNLOAD: 'update:download',
+    INSTALL: 'update:install',
+    STATUS: 'update:status',
   },
   AI: {
     GET_SETTINGS: 'ai:get-settings',

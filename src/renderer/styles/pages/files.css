@@ -1165,3 +1165,26 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* Mermaid diagrams in Markdown preview */
+.markdown-preview-pane .nova-mermaid {
+  margin: 1em 0;
+  padding: 16px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  background: var(--bg-elevated);
+  overflow: auto;
+  text-align: center;
+}
+
+.markdown-preview-pane .nova-mermaid svg {
+  max-width: 100%;
+  height: auto;
+}
+
+.markdown-preview-pane .mermaid-error {
+  margin-top: 8px;
+  color: var(--red);
+  font-size: 12px;
+  text-align: left;
+}

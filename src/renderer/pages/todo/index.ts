@@ -22,7 +22,7 @@ import {
   type ViewMode,
 } from './stores/todo.store';
 import { initTaskInput } from './task-input';
-import { renderTaskList } from './task-list';
+import { renderTaskList, renderCompletedTasks } from './task-list';
 import { renderCommandBar } from './dashboard';
 import { renderCategories, initCategoryToolbar } from './categories';
 import { startReminderCheck } from './reminders';
@@ -108,6 +108,7 @@ function renderAll(): void {
     renderCommandBar();
     renderCategories(() => renderUI(), refreshAll);
     renderTaskList(renderUI, openDrawer);
+    renderCompletedTasks();
     updateNavBadge();
     syncViewControls();
 
@@ -501,7 +502,8 @@ function esc(text: string): string {
 }
 
 export function scrollToTodayBucket(): void {
-  const target = document.getElementById('todo-bucket-today') || document.getElementById('todo-command-bar');
+  // Scroll to the "今天" timeline group
+  const target = document.querySelector('.timeline-group[data-group="today"]') || document.getElementById('todo-command-bar');
   target?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 

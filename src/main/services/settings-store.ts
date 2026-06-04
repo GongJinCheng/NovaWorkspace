@@ -2,6 +2,7 @@ import fs from 'fs/promises';
 import path from 'path';
 import { getSettingsDataPath } from '../utils/paths';
 import type { AIProviderConfig, AISettings } from '@shared/types/ai';
+import { normalizeAIModelCapabilities } from '@shared/utils/ai-capabilities';
 
 export interface AppSettings {
   ai: AISettings;
@@ -24,6 +25,7 @@ const DEFAULT_SETTINGS: AppSettings = {
         baseUrl: 'https://api.openai.com/v1',
         apiKey: '',
         defaultModel: 'gpt-3.5-turbo',
+        capabilities: normalizeAIModelCapabilities(null, { type: 'custom', defaultModel: 'gpt-3.5-turbo' }),
         enabled: true,
         createdAt: Date.now(),
         updatedAt: Date.now(),
@@ -73,6 +75,12 @@ export async function saveAIProvider(provider: AIProviderConfig): Promise<AIProv
     type: provider.type || 'custom',
     baseUrl: trimTrailingSlash(provider.baseUrl || ''),
     defaultModel: provider.defaultModel?.trim() || 'gpt-3.5-turbo',
+    capabilities: normalizeAIModelCapabilities(provider.capabilities, {
+      name: provider.name,
+      type: provider.type,
+      baseUrl: provider.baseUrl,
+      defaultModel: provider.defaultModel,
+    }),
     enabled: provider.enabled !== false,
     createdAt: provider.createdAt || now,
     updatedAt: now,
@@ -200,6 +208,12 @@ function normalizeProvider(value: unknown): AIProviderConfig | null {
     baseUrl: trimTrailingSlash(provider.baseUrl || 'https://api.openai.com/v1'),
     apiKey: provider.apiKey || '',
     defaultModel: provider.defaultModel || 'gpt-3.5-turbo',
+    capabilities: normalizeAIModelCapabilities(provider.capabilities, {
+      name: provider.name,
+      type: provider.type,
+      baseUrl: provider.baseUrl,
+      defaultModel: provider.defaultModel,
+    }),
     enabled: provider.enabled !== false,
     createdAt: provider.createdAt || now,
     updatedAt: provider.updatedAt || now,
@@ -217,7 +231,10 @@ function cloneSettings(settings: AppSettings): AppSettings {
 function cloneAISettings(settings: AISettings): AISettings {
   return {
     defaultProviderId: settings.defaultProviderId,
-    providers: settings.providers.map(provider => ({ ...provider })),
+    providers: settings.providers.map(provider => ({
+      ...provider,
+      capabilities: normalizeAIModelCapabilities(provider.capabilities, provider),
+    })),
   };
 }
 

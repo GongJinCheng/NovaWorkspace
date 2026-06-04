@@ -455,3 +455,108 @@
 #page-settings > .settings-section {
   display: none;
 }
+
+/* === AI model capability table === */
+.settings-ai-capabilities {
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  background: var(--bg-surface);
+  padding: 12px;
+}
+
+.settings-ai-capability-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.settings-ai-capability-head strong {
+  display: block;
+  font-size: 13px;
+  color: var(--text-primary);
+}
+
+.settings-ai-capability-head span {
+  display: block;
+  margin-top: 2px;
+  font-size: 11.5px;
+  color: var(--text-tertiary);
+  font-weight: 500;
+}
+
+.settings-ai-capability-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.settings-ai-capability {
+  display: grid !important;
+  grid-template-columns: auto 1fr;
+  grid-template-rows: auto auto;
+  column-gap: 8px !important;
+  row-gap: 2px !important;
+  align-items: start;
+  padding: 9px 10px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  background: var(--bg-soft);
+  cursor: pointer;
+}
+
+.settings-ai-capability input {
+  width: auto !important;
+  margin-top: 2px;
+  grid-row: 1 / span 2;
+}
+
+.settings-ai-capability span {
+  font-size: 12px;
+  color: var(--text-primary);
+}
+
+.settings-ai-capability small {
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--text-tertiary);
+  font-weight: 500;
+}
+
+.settings-ai-capability-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 8px;
+}
+
+.settings-ai-capability-badge {
+  border-radius: 999px;
+  padding: 3px 7px;
+  font-size: 10.5px;
+  line-height: 1.2;
+  border: 1px solid var(--border-subtle);
+  color: var(--text-tertiary);
+  background: var(--bg-surface);
+}
+
+.settings-ai-capability-badge.on {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.settings-ai-capability-badge.off {
+  opacity: 0.7;
+}
+
+@media (max-width: 760px) {
+  .settings-ai-capability-head {
+    align-items: flex-start;
+  }
+
+  .settings-ai-capability-grid {
+    grid-template-columns: 1fr;
+  }
+}

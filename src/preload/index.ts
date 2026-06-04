@@ -32,6 +32,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     restoreBackup: (input: { workspaceRoot: string; filePath: string; backupPath: string }) => ipcRenderer.invoke(IPC_CHANNELS.FS.RESTORE_BACKUP, input),
     deleteBackup: (input: { workspaceRoot: string; backupPath: string }) => ipcRenderer.invoke(IPC_CHANNELS.FS.DELETE_BACKUP, input),
     exportDocument: (input) => ipcRenderer.invoke(IPC_CHANNELS.FS.EXPORT_DOCUMENT, input),
+    readImageAsDataUrl: (filePath: string) => ipcRenderer.invoke(IPC_CHANNELS.FS.READ_IMAGE_AS_DATA_URL, filePath),
   },
   todo: {
     load: (workspaceRoot?: string | null) => ipcRenderer.invoke(IPC_CHANNELS.TODO.LOAD, workspaceRoot),
@@ -59,6 +60,16 @@ contextBridge.exposeInMainWorld('electronAPI', {
     getProjectMeta: (rootPath: string) => ipcRenderer.invoke(IPC_CHANNELS.WORKSPACE.GET_PROJECT_META, rootPath),
     updateProjectMeta: (input) => ipcRenderer.invoke(IPC_CHANNELS.WORKSPACE.UPDATE_PROJECT_META, input),
     getProjectOverview: (rootPath: string) => ipcRenderer.invoke(IPC_CHANNELS.WORKSPACE.GET_PROJECT_OVERVIEW, rootPath),
+  },
+  update: {
+    checkForUpdates: (manual?: boolean) => ipcRenderer.invoke(IPC_CHANNELS.UPDATE.CHECK, manual),
+    downloadUpdate: () => ipcRenderer.invoke(IPC_CHANNELS.UPDATE.DOWNLOAD),
+    installUpdate: () => ipcRenderer.send(IPC_CHANNELS.UPDATE.INSTALL),
+    onStatus: (callback) => {
+      const handler = (_event: unknown, status: unknown) => callback(status as any);
+      ipcRenderer.on(IPC_CHANNELS.UPDATE.STATUS, handler);
+      return () => ipcRenderer.removeListener(IPC_CHANNELS.UPDATE.STATUS, handler);
+    },
   },
   ai: {
     getSettings: () => ipcRenderer.invoke(IPC_CHANNELS.AI.GET_SETTINGS),

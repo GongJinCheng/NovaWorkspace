@@ -475,3 +475,146 @@
   border-top: 1px solid var(--border-subtle);
   margin-top: 6px;
 }
+
+/* === Local login === */
+.user-login-entry {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  color: inherit;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  border-radius: 12px;
+}
+
+.user-login-entry:hover {
+  background: var(--bg-hover);
+}
+
+.user-login-entry .avatar {
+  margin-left: 0;
+}
+
+.local-login-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 5000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(0, 0, 0, 0.42);
+  backdrop-filter: blur(6px);
+}
+
+.local-login-card {
+  width: min(420px, 92vw);
+  padding: 20px;
+  border: 1px solid var(--border-default);
+  border-radius: 16px;
+  background: var(--bg-elevated);
+  box-shadow: 0 24px 80px rgba(0,0,0,0.32);
+  color: var(--text-primary);
+}
+
+.local-login-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.local-login-header h3 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.local-login-header p {
+  margin: 4px 0 0;
+  color: var(--text-tertiary);
+  font-size: 12px;
+}
+
+.local-login-close {
+  border: 0;
+  background: transparent;
+  color: var(--text-tertiary);
+  font-size: 24px;
+  cursor: pointer;
+}
+
+.local-login-card label {
+  display: block;
+  margin: 12px 0 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-secondary);
+}
+
+.local-login-input {
+  width: 100%;
+  border: 1px solid var(--border-default);
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  outline: none;
+  font: inherit;
+}
+
+.local-login-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.local-login-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.local-login-primary,
+.local-login-secondary {
+  border: 1px solid var(--border-default);
+  border-radius: 10px;
+  padding: 9px 14px;
+  font: inherit;
+  cursor: pointer;
+}
+
+.local-login-primary {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: #fff;
+}
+
+.local-login-secondary {
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+}
+
+.mini-toast {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 5100;
+  max-width: 360px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--border-default);
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  box-shadow: 0 16px 42px rgba(0,0,0,0.24);
+  opacity: 0;
+  transform: translateY(10px);
+  transition: all 0.2s ease;
+}
+
+.mini-toast.show {
+  opacity: 1;
+  transform: translateY(0);
+}

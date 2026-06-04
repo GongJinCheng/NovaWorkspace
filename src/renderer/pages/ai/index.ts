@@ -3,6 +3,8 @@
  * Now with streaming responses for typewriter effect.
  */
 import { aiService, type ChatMessage } from './ai-service';
+import type { AIImageAttachment, AIMessageContent, AIModelCapabilities, AIProviderConfig } from '../../../shared/types/ai';
+import { AI_CAPABILITY_LABELS, normalizeAIModelCapabilities, providerSupportsCapability } from '../../../shared/utils/ai-capabilities';
 import { registerPageInit } from '../../app/router';
 import { aiStats } from '../../app/index';
 
@@ -14,6 +16,7 @@ let isGenerating = false;
 let aiPageBound = false;
 let activeToolAction: string | null = null;
 let toolResetTimer: number | null = null;
+let pendingImages: AIImageAttachment[] = [];
 
 // Tool action labels
 const ACTION_LABELS: Record<string, { loading: string; success: string }> = {
@@ -28,7 +31,11 @@ function persistStats(): void {
 }
 
 // Chat UI
-function appendMessage(role: 'user' | 'assistant' | 'system', content: string): HTMLElement {
+function appendMessage(
+  role: 'user' | 'assistant' | 'system',
+  content: string,
+  images: AIImageAttachment[] = []
+): HTMLElement {
   const container = document.getElementById('ai-chat-messages');
   if (!container) return document.createElement('div');
 
@@ -37,28 +44,56 @@ function appendMessage(role: 'user' | 'assistant' | 'system', content: string): 
 
   const bubble = document.createElement('div');
   bubble.className = 'ai-msg-bubble ai-msg-' + role;
-  bubble.textContent = content;
+
+  if (role === 'assistant') {
+    renderAssistantBubble(bubble, content);
+  } else if (role === 'user') {
+    renderUserBubble(bubble, content, images);
+  } else {
+    bubble.textContent = content;
+  }
+
   container.appendChild(bubble);
   container.scrollTop = container.scrollHeight;
   return bubble;
 }
 
 async function sendMessage(text: string): Promise<void> {
-  if (!text.trim() || isGenerating) return;
+  const inputText = text.trim();
+  if (isGenerating) return;
+
+  const hasImageInput = pendingImages.length > 0 || extractLocalImagePaths(inputText).length > 0;
+
   await aiService.reloadConfig().catch(() => undefined);
   if (!aiService.isConfigured()) {
     appendMessage('system', '请先在右侧或设置页配置 AI 模型，并点击“保存配置”。配置完成后回到这里会自动刷新。');
     return;
   }
 
+  const activeProvider = aiService.getActiveProvider();
+  const visionSupported = supportsImageInput(activeProvider);
+  if (hasImageInput && !visionSupported) {
+    const label = activeProvider ? `${activeProvider.name} / ${activeProvider.defaultModel}` : aiService.getModel();
+    appendMessage('system', '当前模型「' + label + '」不支持图片输入，我不能直接识别这张图片。请切换到支持视觉/多模态的模型，或者移除图片后只发送文字内容。');
+    showMsg('当前模型不支持图片输入，请切换多模态模型或移除图片', 'warn');
+    return;
+  }
+
+  const images = [...pendingImages];
+  await attachImagesFromLocalPaths(inputText, images);
+  if (!inputText && images.length === 0) return;
+
   const input = document.getElementById('ai-chat-input') as HTMLTextAreaElement;
   if (input) {
     input.value = '';
     input.style.height = 'auto';
   }
+  pendingImages = [];
+  renderPendingImages();
 
-  appendMessage('user', text.trim());
-  chatHistory.push({ role: 'user', content: text.trim() });
+  appendMessage('user', inputText || '（已发送图片）', images);
+  const userContent = buildUserMessageContent(inputText, images);
+  chatHistory.push({ role: 'user', content: userContent });
 
   isGenerating = true;
   updateSendButton();
@@ -70,27 +105,208 @@ async function sendMessage(text: string): Promise<void> {
   try {
     const systemMsg: ChatMessage = {
       role: 'system',
-      content: '你是一个专业的编程助手，帮助用户分析代码、翻译文档、回答技术问题。请用中文回复。'
+      content: '你是一个专业的编程助手，帮助用户分析代码、翻译文档、回答技术问题。请用中文回复。用户提供图片时，请结合图片内容作答。'
     };
-    const messages = [systemMsg, ...chatHistory];
+    const messages = visionSupported
+      ? [systemMsg, ...chatHistory]
+      : [systemMsg, ...chatHistory].map(toTextOnlyMessage);
 
+    let streamed = '';
     const result = await aiService.chatStream(messages, { temperature: 0.7, timeout: 60000 }, (chunk) => {
-      bubble.textContent += chunk;
+      streamed += chunk;
+      renderAssistantBubble(bubble, streamed);
       if (container) container.scrollTop = container.scrollHeight;
     });
 
     bubble.classList.remove('streaming');
-    chatHistory.push({ role: 'assistant', content: result });
-    incrementAIStats(Math.ceil((text.length + result.length) / 4));
+    renderAssistantBubble(bubble, result);
+    chatHistory.push({ role: 'assistant', content: stripReasoningBlocks(result) });
+    incrementAIStats(Math.ceil((estimateMessageLength(userContent) + result.length) / 4));
   } catch (err) {
     bubble.classList.remove('streaming');
-    const errMsg = err instanceof Error ? err.message : String(err);
     bubble.textContent = '';
+    const errMsg = err instanceof Error ? err.message : String(err);
     appendMessage('system', '请求失败：' + formatFriendlyAiError(errMsg));
   } finally {
     isGenerating = false;
     updateSendButton();
   }
+}
+
+function buildUserMessageContent(text: string, images: AIImageAttachment[]): AIMessageContent {
+  if (images.length === 0) return text;
+  return [
+    { type: 'text', text: text || '请分析这张图片。' },
+    ...images.map((image) => ({ type: 'image_url' as const, image_url: { url: image.dataUrl } })),
+  ];
+}
+
+function supportsImageInput(provider: AIProviderConfig | null): boolean {
+  return providerSupportsCapability(provider, 'vision');
+}
+
+function toTextOnlyMessage(message: ChatMessage): ChatMessage {
+  const content = message.content;
+  if (typeof content === 'string') return message;
+  if (!Array.isArray(content)) return { ...message, content: '' };
+
+  const textParts: string[] = [];
+  let omittedImages = 0;
+  for (const part of content) {
+    if (part.type === 'text' && part.text.trim()) textParts.push(part.text.trim());
+    if (part.type === 'image_url') omittedImages += 1;
+  }
+  if (omittedImages > 0) {
+    textParts.push(`（已省略 ${omittedImages} 张历史图片：当前模型不支持图片输入。）`);
+  }
+  return { ...message, content: textParts.join('\n') };
+}
+
+function estimateMessageLength(content: AIMessageContent): number {
+  if (typeof content === 'string') return content.length;
+  return content.reduce((sum, part) => sum + (part.type === 'text' ? part.text.length : 1200), 0);
+}
+
+function renderUserBubble(bubble: HTMLElement, text: string, images: AIImageAttachment[]): void {
+  const imageHtml = images.length
+    ? '<div class="ai-msg-images">' + images.map((image) =>
+        '<figure class="ai-msg-image"><img src="' + escAttr(image.dataUrl) + '" alt="' + escAttr(image.name) + '"><figcaption>' + escHTML(image.name) + '</figcaption></figure>'
+      ).join('') + '</div>'
+    : '';
+  bubble.innerHTML = (text ? '<div class="ai-msg-text">' + textToHtml(text) + '</div>' : '') + imageHtml;
+}
+
+function renderAssistantBubble(bubble: HTMLElement, content: string): void {
+  bubble.innerHTML = renderReasoningAwareText(content);
+}
+
+function renderReasoningAwareText(content: string): string {
+  const source = content || '';
+  const blocks: string[] = [];
+  let cursor = 0;
+  const regex = /<think>([\s\S]*?)(?:<\/think>|$)/gi;
+  let match: RegExpExecArray | null;
+
+  while ((match = regex.exec(source))) {
+    if (match.index > cursor) {
+      blocks.push('<div class="ai-msg-text">' + textToHtml(source.slice(cursor, match.index)) + '</div>');
+    }
+    const thinking = match[1] || '';
+    if (thinking.trim()) {
+      blocks.push('<details class="ai-think"><summary>思考过程（默认隐藏）</summary><pre>' + escHTML(thinking.trim()) + '</pre></details>');
+    }
+    cursor = regex.lastIndex;
+  }
+
+  if (cursor < source.length) {
+    blocks.push('<div class="ai-msg-text">' + textToHtml(source.slice(cursor)) + '</div>');
+  }
+
+  return blocks.join('') || '<span class="ai-stream-placeholder">正在生成...</span>';
+}
+
+function textToHtml(text: string): string {
+  return escHTML(text).replace(/\n/g, '<br>');
+}
+
+function stripReasoningBlocks(text: string): string {
+  return text.replace(/<think>[\s\S]*?(?:<\/think>|$)/gi, '').trim();
+}
+
+
+async function attachImagesFromLocalPaths(text: string, images: AIImageAttachment[]): Promise<void> {
+  if (!text) return;
+  const existing = new Set(images.map(image => image.path || image.name));
+  const paths = extractLocalImagePaths(text);
+  for (const filePath of paths) {
+    if (existing.has(filePath)) continue;
+    try {
+      const image = await window.electronAPI.fs.readImageAsDataUrl(filePath);
+      images.push(image);
+      existing.add(filePath);
+    } catch (error) {
+      appendMessage('system', '无法读取本地图片：' + (error instanceof Error ? error.message : String(error)));
+    }
+  }
+}
+
+function extractLocalImagePaths(text: string): string[] {
+  const result = new Set<string>();
+  const windows = /[a-zA-Z]:\\(?:[^\\/:*?"<>|\r\n]+\\)*[^\\/:*?"<>|\r\n]+\.(?:png|jpe?g|webp|gif|bmp)/gi;
+  const unix = /(?:~|\/)(?:[^\0\r\n"'<>|]+\/)*[^\0\r\n"'<>|]+\.(?:png|jpe?g|webp|gif|bmp)/gi;
+  for (const match of text.matchAll(windows)) result.add(match[0]);
+  for (const match of text.matchAll(unix)) result.add(match[0]);
+  return Array.from(result);
+}
+
+async function addImageFiles(files: FileList | File[]): Promise<void> {
+  const imageFiles = Array.from(files).filter(file => file.type.startsWith('image/') || /\.(png|jpe?g|webp|gif|bmp)$/i.test(file.name));
+  if (imageFiles.length > 0 && !(await ensureImageInputAvailable())) return;
+  if (imageFiles.length === 0) return;
+
+  const remainingSlots = Math.max(0, 6 - pendingImages.length);
+  for (const file of imageFiles.slice(0, remainingSlots)) {
+    try {
+      pendingImages.push(await readBrowserImageFile(file));
+    } catch (error) {
+      showMsg('图片读取失败：' + (error instanceof Error ? error.message : String(error)), 'error');
+    }
+  }
+
+  if (imageFiles.length > remainingSlots) showMsg('一次最多附加 6 张图片', 'warn');
+  renderPendingImages();
+}
+
+function readBrowserImageFile(file: File): Promise<AIImageAttachment> {
+  return new Promise((resolve, reject) => {
+    const maxBytes = 20 * 1024 * 1024;
+    if (file.size > maxBytes) {
+      reject(new Error('图片超过 20MB'));
+      return;
+    }
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error('无法读取图片文件'));
+    reader.onload = () => resolve({
+      id: `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
+      name: file.name || 'clipboard-image.png',
+      mimeType: file.type || 'image/png',
+      dataUrl: String(reader.result || ''),
+      size: file.size,
+    });
+    reader.readAsDataURL(file);
+  });
+}
+
+async function pickLocalImages(): Promise<void> {
+  if (!(await ensureImageInputAvailable())) return;
+  try {
+    const result = await window.electronAPI.fs.showOpenDialog({
+      properties: ['openFile', 'multiSelections'],
+      filters: [{ name: 'Images', extensions: ['png', 'jpg', 'jpeg', 'webp', 'gif', 'bmp'] }],
+    });
+    if (result.canceled) return;
+    const remainingSlots = Math.max(0, 6 - pendingImages.length);
+    for (const filePath of result.filePaths.slice(0, remainingSlots)) {
+      pendingImages.push(await window.electronAPI.fs.readImageAsDataUrl(filePath));
+    }
+    if (result.filePaths.length > remainingSlots) showMsg('一次最多附加 6 张图片', 'warn');
+    renderPendingImages();
+  } catch (error) {
+    showMsg('选择图片失败：' + formatFriendlyAiError(error), 'error');
+  }
+}
+
+function renderPendingImages(): void {
+  const tray = document.getElementById('ai-attachments');
+  if (!tray) return;
+  tray.innerHTML = pendingImages.map((image, index) =>
+    '<div class="ai-attachment" data-index="' + index + '">' +
+      '<img src="' + escAttr(image.dataUrl) + '" alt="' + escAttr(image.name) + '">' +
+      '<span>' + escHTML(image.name) + '</span>' +
+      '<button type="button" data-action="remove-ai-image" data-index="' + index + '" title="移除图片">×</button>' +
+    '</div>'
+  ).join('');
+  tray.hidden = pendingImages.length === 0;
 }
 
 function updateSendButton(): void {
@@ -118,6 +334,9 @@ function initChatInput(): void {
   const input = document.getElementById('ai-chat-input') as HTMLTextAreaElement | null;
   const sendBtn = document.getElementById('btn-ai-send');
   const clearBtn = document.getElementById('btn-ai-clear');
+  const attachBtn = document.getElementById('btn-ai-attach-image');
+  const attachments = document.getElementById('ai-attachments');
+  const inputWrap = document.querySelector('.ai-chat-input-wrap') as HTMLElement | null;
   const messages = document.getElementById('ai-chat-messages');
 
   input?.addEventListener('keydown', (e) => {
@@ -137,6 +356,41 @@ function initChatInput(): void {
   });
 
   clearBtn?.addEventListener('click', clearChat);
+
+  attachBtn?.addEventListener('click', () => { void pickLocalImages(); });
+
+  attachments?.addEventListener('click', (event) => {
+    const target = event.target as HTMLElement | null;
+    const removeBtn = target?.closest('[data-action="remove-ai-image"]') as HTMLElement | null;
+    if (!removeBtn) return;
+    const index = Number(removeBtn.dataset.index || -1);
+    if (index >= 0) {
+      pendingImages.splice(index, 1);
+      renderPendingImages();
+    }
+  });
+
+  input?.addEventListener('paste', (event) => {
+    const files = Array.from(event.clipboardData?.items || [])
+      .filter(item => item.kind === 'file')
+      .map(item => item.getAsFile())
+      .filter(Boolean) as File[];
+    if (files.length > 0) {
+      event.preventDefault();
+      void addImageFiles(files);
+    }
+  });
+
+  inputWrap?.addEventListener('dragover', (event) => {
+    event.preventDefault();
+    inputWrap.classList.add('dragover');
+  });
+  inputWrap?.addEventListener('dragleave', () => inputWrap.classList.remove('dragover'));
+  inputWrap?.addEventListener('drop', (event) => {
+    event.preventDefault();
+    inputWrap.classList.remove('dragover');
+    if (event.dataTransfer?.files?.length) void addImageFiles(event.dataTransfer.files);
+  });
 
   messages?.addEventListener('click', (event) => {
     const target = event.target as HTMLElement | null;
@@ -187,6 +441,7 @@ async function loadAIConfig(): Promise<void> {
     configTitle.setAttribute('title', `当前默认供应商：${activeProvider.name} · ${activeProvider.defaultModel}`);
   }
   renderCurrentProviderInfo(activeProvider);
+  updateImageInputState(activeProvider);
 
   await updateAIStatus();
 }
@@ -338,6 +593,8 @@ async function handleAIAction(action: string): Promise<void> {
         return;
     }
 
+    result = stripReasoningBlocks(result);
+
     showAIModal(labels.success, result, action === 'format' ? () => {
       editorData.model.setValue(result);
     } : undefined);
@@ -386,8 +643,18 @@ function scheduleToolButtonReset(activeButton: HTMLButtonElement | null, origina
 }
 
 function escHTML(str: string): string {
-  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
+
+function escAttr(str: string): string {
+  return escHTML(str).replace(/`/g, '&#96;');
+}
+
 
 function showAIModal(title: string, content: string, onApply?: () => void): void {
   let modal = document.querySelector('.ai-modal') as HTMLElement | null;
@@ -461,6 +728,7 @@ function formatFriendlyAiError(error: unknown): string {
   if (/401|unauthorized|api key|apikey|密钥|鉴权/i.test(message)) return 'API Key 可能不正确或没有权限，请重新保存配置。';
   if (/404|model|模型/i.test(message)) return '模型名称可能不存在，请检查默认模型。';
   if (/network|fetch failed|ENOTFOUND|ECONNREFUSED|Failed to fetch/i.test(message)) return '网络连接失败，请检查 Base URL 是否可访问。';
+  if (/image_url|图片输入|image.*unsupported|unsupported.*image|multimodal|vision|expected.*text|unknown variant/i.test(message)) return '当前模型或接口不支持图片输入。请切换到支持视觉/多模态的模型，或移除图片后只发送文字。';
   if (/余额|quota|insufficient|credit/i.test(message)) return '账号额度可能不足，请检查服务商余额或套餐。';
   return message || '未知错误，请检查 AI 配置。';
 }
@@ -475,6 +743,42 @@ function showMsg(text: string, type: string = 'info'): void {
 }
 
 
+
+
+async function ensureImageInputAvailable(): Promise<boolean> {
+  await aiService.reloadConfig({ silent: true }).catch(() => undefined);
+  const provider = aiService.getActiveProvider();
+  if (supportsImageInput(provider)) return true;
+
+  const label = provider ? `${provider.name} / ${provider.defaultModel}` : aiService.getModel();
+  showMsg('当前模型不支持图片输入，请先在设置页开启“图片输入”能力或切换视觉模型', 'warn');
+  appendMessage('system', '当前模型「' + label + '」的能力表未开启“图片输入”，我不能直接识别图片。请切换到支持视觉/多模态的模型，或在设置页确认后开启图片输入能力。');
+  return false;
+}
+
+function updateImageInputState(provider: AIProviderConfig | null): void {
+  const attachBtn = document.getElementById('btn-ai-attach-image') as HTMLButtonElement | null;
+  const input = document.getElementById('ai-chat-input') as HTMLTextAreaElement | null;
+  const supported = supportsImageInput(provider);
+  if (attachBtn) {
+    attachBtn.classList.toggle('is-disabled', !supported);
+    attachBtn.setAttribute('aria-disabled', supported ? 'false' : 'true');
+    attachBtn.title = supported ? '选择本地图片 / 支持粘贴拖拽图片' : '当前模型能力表未开启图片输入';
+  }
+  if (input) {
+    input.placeholder = supported
+      ? '输入消息，支持粘贴/拖拽图片或本地图片路径...'
+      : '输入消息...（当前模型不支持图片输入）';
+  }
+}
+
+function renderCapabilityBadges(capabilities: AIModelCapabilities): string {
+  const keys = Object.keys(AI_CAPABILITY_LABELS) as Array<keyof AIModelCapabilities>;
+  return keys.map(key => {
+    const on = capabilities[key] === true;
+    return '<span class="ai-capability-badge ' + (on ? 'on' : 'off') + '">' + escHTML(AI_CAPABILITY_LABELS[key]) + '</span>';
+  }).join('');
+}
 
 function renderCurrentProviderInfo(provider: ReturnType<typeof aiService.getActiveProvider>): void {
   const body = document.getElementById('ai-config-body');
@@ -492,7 +796,10 @@ function renderCurrentProviderInfo(provider: ReturnType<typeof aiService.getActi
     return;
   }
 
-  info.textContent = `当前默认：${provider.name} / ${provider.defaultModel}`;
+  const capabilities = normalizeAIModelCapabilities(provider.capabilities, provider);
+  info.innerHTML =
+    '<div class="ai-current-provider-line">当前默认：' + escHTML(provider.name) + ' / ' + escHTML(provider.defaultModel) + '</div>' +
+    '<div class="ai-capability-badges">' + renderCapabilityBadges(capabilities) + '</div>';
 }
 
 function renderModelOptions(

@@ -1,99 +1,333 @@
 <!DOCTYPE html>
 <html lang="zh-CN" data-theme="dark">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Nova</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
+    rel="stylesheet">
   <link rel="stylesheet" href="src/renderer/styles/index.css">
-<style>
-    .sidebar.collapsed .search-box { padding: 8px 10px; justify-content: center; }
-    .sidebar.collapsed .search-box span, .sidebar.collapsed .search-box kbd { display: none; }
-    .sidebar.collapsed .nav-label { display: none; }
-    .sidebar.collapsed .nav-item { justify-content: center; padding: 9px; gap: 0; }
-    .sidebar.collapsed .nav-item span, .sidebar.collapsed .nav-item .badge { display: none; }
-    .sidebar.collapsed .nav-item svg { opacity: 0.8; }
-    .sidebar.collapsed .user-meta, .sidebar.collapsed .sidebar-footer { display: none; }
-    .sidebar.collapsed .sidebar-nav { padding: 8px 6px; }
-    .sidebar.collapsed .sidebar-header { padding: 12px 10px; }
-    .sidebar.collapsed .nav-item { position: relative; }
+  <style>
+    .sidebar.collapsed .search-box {
+      padding: 8px 10px;
+      justify-content: center;
+    }
+
+    .sidebar.collapsed .search-box span,
+    .sidebar.collapsed .search-box kbd {
+      display: none;
+    }
+
+    .sidebar.collapsed .nav-label {
+      display: none;
+    }
+
+    .sidebar.collapsed .nav-item {
+      justify-content: center;
+      padding: 9px;
+      gap: 0;
+    }
+
+    .sidebar.collapsed .nav-item span,
+    .sidebar.collapsed .nav-item .badge {
+      display: none;
+    }
+
+    .sidebar.collapsed .nav-item svg {
+      opacity: 0.8;
+    }
+
+    .sidebar.collapsed .user-meta,
+    .sidebar.collapsed .sidebar-footer {
+      display: none;
+    }
+
+    .sidebar.collapsed .sidebar-nav {
+      padding: 8px 6px;
+    }
+
+    .sidebar.collapsed .sidebar-header {
+      padding: 12px 10px;
+    }
+
+    .sidebar.collapsed .nav-item {
+      position: relative;
+    }
+
     .sidebar.collapsed .nav-item:hover::after {
-      content: attr(data-tooltip); position: absolute; left: 52px; top: 50%;
-      transform: translateY(-50%); background: var(--bg-elevated);
-      border: 1px solid var(--border-subtle); border-radius: 6px;
-      padding: 6px 10px; font-size: 12px; font-weight: 500;
-      color: var(--text-primary); white-space: nowrap; z-index: 100;
-      pointer-events: none; box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+      content: attr(data-tooltip);
+      position: absolute;
+      left: 52px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: var(--bg-elevated);
+      border: 1px solid var(--border-subtle);
+      border-radius: 6px;
+      padding: 6px 10px;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-primary);
+      white-space: nowrap;
+      z-index: 100;
+      pointer-events: none;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
       animation: fadeIn 0.1s ease;
     }
-    .sidebar { transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1); }
-    
+
+    .sidebar {
+      transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
     .files-top-bar {
-      display: flex; align-items: center; gap: 8px; padding: 8px 12px;
-      border-bottom: 1px solid var(--border-subtle); background: var(--bg-surface); flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border-bottom: 1px solid var(--border-subtle);
+      background: var(--bg-surface);
+      flex-shrink: 0;
     }
+
     .breadcrumb-bar {
-      display: flex; align-items: center; gap: 2px; padding: 0 8px; flex: 0 1 auto; overflow: hidden;
+      display: flex;
+      align-items: center;
+      gap: 2px;
+      padding: 0 8px;
+      flex: 0 1 auto;
+      overflow: hidden;
     }
+
     .breadcrumb-item {
-      font-size: 12px; color: var(--text-tertiary); cursor: pointer; padding: 3px 8px;
-      border-radius: 4px; white-space: nowrap; transition: all 0.15s ease;
+      font-size: 12px;
+      color: var(--text-tertiary);
+      cursor: pointer;
+      padding: 3px 8px;
+      border-radius: 4px;
+      white-space: nowrap;
+      transition: all 0.15s ease;
     }
-    .breadcrumb-item:hover { color: var(--text-primary); background: var(--bg-hover); }
-    .breadcrumb-item.active { color: var(--text-primary); font-weight: 600; }
-    .breadcrumb-separator { color: var(--text-tertiary); margin: 0 2px; font-size: 10px; }
+
+    .breadcrumb-item:hover {
+      color: var(--text-primary);
+      background: var(--bg-hover);
+    }
+
+    .breadcrumb-item.active {
+      color: var(--text-primary);
+      font-weight: 600;
+    }
+
+    .breadcrumb-separator {
+      color: var(--text-tertiary);
+      margin: 0 2px;
+      font-size: 10px;
+    }
+
     .files-search-box {
-      display: flex; align-items: center; gap: 8px; padding: 6px 12px;
-      background: var(--bg-elevated); border: 1px solid var(--border-subtle);
-      border-radius: 8px; margin: 0 8px; transition: all 0.15s ease; flex: 0 1 200px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 12px;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px;
+      margin: 0 8px;
+      transition: all 0.15s ease;
+      flex: 0 1 200px;
     }
-    .files-search-box:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
-    .files-search-box svg { color: var(--text-tertiary); flex-shrink: 0; }
+
+    .files-search-box:focus-within {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-soft);
+    }
+
+    .files-search-box svg {
+      color: var(--text-tertiary);
+      flex-shrink: 0;
+    }
+
     .files-search-box input {
-      border: none; background: transparent; color: var(--text-primary);
-      font-family: inherit; font-size: 13px; outline: none; width: 100%;
+      border: none;
+      background: transparent;
+      color: var(--text-primary);
+      font-family: inherit;
+      font-size: 13px;
+      outline: none;
+      width: 100%;
     }
-    .files-search-box input::placeholder { color: var(--text-tertiary); }
+
+    .files-search-box input::placeholder {
+      color: var(--text-tertiary);
+    }
+
     .files-search-box kbd {
-      font-family: inherit; font-size: 10px; padding: 2px 5px;
-      background: var(--bg-surface); border: 1px solid var(--border-subtle);
-      border-radius: 3px; color: var(--text-tertiary); flex-shrink: 0;
+      font-family: inherit;
+      font-size: 10px;
+      padding: 2px 5px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: 3px;
+      color: var(--text-tertiary);
+      flex-shrink: 0;
+    }
+
+    /* ==========================================================================
+       🚨 待办中心样式与布局畸变强力修复
+       ========================================================================== */
+
+    /* 确保整体容器拥有合适的工作流高度与布局切分 */
+    #page-todo {
+      width: 100% !important;
+      height: 100% !important;
+    }
+
+    .todo-workstation {
+      display: flex !important;
+      width: 100% !important;
+      height: 100% !important;
+    }
+
+    .todo-workspace {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        /* 或者依靠父级的 flex: 1 撑开 */
+        overflow: hidden;
+        /* 防止双滚动条 */
+    }
+    
+
+    /* 1. 修复顶部控制栏组件变形 (强制对齐且不可被随心压缩拉伸) */
+    .todo-command-bar {
+      display: flex !important;
+      align-items: stretch !important;
+      gap: 16px !important;
+      margin-bottom: 20px !important;
+      width: 100% !important;
+      flex-shrink: 0 !important;
+    }
+
+    /* 环形卡片固定宽度 */
+    .todo-command-ring-card {
+      flex: 0 0 220px !important;
+      width: 220px !important;
+      display: flex !important;
+      align-items: center !important;
+      gap: 16px !important;
+    }
+
+    /* 下一步动作弹性拉伸 */
+    .todo-next-up-card {
+      flex: 1 !important;
+      display: flex !important;
+      flex-direction: column !important;
+      justify-content: center !important;
+      min-width: 0 !important;
+    }
+
+    /* 右侧 5 个状态小方块外包装 */
+    .todo-command-metrics {
+      display: flex !important;
+      gap: 8px !important;
+      flex-shrink: 0 !important;
+    }
+
+    /* 强制重置小方块的高瘦形态，防止其横向拉伸变扁 */
+    .todo-metric-chip {
+      display: flex !important;
+      flex-direction: column !important;
+      align-items: center !important;
+      justify-content: center !important;
+      width: 72px !important;
+      height: 100% !important;
+      min-height: 72px !important;
+      padding: 8px !important;
+      box-sizing: border-box !important;
+    }
+
+    /* 2. 时间轴布局修复：纵向滚动，子元素自动撑满宽度 */
+    .todo-task-area {
+      flex: 1;
+      overflow-y: auto;
+      overflow-x: hidden;
+      padding: 8px 4px;
+    }
+
+    /* 3. 纵向滚动条样式 */
+    .todo-task-area::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .todo-task-area::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    .todo-task-area::-webkit-scrollbar-thumb {
+      background: var(--border-subtle, rgba(255, 255, 255, 0.1));
+      border-radius: 4px;
+    }
+
+    .todo-task-area::-webkit-scrollbar-thumb:hover {
+      background: var(--text-tertiary, rgba(255, 255, 255, 0.3));
     }
   </style>
 </head>
+
 <body>
   <div class="titlebar">
     <div class="titlebar-drag">
-      <span class="app-logo"></span>
+      <span class="app-logo" src="assets/nova-icon.png"></span>
       <span class="app-title">Nova</span>
-        <button class="sidebar-collapse-btn" id="btn-collapse-sidebar" title="收起侧边栏">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m11 17-5-5 5-5"/><path d="m18 17-5-5 5-5"/></svg>
-        </button>
+      <button class="sidebar-collapse-btn" id="btn-collapse-sidebar" title="收起侧边栏">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="m11 17-5-5 5-5" />
+          <path d="m18 17-5-5 5-5" />
+        </svg>
+      </button>
     </div>
     <div class="titlebar-controls">
       <button class="ctrl-btn" id="btn-theme" title="切换主题">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="5" />
+          <line x1="12" y1="1" x2="12" y2="3" />
+          <line x1="12" y1="21" x2="12" y2="23" />
+          <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
+          <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+          <line x1="1" y1="12" x2="3" y2="12" />
+          <line x1="21" y1="12" x2="23" y2="12" />
+          <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
+          <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+        </svg>
       </button>
       <button class="ctrl-btn minimize" id="btn-min">
-        <svg width="10" height="1" viewBox="0 0 10 1"><rect width="10" height="1" rx="0.5" fill="currentColor"/></svg>
+        <svg width="10" height="1" viewBox="0 0 10 1">
+          <rect width="10" height="1" rx="0.5" fill="currentColor" />
+        </svg>
       </button>
       <button class="ctrl-btn maximize" id="btn-max">
-        <svg width="10" height="10" viewBox="0 0 10 10"><rect x="0.5" y="0.5" width="9" height="9" rx="1.5" stroke="currentColor" fill="none"/></svg>
+        <svg width="10" height="10" viewBox="0 0 10 10">
+          <rect x="0.5" y="0.5" width="9" height="9" rx="1.5" stroke="currentColor" fill="none" />
+        </svg>
       </button>
       <button class="ctrl-btn close" id="btn-close">
-        <svg width="10" height="10" viewBox="0 0 10 10"><path d="M1 1L9 9M9 1L1 9" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+        <svg width="10" height="10" viewBox="0 0 10 10">
+          <path d="M1 1L9 9M9 1L1 9" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" />
+        </svg>
       </button>
     </div>
   </div>
 
   <div class="app-container">
-    <!-- Global Search Overlay -->
     <div class="global-search-overlay" id="global-search-overlay">
       <div class="global-search-backdrop"></div>
       <div class="global-search-dialog">
         <div class="global-search-header">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8" />
+            <path d="m21 21-4.35-4.35" />
+          </svg>
           <input type="text" id="global-search-input" placeholder="搜索文件、页面或操作..." autocomplete="off" />
           <kbd>Esc</kbd>
         </div>
@@ -104,7 +338,10 @@
     <aside class="sidebar">
       <div class="sidebar-header">
         <div class="search-box">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8" />
+            <path d="m21 21-4.35-4.35" />
+          </svg>
           <span>搜索</span>
           <kbd>Ctrl+K</kbd>
         </div>
@@ -113,24 +350,41 @@
         <div class="nav-group">
           <div class="nav-label">主要</div>
           <a href="#" class="nav-item active" data-page="home" data-tooltip="首页">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+              <polyline points="9 22 9 12 15 12 15 22" />
+            </svg>
             <span>首页</span>
           </a>
           <a href="#" class="nav-item" data-page="project" data-tooltip="项目概览">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M8 17V9"/><path d="M12 17V7"/><path d="M16 17v-5"/></svg>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="3" width="18" height="18" rx="2" />
+              <path d="M8 17V9" />
+              <path d="M12 17V7" />
+              <path d="M16 17v-5" />
+            </svg>
             <span>项目概览</span>
           </a>
           <a href="#" class="nav-item" data-page="files" data-tooltip="文件管理">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+            </svg>
             <span>文件管理</span>
           </a>
           <a href="#" class="nav-item" data-page="ai" data-tooltip="AI 助手">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a4 4 0 0 1 4 4c0 1.95-1.4 3.58-3.25 3.93L12 22"/><path d="M12 2a4 4 0 0 0-4 4c0 1.95 1.4 3.58 3.25 3.93"/><path d="M12 2v20"/></svg>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 2a4 4 0 0 1 4 4c0 1.95-1.4 3.58-3.25 3.93L12 22" />
+              <path d="M12 2a4 4 0 0 0-4 4c0 1.95 1.4 3.58 3.25 3.93" />
+              <path d="M12 2v20" />
+            </svg>
             <span>AI 助手</span>
             <span class="badge beta">Beta</span>
           </a>
           <a href="#" class="nav-item" data-page="todo" data-tooltip="待办中心">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M9 11l3 3L22 4" />
+              <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
+            </svg>
             <span>待办中心</span>
             <span class="todo-badge-count" id="todo-nav-badge"></span>
           </a>
@@ -138,27 +392,29 @@
         <div class="nav-group">
           <div class="nav-label">工具</div>
           <a href="#" class="nav-item" data-page="settings" data-tooltip="设置">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path
+                d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" />
+              <circle cx="12" cy="12" r="3" />
+            </svg>
             <span>设置</span>
           </a>
         </div>
       </nav>
       <div class="sidebar-footer">
-        <div class="user-info">
-          <div class="avatar">G</div>
+        <button class="user-info user-login-entry" id="local-user-card" type="button" title="本地登录 / 切换用户">
+          <div class="avatar" id="local-user-avatar">?</div>
           <div class="user-meta">
-            <span class="user-name">GJC</span>
-            <span class="user-role">开发者</span>
+            <span class="user-name" id="local-user-name">未登录</span>
+            <span class="user-role" id="local-user-role">点击本地登录</span>
           </div>
-        </div>
+        </button>
       </div>
     </aside>
 
     <main class="main-content">
-      <!-- Home Page -->
       <div class="page active" id="page-home">
         <div class="home-page">
-          <!-- 问候与操作 -->
           <div class="home-hero">
             <div class="home-hero-left">
               <h1 class="home-greeting" id="home-greeting">你好 👋</h1>
@@ -166,47 +422,69 @@
             </div>
             <div class="home-hero-actions">
               <button class="btn-primary" id="btn-new-project">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="12" y1="5" x2="12" y2="19" />
+                  <line x1="5" y1="12" x2="19" y2="12" />
+                </svg>
                 打开项目
               </button>
             </div>
           </div>
 
-          <!-- 快捷入口 -->
           <div class="home-quick-grid">
             <button class="home-quick-card" id="btn-go-files">
               <div class="home-quick-icon home-quick-icon-blue">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+                </svg>
               </div>
               <div class="home-quick-info">
                 <span class="home-quick-title">文件管理</span>
                 <span class="home-quick-desc">浏览、编辑和管理项目文件</span>
               </div>
-              <svg class="home-quick-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+              <svg class="home-quick-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                stroke-width="2">
+                <path d="M5 12h14" />
+                <path d="m12 5 7 7-7 7" />
+              </svg>
             </button>
             <button class="home-quick-card" id="btn-go-ai">
               <div class="home-quick-icon home-quick-icon-purple">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a4 4 0 0 1 4 4c0 1.95-1.4 3.58-3.25 3.93L12 22"/><path d="M12 2a4 4 0 0 0-4 4c0 1.95 1.4 3.58 3.25 3.93"/><path d="M12 2v20"/></svg>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M12 2a4 4 0 0 1 4 4c0 1.95-1.4 3.58-3.25 3.93L12 22" />
+                  <path d="M12 2a4 4 0 0 0-4 4c0 1.95 1.4 3.58 3.25 3.93" />
+                  <path d="M12 2v20" />
+                </svg>
               </div>
               <div class="home-quick-info">
                 <span class="home-quick-title">AI 助手</span>
-                <span class="home-quick-desc">智能代码分析与对话</span>
+                <span class="home-quick-desc">智能代码 analysis 与对话</span>
               </div>
-              <svg class="home-quick-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+              <svg class="home-quick-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                stroke-width="2">
+                <path d="M5 12h14" />
+                <path d="m12 5 7 7-7 7" />
+              </svg>
             </button>
             <button class="home-quick-card" id="btn-go-todo">
               <div class="home-quick-icon home-quick-icon-green">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M9 11l3 3L22 4" />
+                  <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
+                </svg>
               </div>
               <div class="home-quick-info">
                 <span class="home-quick-title">待办中心</span>
                 <span class="home-quick-desc">管理任务和待办事项</span>
               </div>
-              <svg class="home-quick-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+              <svg class="home-quick-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                stroke-width="2">
+                <path d="M5 12h14" />
+                <path d="m12 5 7 7-7 7" />
+              </svg>
             </button>
           </div>
 
-          <!-- 工作台概览 -->
           <div class="home-overview-grid">
             <div class="home-stat-card home-stat-primary">
               <div class="home-stat-value" id="home-todo-pending">0</div>
@@ -274,14 +552,12 @@
                 <button class="link-btn" id="btn-clear-recent" style="display:none">清空历史</button>
               </div>
               <div class="home-recent-list" id="home-recent-list">
-                <!-- 由 JS 动态渲染 -->
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- Project Dashboard Page -->
       <div class="page" id="page-project">
         <div class="project-page">
           <div class="project-empty" id="project-empty" style="display:none">
@@ -310,37 +586,57 @@
             <div class="project-loading" id="project-loading-text"></div>
 
             <div class="project-stats-grid">
-              <div class="project-stat-card"><span id="project-stat-md">0</span><em>Markdown 文档</em><small id="project-last-edit">暂无编辑记录</small></div>
-              <div class="project-stat-card"><span id="project-stat-files">0</span><em>总文件数</em><small>不含 node_modules / .git</small></div>
-              <div class="project-stat-card"><span id="project-stat-pending">0</span><em>未完成任务</em><small><b id="project-stat-today">0</b> 个今日到期</small></div>
-              <div class="project-stat-card warning"><span id="project-stat-overdue">0</span><em>逾期任务</em><small>需要优先处理</small></div>
-              <div class="project-stat-card"><span id="project-stat-history">0</span><em>历史版本</em><small>来自 .nova/history</small></div>
-              <div class="project-stat-card"><span class="project-ai-line" id="project-ai-provider">未配置 AI 模型</span><em>AI 状态</em><small>项目级 AI 可直接跳转助手页</small></div>
+              <div class="project-stat-card"><span id="project-stat-md">0</span><em>Markdown 文档</em><small
+                  id="project-last-edit">暂无编辑记录</small></div>
+              <div class="project-stat-card"><span id="project-stat-files">0</span><em>总文件数</em><small>不含 node_modules /
+                  .git</small></div>
+              <div class="project-stat-card"><span id="project-stat-pending">0</span><em>未完成任务</em><small><b
+                    id="project-stat-today">0</b> 个今日到期</small></div>
+              <div class="project-stat-card warning"><span
+                  id="project-stat-overdue">0</span><em>逾期任务</em><small>需要优先处理</small></div>
+              <div class="project-stat-card"><span id="project-stat-history">0</span><em>历史版本</em><small>来自
+                  .nova/history</small></div>
+              <div class="project-stat-card"><span class="project-ai-line" id="project-ai-provider">未配置 AI
+                  模型</span><em>AI 状态</em><small>项目级 AI 可直接跳转助手页</small></div>
             </div>
 
             <div class="project-action-grid">
-              <button class="project-action-card" id="btn-project-new-doc"><strong>新建文档</strong><span>在当前工作区创建 Markdown</span></button>
-              <button class="project-action-card" id="btn-project-new-todo"><strong>新建待办</strong><span>快速记录下一步任务</span></button>
-              <button class="project-action-card" id="btn-project-files"><strong>打开文件管理</strong><span>浏览和编辑项目文件</span></button>
-              <button class="project-action-card" id="btn-project-ai"><strong>打开 AI 助手</strong><span>继续对话和模型配置</span></button>
-              <button class="project-action-card accent" id="btn-project-summary"><strong>总结项目</strong><span>把项目状态带到 AI 助手</span></button>
-              <button class="project-action-card accent" id="btn-project-plan"><strong>生成计划</strong><span>让 AI 给出下一步推进建议</span></button>
-              <button class="project-action-card" id="btn-project-export-report-md"><strong>导出项目报告</strong><span>生成 Markdown 项目报告</span></button>
-              <button class="project-action-card" id="btn-project-export-report-pdf"><strong>导出 PDF 报告</strong><span>适合分享和归档</span></button>
+              <button class="project-action-card" id="btn-project-new-doc"><strong>新建文档</strong><span>在当前工作区创建
+                  Markdown</span></button>
+              <button class="project-action-card"
+                id="btn-project-new-todo"><strong>新建待办</strong><span>快速记录下一步任务</span></button>
+              <button class="project-action-card"
+                id="btn-project-files"><strong>打开文件管理</strong><span>浏览和编辑项目文件</span></button>
+              <button class="project-action-card" id="btn-project-ai"><strong>打开 AI
+                  助手</strong><span>继续对话和模型配置</span></button>
+              <button class="project-action-card accent" id="btn-project-summary"><strong>总结项目</strong><span>把项目状态带到 AI
+                  助手</span></button>
+              <button class="project-action-card accent" id="btn-project-plan"><strong>生成计划</strong><span>让 AI
+                  给出下一步推进建议</span></button>
+              <button class="project-action-card" id="btn-project-export-report-md"><strong>导出项目报告</strong><span>生成
+                  Markdown 项目报告</span></button>
+              <button class="project-action-card" id="btn-project-export-report-pdf"><strong>导出 PDF
+                  报告</strong><span>适合分享和归档</span></button>
             </div>
 
             <section class="project-section project-template-section">
-              <div class="project-section-header"><h2>从模板创建</h2><span>PRD、会议纪要、技术方案、周报</span></div>
+              <div class="project-section-header">
+                <h2>从模板创建</h2><span>PRD、会议纪要、技术方案、周报</span>
+              </div>
               <div class="project-template-grid" id="project-template-shortcuts"></div>
             </section>
 
             <div class="project-columns">
               <section class="project-section">
-                <div class="project-section-header"><h2>最近文档</h2><span>按修改时间排序</span></div>
+                <div class="project-section-header">
+                  <h2>最近文档</h2><span>按修改时间排序</span>
+                </div>
                 <div id="project-recent-docs" class="project-doc-list"></div>
               </section>
               <section class="project-section">
-                <div class="project-section-header"><h2>最近活动</h2><span>文档、待办、版本历史</span></div>
+                <div class="project-section-header">
+                  <h2>最近活动</h2><span>文档、待办、版本历史</span>
+                </div>
                 <div id="project-activity-list" class="project-activity-list"></div>
               </section>
             </div>
@@ -348,7 +644,6 @@
         </div>
       </div>
 
-      <!-- File Manager Page -->
       <div class="page" id="page-files">
         <div class="file-manager-full">
           <div class="file-sidebar">
@@ -356,22 +651,38 @@
               <span>资源管理器</span>
               <div class="file-sidebar-actions">
                 <button class="icon-btn" id="btn-open-folder-files" title="打开文件夹">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+                  </svg>
                 </button>
                 <button class="icon-btn" id="btn-ai-format-toolbar" title="AI 格式化">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a4 4 0 0 1 4 4c0 1.95-1.4 3.58-3.25 3.93L12 22"/><path d="M12 2a4 4 0 0 0-4 4c0 1.95 1.4 3.58 3.25 3.93"/></svg>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 2a4 4 0 0 1 4 4c0 1.95-1.4 3.58-3.25 3.93L12 22" />
+                    <path d="M12 2a4 4 0 0 0-4 4c0 1.95 1.4 3.58 3.25 3.93" />
+                  </svg>
                 </button>
                 <button class="icon-btn" id="btn-new-file" title="新建文件">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" />
+                    <polyline points="14 2 14 8 20 8" />
+                    <line x1="12" y1="18" x2="12" y2="12" />
+                    <line x1="9" y1="15" x2="15" y2="15" />
+                  </svg>
                 </button>
                 <button class="icon-btn" id="btn-new-folder" title="新建文件夹">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/><line x1="12" y1="11" x2="12" y2="17"/><line x1="9" y1="14" x2="15" y2="14"/></svg>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+                    <line x1="12" y1="11" x2="12" y2="17" />
+                    <line x1="9" y1="14" x2="15" y2="14" />
+                  </svg>
                 </button>
               </div>
             </div>
             <div class="file-tree" id="file-tree">
               <div class="empty-state">
-                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                  <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+                </svg>
                 <p>打开文件夹开始使用</p>
               </div>
             </div>
@@ -382,7 +693,10 @@
             </div>
             <div class="editor-container" id="editor-container">
               <div class="empty-state">
-                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                  <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" />
+                  <polyline points="14 2 14 8 20 8" />
+                </svg>
                 <p>选择文件开始编辑</p>
               </div>
             </div>
@@ -398,14 +712,16 @@
         </div>
       </div>
 
-      <!-- AI Assistant Page -->
       <div class="page" id="page-ai">
         <div class="ai-layout">
-          <!-- Chat 主区域 -->
           <div class="ai-chat-area">
             <div class="ai-chat-header">
               <div class="ai-chat-title">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a4 4 0 0 1 4 4c0 1.95-1.4 3.58-3.25 3.93L12 22"/><path d="M12 2a4 4 0 0 0-4 4c0 1.95 1.4 3.58 3.25 3.93"/><path d="M12 2v20"/></svg>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M12 2a4 4 0 0 1 4 4c0 1.95-1.4 3.58-3.25 3.93L12 22" />
+                  <path d="M12 2a4 4 0 0 0-4 4c0 1.95 1.4 3.58 3.25 3.93" />
+                  <path d="M12 2v20" />
+                </svg>
                 <span>AI 助手</span>
                 <span class="badge beta">Beta</span>
               </div>
@@ -415,17 +731,27 @@
                   <span class="ai-status-text">未配置</span>
                 </div>
                 <button class="icon-btn" id="btn-ai-clear" title="清空对话">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="3 6 5 6 21 6" />
+                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                  </svg>
                 </button>
                 <button class="icon-btn" id="btn-ai-toggle-panel" title="工具面板">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="15" y1="3" x2="15" y2="21"/></svg>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="3" width="18" height="18" rx="2" />
+                    <line x1="15" y1="3" x2="15" y2="21" />
+                  </svg>
                 </button>
               </div>
             </div>
             <div class="ai-chat-messages" id="ai-chat-messages">
               <div class="ai-chat-welcome">
                 <div class="ai-chat-welcome-icon">
-                  <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2a4 4 0 0 1 4 4c0 1.95-1.4 3.58-3.25 3.93L12 22"/><path d="M12 2a4 4 0 0 0-4 4c0 1.95 1.4 3.58 3.25 3.93"/><path d="M12 2v20"/></svg>
+                  <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <path d="M12 2a4 4 0 0 1 4 4c0 1.95-1.4 3.58-3.25 3.93L12 22" />
+                    <path d="M12 2a4 4 0 0 0-4 4c0 1.95 1.4 3.58 3.25 3.93" />
+                    <path d="M12 2v20" />
+                  </svg>
                 </div>
                 <h3>AI 助手</h3>
                 <p>我可以帮你分析代码、翻译文档、回答问题。</p>
@@ -437,23 +763,39 @@
               </div>
             </div>
             <div class="ai-chat-input-area">
+              <div class="ai-attachments" id="ai-attachments" hidden></div>
               <div class="ai-chat-input-wrap">
-                <textarea id="ai-chat-input" class="ai-chat-input" placeholder="输入消息... (Shift+Enter 换行)" rows="1"></textarea>
+                <button class="ai-chat-attach" id="btn-ai-attach-image" title="选择/粘贴图片，或把图片拖到输入框" type="button">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="3" width="18" height="18" rx="2" />
+                    <circle cx="8.5" cy="8.5" r="1.5" />
+                    <path d="M21 15l-5-5L5 21" />
+                  </svg>
+                </button>
+                <textarea id="ai-chat-input" class="ai-chat-input" placeholder="输入消息，支持粘贴/拖拽图片或本地图片路径..."
+                  rows="1"></textarea>
                 <button class="ai-chat-send" id="btn-ai-send" title="发送">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="22" y1="2" x2="11" y2="13" />
+                    <polygon points="22 2 15 22 11 13 2 9 22 2" />
+                  </svg>
                 </button>
               </div>
-              <div class="ai-chat-hint">Enter 发送 · Shift+Enter 换行</div>
+              <div class="ai-chat-hint">Enter 发送 · Shift+Enter 换行 · 支持粘贴/拖拽/选择图片</div>
             </div>
           </div>
 
-          <!-- 工具侧边栏 -->
           <div class="ai-sidebar" id="ai-sidebar">
             <div class="ai-sidebar-section">
               <div class="ai-sidebar-title">AI 工具</div>
               <button class="ai-tool-card" id="btn-ai-format" disabled>
                 <div class="ai-tool-icon format">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" />
+                    <polyline points="14 2 14 8 20 8" />
+                    <line x1="16" y1="13" x2="8" y2="13" />
+                    <line x1="16" y1="17" x2="8" y2="17" />
+                  </svg>
                 </div>
                 <div class="ai-tool-info">
                   <div class="ai-tool-name">Markdown 整理</div>
@@ -462,7 +804,11 @@
               </button>
               <button class="ai-tool-card" id="btn-ai-explain" disabled>
                 <div class="ai-tool-icon explain">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10" />
+                    <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
+                    <line x1="12" y1="17" x2="12.01" y2="17" />
+                  </svg>
                 </div>
                 <div class="ai-tool-info">
                   <div class="ai-tool-name">代码解释</div>
@@ -471,7 +817,10 @@
               </button>
               <button class="ai-tool-card" id="btn-ai-summarize" disabled>
                 <div class="ai-tool-icon summarize">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+                    <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+                  </svg>
                 </div>
                 <div class="ai-tool-info">
                   <div class="ai-tool-name">内容摘要</div>
@@ -480,7 +829,14 @@
               </button>
               <button class="ai-tool-card" id="btn-ai-translate" disabled>
                 <div class="ai-tool-icon translate">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m5 8 6 6"/><path d="m4 14 6-6 2-3"/><path d="M2 5h12"/><path d="M7 2h1"/><path d="m22 22-5-10-5 10"/><path d="M14 18h6"/></svg>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="m5 8 6 6" />
+                    <path d="m4 14 6-6 2-3" />
+                    <path d="M2 5h12" />
+                    <path d="M7 2h1" />
+                    <path d="m22 22-5-10-5 10" />
+                    <path d="M14 18h6" />
+                  </svg>
                 </div>
                 <div class="ai-tool-info">
                   <div class="ai-tool-name">翻译</div>
@@ -492,7 +848,9 @@
             <div class="ai-sidebar-section">
               <div class="ai-sidebar-title" id="ai-config-toggle" style="cursor:pointer">
                 API 配置
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="6 9 12 15 18 9" />
+                </svg>
               </div>
               <div class="ai-config-body" id="ai-config-body">
                 <div class="ai-field">
@@ -504,7 +862,11 @@
                   <div class="ai-input-wrap">
                     <input type="password" id="ai-api-key" placeholder="sk-..." class="ai-input">
                     <button class="ai-eye" id="btn-toggle-key">
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="2">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                        <circle cx="12" cy="12" r="3" />
+                      </svg>
                     </button>
                   </div>
                 </div>
@@ -528,73 +890,97 @@
             <div class="ai-sidebar-section">
               <div class="ai-sidebar-title">统计</div>
               <div class="ai-mini-stats">
-                <div class="ai-mini-stat"><span class="ai-mini-val" id="ai-tokens">0</span><span class="ai-mini-lbl">Tokens</span></div>
-                <div class="ai-mini-stat"><span class="ai-mini-val" id="ai-requests">0</span><span class="ai-mini-lbl">请求</span></div>
-                <div class="ai-mini-stat"><span class="ai-mini-val" id="ai-model-display">-</span><span class="ai-mini-lbl">模型</span></div>
+                <div class="ai-mini-stat"><span class="ai-mini-val" id="ai-tokens">0</span><span
+                    class="ai-mini-lbl">Tokens</span></div>
+                <div class="ai-mini-stat"><span class="ai-mini-val" id="ai-requests">0</span><span
+                    class="ai-mini-lbl">请求</span></div>
+                <div class="ai-mini-stat"><span class="ai-mini-val" id="ai-model-display">-</span><span
+                    class="ai-mini-lbl">模型</span></div>
               </div>
             </div>
           </div>
         </div>
       </div>
-      <!-- Todo Page -->
       <div class="page" id="page-todo">
         <div class="todo-workstation">
-          <!-- Left Sidebar: Filters & Categories -->
           <div class="todo-sidebar">
             <div class="todo-sidebar-section">
               <div class="todo-sidebar-title">智能筛选</div>
               <ul class="todo-smart-filters">
                 <li class="todo-filter-item active" data-filter="all">
-                  <svg class="todo-filter-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="9" y1="9" x2="15" y2="9"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="15" y2="17"/></svg>
+                  <svg class="todo-filter-icon" width="14" height="14" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                    <line x1="9" y1="9" x2="15" y2="9" />
+                    <line x1="9" y1="13" x2="15" y2="13" />
+                    <line x1="9" y1="17" x2="15" y2="17" />
+                  </svg>
                   <span class="todo-filter-name">全部任务</span>
                   <span class="todo-filter-count" id="todo-sidebar-count-all">0</span>
                 </li>
                 <li class="todo-filter-item" data-filter="today">
-                  <svg class="todo-filter-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                  <svg class="todo-filter-icon" width="14" height="14" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10" />
+                    <polyline points="12 6 12 12 16 14" />
+                  </svg>
                   <span class="todo-filter-name">今天</span>
                   <span class="todo-filter-count" id="todo-sidebar-count-today">0</span>
                 </li>
                 <li class="todo-filter-item" data-filter="upcoming">
-                  <svg class="todo-filter-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+                  <svg class="todo-filter-icon" width="14" height="14" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2">
+                    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                    <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+                  </svg>
                   <span class="todo-filter-name">即将到来</span>
                   <span class="todo-filter-count" id="todo-sidebar-count-upcoming">0</span>
                 </li>
                 <li class="todo-filter-item" data-filter="overdue">
-                  <svg class="todo-filter-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                  <svg class="todo-filter-icon" width="14" height="14" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2">
+                    <polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2" />
+                    <line x1="12" y1="8" x2="12" y2="12" />
+                    <line x1="12" y1="16" x2="12.01" y2="16" />
+                  </svg>
                   <span class="todo-filter-name">已逾期</span>
                   <span class="todo-filter-count" id="todo-sidebar-count-overdue">0</span>
                 </li>
                 <li class="todo-filter-item" data-filter="completed">
-                  <svg class="todo-filter-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                  <svg class="todo-filter-icon" width="14" height="14" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2">
+                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                    <polyline points="22 4 12 14.01 9 11.01" />
+                  </svg>
                   <span class="todo-filter-name">已完成</span>
                   <span class="todo-filter-count" id="todo-sidebar-count-completed">0</span>
                 </li>
               </ul>
             </div>
-            
+
             <div class="todo-sidebar-section">
               <div class="todo-sidebar-title-row">
                 <span class="todo-sidebar-title">分类管理</span>
                 <button class="todo-sidebar-add-cat-btn" id="todo-sidebar-add-cat" title="新建分类">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="12" y1="5" x2="12" y2="19" />
+                    <line x1="5" y1="12" x2="19" y2="12" />
+                  </svg>
                 </button>
               </div>
               <div class="todo-sidebar-categories" id="todo-sidebar-categories">
-                <!-- Dynamically rendered custom categories list -->
               </div>
             </div>
           </div>
-          
-          <!-- Middle Workspace: Main Content & Capture -->
+
           <div class="todo-workspace">
             <div class="todo-workspace-header">
-              <!-- Advanced Dashboard inside Workspace -->
               <div class="todo-command-bar" id="todo-command-bar">
                 <div class="todo-command-ring-card">
                   <div class="todo-ring-wrap">
                     <svg class="todo-ring" viewBox="0 0 100 100">
-                      <circle class="todo-ring-bg" cx="50" cy="50" r="42"/>
-                      <circle class="todo-ring-fill" cx="50" cy="50" r="42" id="todo-ring-fill"/>
+                      <circle class="todo-ring-bg" cx="50" cy="50" r="42" />
+                      <circle class="todo-ring-fill" cx="50" cy="50" r="42" id="todo-ring-fill" />
                     </svg>
                     <div class="todo-ring-label" id="todo-ring-label">0%</div>
                   </div>
@@ -633,10 +1019,14 @@
               </div>
             </div>
 
-            <!-- Quick Capture Bar -->
             <div class="todo-capture-bar">
               <div class="todo-input-wrap">
-                <svg class="todo-input-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+                <svg class="todo-input-icon" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                  stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="12" r="10" />
+                  <line x1="12" y1="8" x2="12" y2="16" />
+                  <line x1="8" y1="12" x2="16" y2="12" />
+                </svg>
                 <input type="text" id="todo-quick-input" placeholder="添加待办任务并按下 Enter..." autocomplete="off">
                 <div class="todo-inline-pri">
                   <span class="todo-pri-dot" data-pri="low" title="低优先级"></span>
@@ -645,12 +1035,15 @@
                   <span class="todo-pri-dot" data-pri="urgent" title="紧急"></span>
                 </div>
                 <button class="todo-input-detail-btn" id="todo-btn-detail" title="展开高级选项">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/></svg>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="1" />
+                    <circle cx="12" cy="5" r="1" />
+                    <circle cx="12" cy="19" r="1" />
+                  </svg>
                 </button>
               </div>
               <div class="todo-inline-bar">
                 <div class="todo-cat-pills" id="todo-cat-pills">
-                  <!-- Dynamically rendered pills for category assignment when creating task -->
                 </div>
                 <div class="todo-quick-dates">
                   <button class="todo-date-chip" data-due="30m">30分钟</button>
@@ -668,12 +1061,12 @@
                 </div>
                 <div class="todo-detail-row">
                   <label>初始子任务（每行一个）</label>
-                  <textarea id="todo-subtasks-input" class="todo-textarea" rows="2" placeholder="输入子任务后换行即可输入下一个..."></textarea>
+                  <textarea id="todo-subtasks-input" class="todo-textarea" rows="2"
+                    placeholder="输入子任务后换行即可输入下一个..."></textarea>
                 </div>
               </div>
             </div>
 
-            <!-- Workspace Navigation Toolbar -->
             <div class="todo-toolbar">
               <div class="todo-active-filter-label" id="todo-active-filter-label">所有任务</div>
               <div class="todo-view-controls">
@@ -683,31 +1076,37 @@
               </div>
             </div>
 
-            <!-- Scrollable Tasks Display Area -->
             <div class="todo-task-area" id="todo-task-area"></div>
-            
-            <!-- Quick Timeline for Completed Items -->
+
             <div class="todo-timeline" id="todo-timeline">
               <div class="todo-timeline-header">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+                </svg>
                 <span>最近完成的任务</span>
               </div>
               <div class="todo-timeline-list" id="todo-timeline-list"></div>
             </div>
           </div>
 
-          <!-- Right Detail Drawer: Smooth slide-out panel for task detail inspection -->
           <div class="todo-detail-drawer" id="todo-detail-drawer">
             <div class="todo-drawer-header">
               <span class="todo-drawer-title">任务详情</span>
               <button class="todo-drawer-close" id="todo-drawer-close" title="关闭详情">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="18" y1="6" x2="6" y2="18" />
+                  <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
               </button>
             </div>
             <div class="todo-drawer-content" id="todo-drawer-content">
-              <!-- Dynamically populated based on selectedTaskId -->
               <div class="todo-drawer-empty">
-                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.3"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"
+                  opacity="0.3">
+                  <circle cx="12" cy="12" r="10" />
+                  <line x1="12" y1="8" x2="12" y2="12" />
+                  <line x1="12" y1="16" x2="12.01" y2="16" />
+                </svg>
                 <p>选择待办任务以查看或编辑其详细信息</p>
               </div>
             </div>
@@ -715,7 +1114,6 @@
         </div>
       </div>
 
-      <!-- Settings Page -->
       <div class="page" id="page-settings">
         <div class="settings-page">
           <div class="settings-header">
@@ -725,7 +1123,15 @@
 
           <div class="settings-section">
             <div class="settings-section-header">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/></svg>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="5" />
+                <line x1="12" y1="1" x2="12" y2="3" />
+                <line x1="12" y1="21" x2="12" y2="23" />
+                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
+                <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+                <line x1="1" y1="12" x2="3" y2="12" />
+                <line x1="21" y1="12" x2="23" y2="12" />
+              </svg>
               <h3>外观</h3>
             </div>
             <div class="settings-row">
@@ -752,7 +1158,11 @@
 
           <div class="settings-section">
             <div class="settings-section-header">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="2" y="3" width="20" height="14" rx="2" />
+                <line x1="8" y1="21" x2="16" y2="21" />
+                <line x1="12" y1="17" x2="12" y2="21" />
+              </svg>
               <h3>编辑器</h3>
             </div>
             <div class="settings-row">
@@ -771,7 +1181,11 @@
 
           <div class="settings-section">
             <div class="settings-section-header">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10" />
+                <line x1="12" y1="16" x2="12" y2="12" />
+                <line x1="12" y1="8" x2="12.01" y2="8" />
+              </svg>
               <h3>关于</h3>
             </div>
             <div class="settings-row">
@@ -795,4 +1209,5 @@
   <script src="node_modules/monaco-editor/min/vs/loader.js"></script>
   <script src="dist/renderer/index.js"></script>
 </body>
+
 </html>

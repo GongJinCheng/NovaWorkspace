@@ -1,6 +1,6 @@
 {
   "name": "nova",
-  "version": "2.8.3",
+  "version": "2.9.2",
   "description": "Nova - All-in-one productivity workspace",
   "main": "dist/main/index.js",
   "author": "GongJinCheng",
@@ -14,7 +14,8 @@
     "start": "electron .",
     "dev": "npm run build && npm run start",
     "package": "npm run build && electron-builder --win",
-    "package:dir": "npm run build && electron-builder --win --dir"
+    "package:dir": "npm run build && electron-builder --win --dir",
+    "publish:win": "npm run build && electron-builder --win --publish always"
   },
   "build": {
     "icon": "assets/nova-icon.png",
@@ -56,7 +57,14 @@
       "createStartMenuShortcut": true
     },
     "asar": true,
-    "forceCodeSigning": false
+    "forceCodeSigning": false,
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "GongJinCheng",
+        "repo": "NovaWorkspace"
+      }
+    ]
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
@@ -67,6 +75,8 @@
   },
   "dependencies": {
     "monaco-editor": "^0.52.0",
-    "sharp": "^0.34.5"
+    "sharp": "^0.34.5",
+    "electron-updater": "^6.6.2",
+    "mermaid": "^11.6.0"
   }
 }
