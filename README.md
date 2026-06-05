@@ -1,21 +1,20 @@
-# Nova Workspace
+# Nova Workspace   # Nova工作区   新工作空间
 
 > 一个本地优先的 AI 深度工作台，集成 Markdown 文档、AI 助手、项目待办、版本历史、项目概览、模板系统、导出系统和全局命令面板。
 
-[![Electron](https://img.shields.io/badge/Electron-35-47848f?logo=electron)](https://www.electronjs.org/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.7-3178c6?logo=typescript)](https://www.typescriptlang.org/)
+[![Electron   电子](https://img.shields.io/badge/Electron-35-47848f?logo=electron)](https://www.electronjs.org/)(!(电子)(https://img.shields.io/badge/electron - 35 - 47848 - f?logo=electron)) (https://www.electronjs.org/)
+[![TypeScript   打印稿](https://img.shields.io/badge/TypeScript-5.7-3178c6?logo=typescript)](https://www.typescriptlang.org/)(!(打印稿)(https://img.shields.io/badge/typescript - 5.7 - 3178 - c6?logo=typescript)) (https://www.typescriptlang.org/)
 [![esbuild](https://img.shields.io/badge/esbuild-0.24-ffcf00?logo=esbuild)](https://esbuild.github.io/)
-[![Version](https://img.shields.io/badge/version-2.8.3-0066FF)](https://github.com/GongJinCheng/NovaWorkspace/releases)
+[![Version   版本](https://img.shields.io/badge/version-2.8.3-0066FF)](https://github.com/GongJinCheng/NovaWorkspace/releases)(!(版本)(https://img.shields.io/badge/version 2.8.3 - 0066 ff)] (https://github.com/GongJinCheng/NovaWorkspace/releases)
 
 ---
 
 ## 🎬 Demo
+https://github.com/user-attachments/assets/27173837-4057-4099-97b0-f92940fdeb9b
 
-[![Nova Showcase](https://img.shields.io/badge/Watch_Animation-0066FF?logo=youtube)](./NovaShowcase/renders/)
+A product showcase built with [HyperFrames](https://hyperframes.heygen.com/), featuring project workspace, Markdown editing, AI document assistant, AI-generated todos, project dashboard, templates, export workflow, and document version safety.一个用[HyperFrames]（https://hyperframes.heygen.com/）构建的产品展示，具有项目工作空间、Markdown编辑、AI文档助手、AI生成的待办事项、项目仪表板、模板、导出工作流和文档版本安全。
 
-A product showcase built with [HyperFrames](https://hyperframes.heygen.com/), featuring project workspace, Markdown editing, AI document assistant, AI-generated todos, project dashboard, templates, export workflow, and document version safety.
-
-> Run `cd NovaShowcase && npm run dev` to preview, or `npm run render` to regenerate the MP4.
+> Run `cd NovaShowcase && npm run dev` to preview, or `npm run render` to regenerate the MP4.运行`cd NovaShowcase &；&； npm Run devcd NovaShowcase &； npm运行dev`预览，或`npm Run render`重新生成MP4。
 
 ---
 
@@ -23,7 +22,7 @@ A product showcase built with [HyperFrames](https://hyperframes.heygen.com/), fe
 
 Nova 的核心使用方式是：
 
-```text
+```text   ' ' '文本
 打开一个本地文件夹
 → 作为一个项目工作区
 → 编写 Markdown 文档
@@ -36,7 +35,7 @@ Nova 的核心使用方式是：
 
 每个工作区都是一个独立项目。Nova 会在项目目录下创建 `.nova` 目录，用于保存项目元信息、待办数据、版本历史和活动记录。
 
-```text
+```text   ' ' '文本
 你的项目/
 ├── README.md
 ├── 产品方案.md
