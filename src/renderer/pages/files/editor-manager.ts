@@ -1,4 +1,4 @@
-/**
+﻿/**
  * EditorManager - Monaco Editor Manager
  * Manages Monaco editor instances, tab rendering, and editor lifecycle.
  * Supports VSCode-style tabs: preview tabs, pinned tabs, scroll overflow,
@@ -6,6 +6,7 @@
  */
 import { ipcClient } from '../../services/ipc-client';
 import { aiService } from '../ai/ai-service';
+import { stripReasoningBlocks } from '@shared/utils/ai-capabilities';
 import type { FilesStore } from './files-store';
 import { isMarkdownFile, renderMarkdownToHtml, renderMermaidBlocks } from './markdown-preview';
 import { showInputPrompt, showConfirmDialog, showTaskConfirmDialog } from '../../components/modal';
@@ -461,7 +462,7 @@ ${content}
 
 用户问题：${question}` },
         ], { temperature: 0.4 });
-        this.showMarkdownAiResult('当前文档问答', result, tab);
+        this.showMarkdownAiResult('当前文档问答', stripReasoningBlocks(result), tab);
         button.textContent = '完成';
         return;
       }
@@ -479,7 +480,7 @@ ${content}
           ], { temperature: 0.4 })
         : await aiService.summarize(content);
 
-      this.showMarkdownAiResult(action === 'outline' ? 'Markdown 大纲' : 'Markdown 总结', result, tab);
+      this.showMarkdownAiResult(action === 'outline' ? 'Markdown 大纲' : 'Markdown 总结', stripReasoningBlocks(result), tab);
       button.textContent = '完成';
     } catch (error) {
       console.error('[EditorManager] Markdown AI action failed:', error);
@@ -505,10 +506,10 @@ ${content}
       return;
     }
 
-    const rewritten = await aiService.chat([
+    const rewritten = stripReasoningBlocks(await aiService.chat([
       { role: 'system', content: '请改写用户选中的 Markdown 内容，使其更清晰、自然、结构更好。保持 Markdown 格式，只输出改写后的正文。' },
       { role: 'user', content: selected },
-    ], { temperature: 0.5 });
+    ], { temperature: 0.5 }));
 
     await this.createVersionBackup(tab, 'AI 改写前自动备份');
     tab.model.pushEditOperations([], [{ range: selection, text: rewritten }], () => null);

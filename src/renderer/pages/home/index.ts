@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Home Page - 今日工作台
  * 把首页从“导航页”升级为工作入口：今日待办、最近文档、AI 状态、最近项目。
  */
@@ -8,6 +8,8 @@ import { ipcClient } from '../../services/ipc-client';
 import type { Workspace } from '@shared/types/workspace';
 import type { TodoTask } from '@shared/types/todo';
 import type { RecentMarkdownFile } from '@shared/types/file';
+
+let quickActionsBound = false;
 
 async function initHomePage(): Promise<void> {
   ensureOnboardingStyles();
@@ -430,6 +432,8 @@ async function removeRecentProject(projectPath: string): Promise<void> {
 // ── 快捷操作 ──
 
 function bindQuickActions(): void {
+  if (quickActionsBound) return;
+  quickActionsBound = true;
   document.getElementById('btn-go-files')?.addEventListener('click', () => switchPage('files'));
   document.getElementById('btn-go-ai')?.addEventListener('click', () => switchPage('ai'));
   document.getElementById('btn-go-todo')?.addEventListener('click', () => switchPage('todo'));

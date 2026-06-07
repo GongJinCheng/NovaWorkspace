@@ -1,4 +1,4 @@
-import type { AIModelCapabilities, AIProviderConfig, AIProviderType } from '../types/ai';
+﻿import type { AIModelCapabilities, AIProviderConfig, AIProviderType } from '../types/ai';
 
 export const DEFAULT_AI_MODEL_CAPABILITIES: AIModelCapabilities = {
   vision: false,
@@ -126,4 +126,13 @@ export function describeAIModelCapabilities(capabilities: AIModelCapabilities): 
 
 function testRules(rules: RegExp[], text: string): boolean {
   return rules.some(rule => rule.test(text));
+}
+
+/**
+ * 剥离 AI 返回文本中的思考过程块（<think>...</think>）。
+ * 适用于所有非 AI 对话页面的场景（改写、生成大纲、总结等），
+ * 只在 AI 助手对话页面才保留并渲染思考过程。
+ */
+export function stripReasoningBlocks(text: string): string {
+  return text.replace(/<think>[\s\S]*?(?:<\/think>|$)/gi, '').trim();
 }

@@ -1,10 +1,10 @@
-/**
+﻿/**
  * AI Page - AI assistant with conversational chat + quick tools
  * Now with streaming responses for typewriter effect.
  */
 import { aiService, type ChatMessage } from './ai-service';
 import type { AIImageAttachment, AIMessageContent, AIModelCapabilities, AIProviderConfig } from '../../../shared/types/ai';
-import { AI_CAPABILITY_LABELS, normalizeAIModelCapabilities, providerSupportsCapability } from '../../../shared/utils/ai-capabilities';
+import { AI_CAPABILITY_LABELS, normalizeAIModelCapabilities, providerSupportsCapability, stripReasoningBlocks } from '../../../shared/utils/ai-capabilities';
 import { registerPageInit } from '../../app/router';
 import { aiStats } from '../../app/index';
 
@@ -209,9 +209,6 @@ function textToHtml(text: string): string {
   return escHTML(text).replace(/\n/g, '<br>');
 }
 
-function stripReasoningBlocks(text: string): string {
-  return text.replace(/<think>[\s\S]*?(?:<\/think>|$)/gi, '').trim();
-}
 
 
 async function attachImagesFromLocalPaths(text: string, images: AIImageAttachment[]): Promise<void> {
