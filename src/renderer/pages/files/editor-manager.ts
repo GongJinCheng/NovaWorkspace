@@ -1131,7 +1131,7 @@ ${content}
 
   async revealActiveFile(): Promise<void> {
     if (!this.activeEditorPath) return;
-    const fileTree = (window as any).__fileTree;
+    const fileTree = window.__fileTree;
     await fileTree?.revealPath?.(this.activeEditorPath);
   }
 

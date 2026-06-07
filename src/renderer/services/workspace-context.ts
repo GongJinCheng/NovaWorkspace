@@ -1,7 +1,7 @@
-/** 当前工作区上下文工具。用于让 Todo、搜索、首页等模块按项目读写数据。 */
+﻿/** 当前工作区上下文工具。用于让 Todo、搜索、首页等模块按项目读写数据。 */
 export function getCurrentWorkspaceRoot(): string | null {
   try {
-    const store = (window as any).__filesStore;
+    const store = window.__filesStore;
     const root = store?.getWorkspaceRoot?.() || store?.getState?.()?.workspaceRoot || localStorage.getItem('files-workspace-root') || '';
     return typeof root === 'string' && root.trim() ? root : null;
   } catch {

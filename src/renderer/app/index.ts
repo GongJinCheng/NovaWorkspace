@@ -1,4 +1,4 @@
-/**
+﻿/**
  * App Entry - Application initialization entry
  * Binds global events, initializes theme, registers page routing.
  * Features: global search overlay (Ctrl+K)
@@ -107,7 +107,7 @@ function bindKeyboardShortcuts(): void {
 
     if (key === 's') {
       e.preventDefault();
-      const em = (window as any).__editorManager;
+      const em = window.__editorManager;
       if (em) em.saveFile();
       return;
     }
@@ -116,7 +116,7 @@ function bindKeyboardShortcuts(): void {
       e.preventDefault();
       switchPage('files');
       setTimeout(() => {
-        const ft = (window as any).__fileTree;
+        const ft = window.__fileTree;
         if (ft) ft.openFolder();
       }, 200);
       return;
@@ -125,13 +125,13 @@ function bindKeyboardShortcuts(): void {
     if (key === 'n') {
       e.preventDefault();
       switchPage('files');
-      setTimeout(() => { (window as any).__handleNewFile?.(); }, 200);
+      setTimeout(() => { window.__handleNewFile?.(); }, 200);
       return;
     }
 
     if (key === 'w') {
       e.preventDefault();
-      const em = (window as any).__editorManager;
+      const em = window.__editorManager;
       if (em?.activeEditor) em.closeTab(em.activeEditor);
     }
   };
@@ -145,7 +145,7 @@ function bindKeyboardShortcuts(): void {
   window.addEventListener('focus', () => {
     document.body?.setAttribute('data-shortcuts-ready', 'true');
   });
-  (window as any).__openCommandPalette = openSearchOverlay;
+  window.__openCommandPalette = openSearchOverlay;
 }
 
 
@@ -230,13 +230,13 @@ function getDefaultPaletteActions(): PaletteResult[] {
 function getCommandActions(): PaletteResult[] {
   const templateActions = buildTemplateCommandResults((template) => {
     switchPage('files');
-    setTimeout(() => { void (window as any).__handleNewFileFromTemplate?.(template.id); }, 220);
+    setTimeout(() => { void window.__handleNewFileFromTemplate?.(template.id); }, 220);
   });
 
   return [
-    { id: 'cmd-open-folder', group: '命令', title: '打开工作区', subtitle: '选择一个本地文件夹作为项目', icon: '📂', action: () => { switchPage('files'); setTimeout(() => (window as any).__fileTree?.openFolder?.() || (window as any).__chooseWorkspaceFolder?.(), 200); } },
+    { id: 'cmd-open-folder', group: '命令', title: '打开工作区', subtitle: '选择一个本地文件夹作为项目', icon: '📂', action: () => { switchPage('files'); setTimeout(() => window.__fileTree?.openFolder?.() || window.__chooseWorkspaceFolder?.(), 200); } },
     { id: 'cmd-project-overview', group: '命令', title: '打开项目概览', subtitle: '查看当前工作区统计和动态', icon: '📊', action: () => switchPage('project') },
-    { id: 'cmd-new-file', group: '命令', title: '新建文档', subtitle: '选择模板并创建 Markdown 文档', icon: '📝', action: () => { switchPage('files'); setTimeout(() => (window as any).__handleNewFile?.(), 200); } },
+    { id: 'cmd-new-file', group: '命令', title: '新建文档', subtitle: '选择模板并创建 Markdown 文档', icon: '📝', action: () => { switchPage('files'); setTimeout(() => window.__handleNewFile?.(), 200); } },
     { id: 'cmd-new-todo', group: '命令', title: '新建待办', subtitle: '快速创建一条任务', icon: '➕', action: createQuickTodo },
     { id: 'cmd-settings', group: '命令', title: '打开设置', subtitle: '配置 AI Provider、主题和快捷键', icon: '⚙️', action: () => switchPage('settings') },
     { id: 'cmd-ai', group: '命令', title: '打开 AI 助手', subtitle: '进入 AI 对话页', icon: '🤖', action: () => switchPage('ai') },
@@ -268,7 +268,7 @@ async function searchTodoResults(lowerQuery: string): Promise<PaletteResult[]> {
       icon: task.completed ? '☑️' : '✅',
       action: async () => {
         switchPage('todo');
-        setTimeout(() => { void (window as any).__openTodoTask?.(task.id); }, 250);
+        setTimeout(() => { void window.__openTodoTask?.(task.id); }, 250);
       },
     }));
   } catch {
@@ -293,7 +293,7 @@ async function searchWorkspaceResults(query: string): Promise<PaletteResult[]> {
 }
 
 function getCurrentWorkspaceRoot(): string {
-  const store = (window as any).__filesStore;
+  const store = window.__filesStore;
   const root = store?.getWorkspaceRoot?.() || store?.getState?.()?.workspaceRoot || '';
   return typeof root === 'string' ? root : '';
 }
@@ -301,7 +301,7 @@ function getCurrentWorkspaceRoot(): string {
 function openFileFromPalette(filePath: string): void {
   switchPage('files');
   setTimeout(() => {
-    const openFilePath = (window as any).__openFilePath;
+    const openFilePath = window.__openFilePath;
     if (typeof openFilePath === 'function') void openFilePath(filePath);
   }, 220);
 }
@@ -309,7 +309,7 @@ function openFileFromPalette(filePath: string): void {
 function runActiveMarkdownCommand(action: string): void {
   switchPage('files');
   setTimeout(() => {
-    const em = (window as any).__editorManager;
+    const em = window.__editorManager;
     if (!em?.activeEditor) {
       alert('请先在文件管理器中打开一个 Markdown 文档');
       return;
@@ -321,7 +321,7 @@ function runActiveMarkdownCommand(action: string): void {
 function runProjectExportCommand(format: 'markdown' | 'pdf' | 'html'): void {
   switchPage('project');
   setTimeout(() => {
-    void (window as any).__exportProjectReport?.(format);
+    void window.__exportProjectReport?.(format);
   }, 260);
 }
 
@@ -340,7 +340,7 @@ async function createQuickTodo(): Promise<void> {
   });
   window.dispatchEvent(new CustomEvent('nova:todo-data-changed'));
   switchPage('todo');
-  setTimeout(() => (window as any).__focusTodoQuickInput?.(), 250);
+  setTimeout(() => window.__focusTodoQuickInput?.(), 250);
 }
 
 function renderPaletteSections(container: HTMLElement, results: PaletteResult[]): void {

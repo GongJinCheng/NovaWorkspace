@@ -1,4 +1,4 @@
-/** Project Dashboard Page - 项目概览页 */
+﻿/** Project Dashboard Page - 项目概览页 */
 import { registerPageInit, switchPage } from '../app/router';
 import { ipcClient } from '../services/ipc-client';
 import { getCurrentWorkspaceRoot } from '../services/workspace-context';
@@ -22,8 +22,8 @@ function bindOnce(): void {
   document.getElementById('btn-project-open-workspace')?.addEventListener('click', openWorkspacePicker);
   document.getElementById('btn-project-refresh')?.addEventListener('click', () => { void renderProjectDashboard(); });
   document.getElementById('btn-project-edit-meta')?.addEventListener('click', () => { void editProjectMeta(); });
-  document.getElementById('btn-project-new-doc')?.addEventListener('click', () => { switchPage('files'); setTimeout(() => (window as any).__handleNewFile?.(), 220); });
-  document.getElementById('btn-project-new-todo')?.addEventListener('click', () => { switchPage('todo'); setTimeout(() => (window as any).__focusTodoQuickInput?.(), 220); });
+  document.getElementById('btn-project-new-doc')?.addEventListener('click', () => { switchPage('files'); setTimeout(() => window.__handleNewFile?.(), 220); });
+  document.getElementById('btn-project-new-todo')?.addEventListener('click', () => { switchPage('todo'); setTimeout(() => window.__focusTodoQuickInput?.(), 220); });
   document.getElementById('btn-project-files')?.addEventListener('click', () => switchPage('files'));
   document.getElementById('btn-project-ai')?.addEventListener('click', () => switchPage('ai'));
   document.getElementById('btn-project-summary')?.addEventListener('click', () => runProjectAI('summary'));
@@ -34,7 +34,7 @@ function bindOnce(): void {
   window.addEventListener('nova:todo-data-changed', () => { void renderProjectDashboard(); });
   window.addEventListener('nova:workspace-changed', () => { void renderProjectDashboard(); });
 
-  (window as any).__exportProjectReport = (format: ExportFormat = 'markdown') => exportCurrentProjectReport(format);
+  window.__exportProjectReport = (format: ExportFormat = 'markdown') => exportCurrentProjectReport(format);
 }
 
 async function renderProjectDashboard(): Promise<void> {
@@ -100,7 +100,7 @@ function renderRecentDocs(docs: ProjectRecentDocument[]): void {
       const filePath = (row as HTMLElement).dataset.path;
       if (!filePath) return;
       switchPage('files');
-      setTimeout(() => { void (window as any).__openFilePath?.(filePath); }, 220);
+      setTimeout(() => { void window.__openFilePath?.(filePath); }, 220);
     });
   });
 }
@@ -121,7 +121,7 @@ function renderTemplateShortcuts(): void {
       const templateId = (card as HTMLElement).dataset.templateId;
       if (!templateId) return;
       switchPage('files');
-      setTimeout(() => { void (window as any).__handleNewFileFromTemplate?.(templateId); }, 260);
+      setTimeout(() => { void window.__handleNewFileFromTemplate?.(templateId); }, 260);
     });
   });
 }
@@ -157,8 +157,8 @@ async function editProjectMeta(): Promise<void> {
 async function openWorkspacePicker(): Promise<void> {
   switchPage('files');
   setTimeout(async () => {
-    const chooseWorkspace = (window as any).__chooseWorkspaceFolder;
-    const ft = (window as any).__fileTree;
+    const chooseWorkspace = window.__chooseWorkspaceFolder;
+    const ft = window.__fileTree;
     if (typeof chooseWorkspace === 'function') await chooseWorkspace();
     else if (ft?.openFolder) await ft.openFolder();
   }, 200);

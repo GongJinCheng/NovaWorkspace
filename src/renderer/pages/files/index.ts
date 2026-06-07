@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Files Page - orchestrates file tree, editor tabs, and file operations.
  * Features: drag-and-drop, state persistence restore.
  */
@@ -514,16 +514,16 @@ async function initFilesPage(): Promise<void> {
   editorManager.attachStore(store);
   store.subscribe(() => scheduleWorkspaceSessionSave());
 
-  (window as any).__fileTree = fileTree;
-  (window as any).__editorManager = editorManager;
-  (window as any).__filesStore = store;
-  (window as any).__openWorkspaceRoot = openWorkspaceRoot;
-  (window as any).__chooseWorkspaceFolder = chooseAndOpenWorkspace;
-  (window as any).__openFilePath = async (filePath: string) => {
+  window.__fileTree = fileTree;
+  window.__editorManager = editorManager;
+  window.__filesStore = store;
+  window.__openWorkspaceRoot = openWorkspaceRoot;
+  window.__chooseWorkspaceFolder = chooseAndOpenWorkspace;
+  window.__openFilePath = async (filePath: string) => {
     if (!editorManager) return;
     await editorManager.openPath(filePath);
   };
-  (window as any).__getActiveFileSnapshot = () => editorManager?.getActiveFileSnapshot?.() || null;
+  window.__getActiveFileSnapshot = () => editorManager?.getActiveFileSnapshot?.() || null;
 
   fileTree.onFileSelect = (filePath, fileName) => {
     editorManager?.openFile(filePath, fileName);
@@ -637,8 +637,8 @@ if (searchInput) {
 }
 
 bindFilesToolbar();
-(window as any).__handleNewFile = handleNewFile;
-(window as any).__handleNewFileFromTemplate = handleNewFileFromTemplate;
+window.__handleNewFile = handleNewFile;
+window.__handleNewFileFromTemplate = handleNewFileFromTemplate;
 
 registerPageInit('files' as PageId, initFilesPage);
 

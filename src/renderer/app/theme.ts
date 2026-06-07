@@ -93,7 +93,7 @@ function syncThemeButton(): void {
 }
 
 function updateMonacoTheme(): void {
-  const editorManager = (window as any).__editorManager;
+  const editorManager = window.__editorManager;
   if (editorManager?.monaco) {
     editorManager.monaco.editor.setTheme(effectiveTheme === 'dark' ? 'custom-dark' : 'custom-light');
   }

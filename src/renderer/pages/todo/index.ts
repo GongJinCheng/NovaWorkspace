@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Todo Page - Entry and Detail Drawer Coordinator
  * Handles filters, view modes, sliding details drawer, auto-saves, and subtask managers.
  * Performance: debounced refresh to avoid lag on rapid interactions.
@@ -54,11 +54,11 @@ async function initTodoPage(): Promise<void> {
     void refreshAll();
   });
 
-  (window as any).__openTodoTask = async (taskId: string) => {
+  window.__openTodoTask = async (taskId: string) => {
     await refreshAll();
     openDrawer(taskId);
   };
-  (window as any).__focusTodoQuickInput = () => {
+  window.__focusTodoQuickInput = () => {
     (document.getElementById('todo-quick-input') as HTMLInputElement | null)?.focus();
   };
 
@@ -348,7 +348,7 @@ function bindDrawerEvents(taskId: string): void {
     if (!sourcePath) return;
     switchPage('files');
     setTimeout(() => {
-      const openFilePath = (window as any).__openFilePath;
+      const openFilePath = window.__openFilePath;
       if (typeof openFilePath === 'function') {
         void openFilePath(sourcePath);
       }

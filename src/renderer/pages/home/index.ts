@@ -279,7 +279,7 @@ async function renderRecentDocs(): Promise<void> {
 function openMarkdownFile(filePath: string): void {
   switchPage('files');
   setTimeout(() => {
-    const openFilePath = (window as any).__openFilePath;
+    const openFilePath = window.__openFilePath;
     if (typeof openFilePath === 'function') void openFilePath(filePath);
   }, 250);
 }
@@ -393,9 +393,9 @@ async function openRecentProject(projectPath: string): Promise<void> {
   await ipcClient.workspace.open({ rootPath: projectPath }).catch(() => null);
   switchPage('files');
   setTimeout(async () => {
-    const openWorkspace = (window as any).__openWorkspaceRoot;
-    const ft = (window as any).__fileTree;
-    const store = (window as any).__filesStore;
+    const openWorkspace = window.__openWorkspaceRoot;
+    const ft = window.__fileTree;
+    const store = window.__filesStore;
 
     if (typeof openWorkspace === 'function') {
       await openWorkspace(projectPath, { restoreSession: true });
@@ -412,8 +412,8 @@ async function openRecentProject(projectPath: string): Promise<void> {
 async function openWorkspacePicker(): Promise<void> {
   switchPage('files');
   setTimeout(async () => {
-    const chooseWorkspace = (window as any).__chooseWorkspaceFolder;
-    const ft = (window as any).__fileTree;
+    const chooseWorkspace = window.__chooseWorkspaceFolder;
+    const ft = window.__fileTree;
     if (typeof chooseWorkspace === 'function') {
       await chooseWorkspace();
     } else if (ft?.openFolder) {

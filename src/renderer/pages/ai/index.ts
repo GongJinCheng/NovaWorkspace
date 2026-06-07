@@ -8,7 +8,7 @@ import { AI_CAPABILITY_LABELS, normalizeAIModelCapabilities, providerSupportsCap
 import { registerPageInit } from '../../app/router';
 import { aiStats } from '../../app/index';
 
-(window as any).aiService = aiService;
+window.aiService = aiService;
 
 // Chat state
 const chatHistory: ChatMessage[] = [];
@@ -542,7 +542,7 @@ async function handleAIAction(action: string): Promise<void> {
     return;
   }
 
-  const em = (window as any).__editorManager;
+  const em = window.__editorManager;
   const activePath = em?.activeEditor;
   if (!activePath) {
     showMsg('请先打开一个文件', 'error');
