@@ -196,25 +196,9 @@ export class EditorManager {
     shell.className = 'editor-shell';
     shell.innerHTML =
       '<div class="markdown-toolbar" data-visible="false">' +
-        '<div class="markdown-mode-group">' +
-          '<button class="markdown-tool-btn active" data-md-mode="edit" title="仅编辑">编辑</button>' +
-          '<button class="markdown-tool-btn" data-md-mode="preview" title="仅预览">预览</button>' +
-          '<button class="markdown-tool-btn" data-md-mode="split" title="分屏编辑预览">分屏</button>' +
-        '</div>' +
-        '<div class="markdown-ai-group">' +
-          '<button class="markdown-tool-btn" data-md-action="summary">AI 总结</button>' +
-          '<button class="markdown-tool-btn" data-md-action="outline">生成大纲</button>' +
-          '<button class="markdown-tool-btn" data-md-action="rewrite">改写选中</button>' +
-          '<button class="markdown-tool-btn" data-md-action="askdoc">问当前文档</button>' +
-          '<button class="markdown-tool-btn primary" data-md-action="todo">生成待办</button>' +
-        '</div>' +
         '<div class="markdown-version-group">' +
           '<button class="markdown-tool-btn" data-md-action="saveversion">保存版本</button>' +
           '<button class="markdown-tool-btn" data-md-action="history">版本历史</button>' +
-        '</div>' +
-        '<div class="markdown-export-group">' +
-          '<button class="markdown-tool-btn" data-md-action="exporthtml">导出 HTML</button>' +
-          '<button class="markdown-tool-btn" data-md-action="exportpdf">导出 PDF</button>' +
         '</div>' +
       '</div>' +
       '<div class="markdown-workspace">' +
@@ -363,6 +347,15 @@ export class EditorManager {
     const button = document.createElement('button');
     button.textContent = labelMap[action] || action;
     await this.runMarkdownAiAction(action, button as HTMLButtonElement);
+  }
+
+  setMarkdownMode(mode: MarkdownViewMode): void {
+    if (!this.isActiveMarkdown()) {
+      window.alert('请先在文件管理器中打开一个 Markdown 文档');
+      return;
+    }
+    this.markdownMode = mode;
+    this.applyMarkdownMode();
   }
 
   async exportCurrentMarkdown(format: ExportFormat): Promise<void> {

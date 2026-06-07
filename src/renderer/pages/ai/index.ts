@@ -14,17 +14,8 @@ window.aiService = aiService;
 const chatHistory: ChatMessage[] = [];
 let isGenerating = false;
 let aiPageBound = false;
-let activeToolAction: string | null = null;
-let toolResetTimer: number | null = null;
 let pendingImages: AIImageAttachment[] = [];
 
-// Tool action labels
-const ACTION_LABELS: Record<string, { loading: string; success: string }> = {
-  format:    { loading: '格式化中...', success: '✅ 格式化完成' },
-  explain:   { loading: '解释中...',   success: '✅ 解释完成' },
-  summarize: { loading: '总结中...',   success: '✅ 总结完成' },
-  translate: { loading: '翻译中...',   success: '✅ 翻译完成' },
-};
 
 function persistStats(): void {
   localStorage.setItem('ai-stats', JSON.stringify(aiStats));
@@ -530,115 +521,6 @@ async function fetchModels(): Promise<void> {
   }
 }
 
-// AI Tool Actions
-async function handleAIAction(action: string): Promise<void> {
-  await aiService.reloadConfig().catch(() => undefined);
-  if (activeToolAction) {
-    showMsg('AI 正在处理“' + ACTION_LABELS[activeToolAction].loading.replace('中...', '') + '”，请稍后', 'info');
-    return;
-  }
-  if (!aiService.isConfigured()) {
-    showMsg('请先在设置页配置 AI，并点击“保存配置”', 'error');
-    return;
-  }
-
-  const em = window.__editorManager;
-  const activePath = em?.activeEditor;
-  if (!activePath) {
-    showMsg('请先打开一个文件', 'error');
-    return;
-  }
-
-  const editorData = em?.getEditorByPath(activePath);
-  if (!editorData) return;
-
-  const content = editorData.model.getValue();
-  if (!content.trim()) {
-    showMsg('文件内容为空', 'error');
-    return;
-  }
-
-  const labels = ACTION_LABELS[action];
-  const toolbarBtn = document.getElementById('btn-ai-' + action) as HTMLButtonElement | null;
-  const originalHTML = toolbarBtn?.dataset.originalHtml || toolbarBtn?.innerHTML || '';
-  if (toolbarBtn && !toolbarBtn.dataset.originalHtml) toolbarBtn.dataset.originalHtml = originalHTML;
-
-  activeToolAction = action;
-  setToolButtonsDisabled(true, toolbarBtn);
-  if (toolbarBtn) {
-    toolbarBtn.innerHTML = labels.loading;
-    toolbarBtn.classList.add('loading');
-    toolbarBtn.classList.remove('success');
-  }
-
-  try {
-    let result: string;
-    switch (action) {
-      case 'format':
-        result = await aiService.formatMarkdown(content);
-        break;
-      case 'explain':
-        result = await aiService.explainCode(content);
-        break;
-      case 'summarize':
-        result = await aiService.summarize(content);
-        break;
-      case 'translate':
-        result = await aiService.translate(content);
-        break;
-      default:
-        return;
-    }
-
-    result = stripReasoningBlocks(result);
-
-    showAIModal(labels.success, result, action === 'format' ? () => {
-      editorData.model.setValue(result);
-    } : undefined);
-
-    incrementAIStats(Math.ceil((content.length + result.length) / 4));
-
-    if (toolbarBtn) {
-      toolbarBtn.innerHTML = labels.success;
-      toolbarBtn.classList.remove('loading');
-      toolbarBtn.classList.add('success');
-    }
-  } catch (err) {
-    showMsg('AI 操作失败：' + formatFriendlyAiError(err), 'error');
-  } finally {
-    activeToolAction = null;
-    scheduleToolButtonReset(toolbarBtn, originalHTML);
-  }
-}
-
-function setToolButtonsDisabled(disabled: boolean, activeButton?: HTMLButtonElement | null): void {
-  document.querySelectorAll('.ai-tool-card').forEach((btn) => {
-    const button = btn as HTMLButtonElement;
-    button.disabled = disabled && button !== activeButton ? true : disabled;
-  });
-}
-
-function scheduleToolButtonReset(activeButton: HTMLButtonElement | null, originalHTML: string): void {
-  if (toolResetTimer) {
-    window.clearTimeout(toolResetTimer);
-    toolResetTimer = null;
-  }
-
-  toolResetTimer = window.setTimeout(() => {
-    document.querySelectorAll('.ai-tool-card').forEach((btn) => {
-      const button = btn as HTMLButtonElement;
-      const original = button.dataset.originalHtml;
-      button.disabled = false;
-      button.classList.remove('loading', 'success');
-      if (original) button.innerHTML = original;
-    });
-    if (activeButton && !activeButton.dataset.originalHtml) {
-      activeButton.innerHTML = originalHTML;
-    }
-    void updateAIStatus();
-  }, 700);
-}
-
 function escHTML(str: string): string {
   return String(str)
     .replace(/&/g, '&amp;')
@@ -701,7 +583,7 @@ async function updateAIStatus(): Promise<void> {
   dot?.classList.toggle('active', isConfigured);
   const modelDisplay = document.getElementById('ai-model-display');
   if (modelDisplay) modelDisplay.textContent = isConfigured ? aiService.getModel() : '-';
-  document.querySelectorAll('.ai-tool-card').forEach(btn => (btn as HTMLButtonElement).disabled = !isConfigured || !!activeToolAction);
+
   updateStatsDisplay();
 }
 
@@ -883,11 +765,6 @@ function bindAIPageEventsOnce(): void {
   document.getElementById('btn-save-ai')?.addEventListener('click', () => { void saveAIConfig(); });
   document.getElementById('btn-test-ai')?.addEventListener('click', () => { void testAIConnection(); });
   document.getElementById('btn-toggle-key')?.addEventListener('click', toggleApiKeyVisibility);
-  document.getElementById('btn-fetch-models')?.addEventListener('click', () => { void fetchModels(); });
-  document.getElementById('btn-ai-format')?.addEventListener('click', () => { void handleAIAction('format'); });
-  document.getElementById('btn-ai-explain')?.addEventListener('click', () => { void handleAIAction('explain'); });
-  document.getElementById('btn-ai-summarize')?.addEventListener('click', () => { void handleAIAction('summarize'); });
-  document.getElementById('btn-ai-translate')?.addEventListener('click', () => { void handleAIAction('translate'); });
 
   const modelSelect = document.getElementById('ai-model-select') as HTMLSelectElement | null;
   modelSelect?.addEventListener('change', (e) => {

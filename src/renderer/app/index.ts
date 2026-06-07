@@ -241,7 +241,12 @@ function getCommandActions(): PaletteResult[] {
     { id: 'cmd-settings', group: '命令', title: '打开设置', subtitle: '配置 AI Provider、主题和快捷键', icon: '⚙️', action: () => switchPage('settings') },
     { id: 'cmd-ai', group: '命令', title: '打开 AI 助手', subtitle: '进入 AI 对话页', icon: '🤖', action: () => switchPage('ai') },
     ...templateActions,
+    { id: 'cmd-edit-mode', group: '文档命令', title: '切换到编辑模式', subtitle: '仅显示 Markdown 编辑器', icon: '📝', action: () => runActiveMarkdownModeCommand('edit') },
+    { id: 'cmd-preview-mode', group: '文档命令', title: '切换到预览模式', subtitle: '仅显示 Markdown 渲染预览', icon: '👁️', action: () => runActiveMarkdownModeCommand('preview') },
+    { id: 'cmd-split-mode', group: '文档命令', title: '切换到分屏模式', subtitle: '左侧编辑右侧预览', icon: '↔️', action: () => runActiveMarkdownModeCommand('split') },
     { id: 'cmd-ai-summary', group: 'AI 命令', title: 'AI 总结当前文档', subtitle: '基于当前 Markdown 生成总结', icon: '✨', action: () => runActiveMarkdownCommand('summary') },
+    { id: 'cmd-ai-outline', group: 'AI 命令', title: 'AI 生成文档大纲', subtitle: '基于当前 Markdown 生成大纲', icon: '📋', action: () => runActiveMarkdownCommand('outline') },
+    { id: 'cmd-ai-rewrite', group: 'AI 命令', title: 'AI 改写选中文本', subtitle: '对当前选中的内容进行改写', icon: '✏️', action: () => runActiveMarkdownCommand('rewrite') },
     { id: 'cmd-ai-todo', group: 'AI 命令', title: 'AI 根据当前文档生成待办', subtitle: '从当前 Markdown 提取任务', icon: '✅', action: () => runActiveMarkdownCommand('todo') },
     { id: 'cmd-ask-doc', group: 'AI 命令', title: '问当前文档', subtitle: '基于当前 Markdown 向 AI 提问', icon: '💬', action: () => runActiveMarkdownCommand('askdoc') },
     { id: 'cmd-export-current-html', group: '导出', title: '导出当前文档为 HTML', subtitle: '把当前 Markdown 导出为网页文件', icon: '🌐', action: () => runActiveMarkdownCommand('exporthtml') },
@@ -315,6 +320,18 @@ function runActiveMarkdownCommand(action: string): void {
       return;
     }
     void em.runMarkdownCommand?.(action);
+  }, 220);
+}
+
+function runActiveMarkdownModeCommand(mode: 'edit' | 'preview' | 'split'): void {
+  switchPage('files');
+  setTimeout(() => {
+    const em = window.__editorManager;
+    if (!em?.activeEditor) {
+      alert('请先在文件管理器中打开一个 Markdown 文档');
+      return;
+    }
+    em.setMarkdownMode?.(mode);
   }, 220);
 }
 
