@@ -15,6 +15,7 @@ const chatHistory: ChatMessage[] = [];
 let isGenerating = false;
 let aiPageBound = false;
 let pendingImages: AIImageAttachment[] = [];
+let pendingFiles: Array<{ path: string; name: string }> = [];
 
 
 function persistStats(): void {
@@ -82,8 +83,28 @@ async function sendMessage(text: string): Promise<void> {
   pendingImages = [];
   renderPendingImages();
 
-  appendMessage('user', inputText || '（已发送图片）', images);
-  const userContent = buildUserMessageContent(inputText, images);
+  // 读取待引用文件，拼入文件内容作为 AI 上下文
+  let fileContext = '';
+  const fileNames: string[] = [];
+  for (const file of pendingFiles) {
+    try {
+      const content = await window.electronAPI.fs.readFile(file.path);
+      fileContext += '--- FILE: ' + file.name + ' ---\n' + content + '\n--- END FILE ---\n\n';
+      fileNames.push(file.name);
+    } catch (error) {
+      appendMessage('system', '无法读取文件：' + file.name + ' - ' + (error instanceof Error ? error.message : String(error)));
+    }
+  }
+  pendingFiles = [];
+  renderPendingFiles();
+
+  const combinedText = fileContext + (inputText || (images.length > 0 ? '（已发送图片）' : '（已引用文件）'));
+  const displayText = fileNames.length > 0
+    ? '📎 ' + fileNames.join(', ') + (inputText ? '\n\n' + inputText : '')
+    : (inputText || (images.length > 0 ? '（已发送图片）' : '（已引用文件）'));
+
+  appendMessage('user', displayText, images);
+  const userContent = buildUserMessageContent(combinedText, images);
   chatHistory.push({ role: 'user', content: userContent });
 
   isGenerating = true;
@@ -297,6 +318,44 @@ function renderPendingImages(): void {
   tray.hidden = pendingImages.length === 0;
 }
 
+async function pickProjectFiles(): Promise<void> {
+  try {
+    const result = await window.electronAPI.fs.showOpenDialog({
+      properties: ['openFile', 'multiSelections'],
+      filters: [
+        { name: 'Text/Code Files', extensions: ['ts','tsx','js','jsx','vue','svelte','py','java','go','rs','c','cpp','h','cs','php','rb','sh','md','markdown','txt','json','yaml','yml','xml','html','css','scss','less','sql','graphql','dockerfile','makefile','toml','ini','env'] },
+        { name: 'All Files', extensions: ['*'] },
+      ],
+    });
+    if (result.canceled) return;
+    const existing = new Set(pendingFiles.map(f => f.path));
+    for (const filePath of result.filePaths) {
+      if (existing.has(filePath)) continue;
+      const name = filePath.split(/[\\/]/).pop() || filePath;
+      pendingFiles.push({ path: filePath, name });
+    }
+    renderPendingFiles();
+  } catch (error) {
+    showMsg('选择文件失败：' + formatFriendlyAiError(error), 'error');
+  }
+}
+
+function renderPendingFiles(): void {
+  const tray = document.getElementById('ai-file-attachments');
+  if (!tray) return;
+  tray.innerHTML = pendingFiles.map((file, index) =>
+    '<div class="ai-file-attachment">' +
+      '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">' +
+        '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>' +
+        '<polyline points="14 2 14 8 20 8"/>' +
+      '</svg>' +
+      '<span>' + escHTML(file.name) + '</span>' +
+      '<button type="button" data-action="remove-ai-file" data-index="' + index + '" title="移除文件">×</button>' +
+    '</div>'
+  ).join('');
+  tray.hidden = pendingFiles.length === 0;
+}
+
 function updateSendButton(): void {
   const btn = document.getElementById('btn-ai-send') as HTMLButtonElement;
   if (btn) btn.disabled = isGenerating;
@@ -347,6 +406,9 @@ function initChatInput(): void {
 
   attachBtn?.addEventListener('click', () => { void pickLocalImages(); });
 
+  const fileAttachBtn = document.getElementById('btn-ai-attach-file');
+  fileAttachBtn?.addEventListener('click', () => { void pickProjectFiles(); });
+
   attachments?.addEventListener('click', (event) => {
     const target = event.target as HTMLElement | null;
     const removeBtn = target?.closest('[data-action="remove-ai-image"]') as HTMLElement | null;
@@ -355,6 +417,18 @@ function initChatInput(): void {
     if (index >= 0) {
       pendingImages.splice(index, 1);
       renderPendingImages();
+    }
+  });
+
+  const fileAtachments = document.getElementById('ai-file-atachments');
+  fileAtachments?.addEventListener('click', (event) => {
+    const target = event.target as HTMLElement | null;
+    const removeBtn = target?.closest('[data-action="remove-ai-file"]') as HTMLElement | null;
+    if (!removeBtn) return;
+    const index = Number(removeBtn.dataset.index || -1);
+    if (index >= 0) {
+      pendingFiles.splice(index, 1);
+      renderPendingFiles();
     }
   });
 

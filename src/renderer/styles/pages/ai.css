@@ -787,6 +787,51 @@
 
 .ai-attachment button:hover { color: var(--red); }
 
+/* === File Attachments (Reference Files) === */
+.ai-file-attachments {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+.ai-file-attachment {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 260px;
+  padding: 5px 8px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.ai-file-attachment svg {
+  flex-shrink: 0;
+  color: var(--accent);
+}
+
+.ai-file-attachment span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.ai-file-attachment button {
+  border: 0;
+  background: transparent;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  font-size: 15px;
+  line-height: 1;
+  padding: 0 2px;
+}
+
+.ai-file-attachment button:hover { color: var(--red); }
+
 .ai-msg-images {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
