@@ -217,7 +217,7 @@ async function renderSearchResults(query: string): Promise<void> {
 
 function getDefaultPaletteActions(): PaletteResult[] {
   return [
-    ...getCommandActions().slice(0, 10),
+    ...getCommandActions().slice(0, 18),
     { id: 'page-home', group: '页面', title: '首页', subtitle: '回到今日工作台', icon: '🏠', action: () => switchPage('home') },
     { id: 'page-project', group: '页面', title: '项目概览', subtitle: '查看当前工作区状态、统计和项目 AI', icon: '📊', action: () => switchPage('project') },
     { id: 'page-files', group: '页面', title: '文件管理', subtitle: '浏览和编辑工作区文件', icon: '📁', action: () => switchPage('files') },
@@ -240,10 +240,10 @@ function getCommandActions(): PaletteResult[] {
     { id: 'cmd-new-todo', group: '命令', title: '新建待办', subtitle: '快速创建一条任务', icon: '➕', action: createQuickTodo },
     { id: 'cmd-settings', group: '命令', title: '打开设置', subtitle: '配置 AI Provider、主题和快捷键', icon: '⚙️', action: () => switchPage('settings') },
     { id: 'cmd-ai', group: '命令', title: '打开 AI 助手', subtitle: '进入 AI 对话页', icon: '🤖', action: () => switchPage('ai') },
-    ...templateActions,
     { id: 'cmd-edit-mode', group: '文档命令', title: '切换到编辑模式', subtitle: '仅显示 Markdown 编辑器', icon: '📝', action: () => runActiveMarkdownModeCommand('edit') },
     { id: 'cmd-preview-mode', group: '文档命令', title: '切换到预览模式', subtitle: '仅显示 Markdown 渲染预览', icon: '👁️', action: () => runActiveMarkdownModeCommand('preview') },
     { id: 'cmd-split-mode', group: '文档命令', title: '切换到分屏模式', subtitle: '左侧编辑右侧预览', icon: '↔️', action: () => runActiveMarkdownModeCommand('split') },
+    ...templateActions,
     { id: 'cmd-ai-summary', group: 'AI 命令', title: 'AI 总结当前文档', subtitle: '基于当前 Markdown 生成总结', icon: '✨', action: () => runActiveMarkdownCommand('summary') },
     { id: 'cmd-ai-outline', group: 'AI 命令', title: 'AI 生成文档大纲', subtitle: '基于当前 Markdown 生成大纲', icon: '📋', action: () => runActiveMarkdownCommand('outline') },
     { id: 'cmd-ai-rewrite', group: 'AI 命令', title: 'AI 改写选中文本', subtitle: '对当前选中的内容进行改写', icon: '✏️', action: () => runActiveMarkdownCommand('rewrite') },

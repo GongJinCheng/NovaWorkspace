@@ -196,6 +196,11 @@ export class EditorManager {
     shell.className = 'editor-shell';
     shell.innerHTML =
       '<div class="markdown-toolbar" data-visible="false">' +
+        '<div class="markdown-mode-group">' +
+          '<button class="markdown-tool-btn" data-md-mode="edit" title="编辑模式 (Ctrl+K → 编辑)">编辑</button>' +
+          '<button class="markdown-tool-btn" data-md-mode="preview" title="预览模式 (Ctrl+K → 预览)">预览</button>' +
+          '<button class="markdown-tool-btn" data-md-mode="split" title="分屏模式 (Ctrl+K → 分屏)">分屏</button>' +
+        '</div>' +
         '<div class="markdown-version-group">' +
           '<button class="markdown-tool-btn" data-md-action="saveversion">保存版本</button>' +
           '<button class="markdown-tool-btn" data-md-action="history">版本历史</button>' +
