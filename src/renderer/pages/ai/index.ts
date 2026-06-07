@@ -420,8 +420,8 @@ function initChatInput(): void {
     }
   });
 
-  const fileAtachments = document.getElementById('ai-file-atachments');
-  fileAtachments?.addEventListener('click', (event) => {
+  const fileAttachments = document.getElementById('ai-file-attachments');
+  fileAttachments?.addEventListener('click', (event) => {
     const target = event.target as HTMLElement | null;
     const removeBtn = target?.closest('[data-action="remove-ai-file"]') as HTMLElement | null;
     if (!removeBtn) return;
