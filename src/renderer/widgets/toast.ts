@@ -2,9 +2,12 @@
  * Toast — 通用 Toast 通知组件
  */
 
+import { escHtml } from '../utils/escape';
+
 type ToastType = 'success' | 'error' | 'info' | 'warning';
 
 const TOAST_DURATION = 3000;
+const UNDO_TOAST_DURATION = 5000;
 
 export function showToast(message: string, type: ToastType = 'info'): void {
   const toast = document.createElement('div');
@@ -19,7 +22,7 @@ export function showToast(message: string, type: ToastType = 'info'): void {
 
   toast.innerHTML = `
     <span class="toast-icon">${icons[type]}</span>
-    <span class="toast-message">${esc(message)}</span>
+    <span class="toast-message">${escHtml(message)}</span>
     <button class="toast-close">×</button>
   `;
 
@@ -29,8 +32,57 @@ export function showToast(message: string, type: ToastType = 'info'): void {
   setTimeout(() => { if (toast.parentNode) toast.remove(); }, TOAST_DURATION);
 }
 
-function esc(text: string): string {
-  const d = document.createElement('div');
-  d.textContent = text;
-  return d.innerHTML;
+/**
+ * Show a toast with an "撤销" (undo) action button.
+ * @param message   - Notification text (will be HTML-escaped)
+ * @param onUndo    - Called when the user clicks 撤销. Returns whether the undo succeeded.
+ * @param duration  - Auto-dismiss timeout in ms (default 5 s)
+ */
+export function showUndoToast(
+  message: string,
+  onUndo: () => void | Promise<void>,
+  duration = UNDO_TOAST_DURATION
+): void {
+  const toast = document.createElement('div');
+  toast.className = 'toast toast-info toast-undo';
+
+  toast.innerHTML = `
+    <span class="toast-icon">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polyline points="9 14 4 9 9 4"/><path d="M20 20v-7a4 4 0 0 0-4-4H4"/>
+      </svg>
+    </span>
+    <span class="toast-message">${escHtml(message)}</span>
+    <button class="toast-undo-btn">撤销</button>
+    <button class="toast-close">×</button>
+  `;
+
+  document.body.appendChild(toast);
+
+  let dismissed = false;
+  const dismiss = () => {
+    if (!dismissed) {
+      dismissed = true;
+      toast.remove();
+    }
+  };
+
+  const undoBtn = toast.querySelector('.toast-undo-btn');
+  undoBtn?.addEventListener('click', () => {
+    dismiss();
+    void Promise.resolve(onUndo());
+  });
+
+  toast.querySelector('.toast-close')?.addEventListener('click', dismiss);
+
+  const timer = setTimeout(dismiss, duration);
+
+  // If removed externally (e.g. page unload), clear timer
+  const observer = new MutationObserver(() => {
+    if (!toast.isConnected) {
+      clearTimeout(timer);
+      observer.disconnect();
+    }
+  });
+  observer.observe(document.body, { childList: true, subtree: false });
 }

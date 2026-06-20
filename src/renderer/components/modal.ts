@@ -2,6 +2,8 @@
  * Modal - 通用模态框组件
  */
 
+import { escHtml } from '../utils/escape';
+
 interface ModalInputField {
   placeholder: string;
   defaultValue?: string;
@@ -28,18 +30,18 @@ export function showModal(options: ModalOptions): HTMLElement {
   let actionsHtml = '';
   if (actions.length > 0) {
     actionsHtml = `<div class="modal-actions">
-      ${actions.map((a, i) => `<button class="modal-btn modal-btn-${a.type || 'secondary'}" data-action-idx="${i}">${esc(a.label)}</button>`).join('')}
+      ${actions.map((a, i) => `<button class="modal-btn modal-btn-${a.type || 'secondary'}" data-action-idx="${i}">${escHtml(a.label)}</button>`).join('')}
     </div>`;
   }
 
   const inputHtml = inputField
-    ? `<input class="modal-input" type="text" placeholder="${esc(inputField.placeholder)}" value="${esc(inputField.defaultValue || '')}" />`
+    ? `<input class="modal-input" type="text" placeholder="${escHtml(inputField.placeholder)}" value="${escHtml(inputField.defaultValue || '')}" />`
     : '';
 
   overlay.innerHTML = `
     <div class="modal-content">
       <div class="modal-header">
-        <h3>${esc(title)}</h3>
+        <h3>${escHtml(title)}</h3>
         <button class="modal-close-btn">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M18 6L6 18M6 6l12 12"/>
@@ -149,7 +151,7 @@ export function showConfirmDialog(options: {
 
     overlay = showModal({
       title: options.title,
-      content: '<p class="modal-message">' + esc(options.message).replace(/\n/g, '<br>') + '</p>',
+      content: '<p class="modal-message">' + escHtml(options.message).replace(/\n/g, '<br>') + '</p>',
       actions: [
         { label: options.cancelText || '取消', type: 'secondary', onClick: () => done(false) },
         { label: options.confirmText || '确定', type: options.danger ? 'danger' : 'primary', onClick: () => done(true) },
@@ -178,9 +180,9 @@ export function showTaskConfirmDialog(tasks: Array<{ title: string; description?
     };
     const listHtml = tasks.slice(0, 12).map((task, index) =>
       '<div class="modal-task-preview-item">' +
-        '<div class="modal-task-preview-title"><span>' + (index + 1) + '.</span>' + esc(task.title) + '</div>' +
-        (task.description ? '<div class="modal-task-preview-desc">' + esc(task.description) + '</div>' : '') +
-        '<div class="modal-task-preview-priority">优先级：' + esc(priorityLabel[task.priority || 'medium'] || '中') + '</div>' +
+        '<div class="modal-task-preview-title"><span>' + (index + 1) + '.</span>' + escHtml(task.title) + '</div>' +
+        (task.description ? '<div class="modal-task-preview-desc">' + escHtml(task.description) + '</div>' : '') +
+        '<div class="modal-task-preview-priority">优先级：' + escHtml(priorityLabel[task.priority || 'medium'] || '中') + '</div>' +
       '</div>'
     ).join('');
 
@@ -196,10 +198,4 @@ export function showTaskConfirmDialog(tasks: Array<{ title: string; description?
       onClose: () => done(false),
     });
   });
-}
-
-function esc(text: string): string {
-  const d = document.createElement('div');
-  d.textContent = text;
-  return d.innerHTML;
 }

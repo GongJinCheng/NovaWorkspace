@@ -6,9 +6,32 @@ import { workspaceStore } from '../services/workspace-store';
 import * as todoStore from '../services/todo-store';
 import { getAISettings } from '../services/settings-store';
 import { setActiveWorkspaceRoot } from '../utils/active-workspace';
+import { isOverdue, isDueToday } from '@shared/utils/date';
 import type { OpenWorkspaceInput, SaveWorkspaceSessionInput, ProjectMeta, ProjectOverview, ProjectActivityItem, ProjectRecentDocument, UpdateProjectMetaInput } from '@shared/types/workspace';
 
 const IGNORED_DIRS = new Set(['node_modules', '.git', 'dist', 'release', 'build', 'out', '.next', '.cache', 'coverage']);
+
+// ── 项目概览缓存 ──
+interface OverviewCacheEntry {
+  overview: ProjectOverview;
+  /** mtime of .nova/ dir when cache was built (ms since epoch), or 0 if not found */
+  novaMtime: number;
+  /** mtime of workspace root dir when cache was built */
+  rootMtime: number;
+  /** wall-clock time of last build (for max-age eviction) */
+  builtAt: number;
+}
+const OVERVIEW_CACHE_MAX_AGE_MS = 30 * 1000; // 30 s
+const overviewCache = new Map<string, OverviewCacheEntry>();
+
+async function getDirMtime(dirPath: string): Promise<number> {
+  try { return (await fs.stat(dirPath)).mtimeMs; } catch { return 0; }
+}
+
+/** Invalidate cached overview for a workspace root. Called after write operations. */
+function invalidateOverviewCache(rootPath: string): void {
+  overviewCache.delete(path.resolve(rootPath));
+}
 
 export function registerWorkspaceHandlers(): void {
   ipcMain.handle(IPC_CHANNELS.WORKSPACE.LIST, async () => {
@@ -53,11 +76,12 @@ export function registerWorkspaceHandlers(): void {
     };
     await writeProjectMeta(rootPath, next);
     await workspaceStore.open({ rootPath, name: next.name }).catch(() => null);
+    invalidateOverviewCache(rootPath);
     return next;
   });
 
   ipcMain.handle(IPC_CHANNELS.WORKSPACE.GET_PROJECT_OVERVIEW, async (_event, rootPath: string) => {
-    return buildProjectOverview(rootPath);
+    return getCachedProjectOverview(rootPath);
   });
 }
 
@@ -110,6 +134,25 @@ async function readReadmeDescription(rootPath: string): Promise<string> {
     } catch { /* ignore */ }
   }
   return '';
+}
+
+async function getCachedProjectOverview(rootPathInput: string): Promise<ProjectOverview> {
+  const rootPath = path.resolve(rootPathInput);
+  const novaDir = path.join(rootPath, '.nova');
+  const [rootMtime, novaMtime] = await Promise.all([getDirMtime(rootPath), getDirMtime(novaDir)]);
+  const cached = overviewCache.get(rootPath);
+  const now = Date.now();
+  if (
+    cached &&
+    now - cached.builtAt < OVERVIEW_CACHE_MAX_AGE_MS &&
+    cached.rootMtime === rootMtime &&
+    cached.novaMtime === novaMtime
+  ) {
+    return cached.overview;
+  }
+  const overview = await buildProjectOverview(rootPath);
+  overviewCache.set(rootPath, { overview, rootMtime, novaMtime, builtAt: now });
+  return overview;
 }
 
 async function buildProjectOverview(rootPathInput: string): Promise<ProjectOverview> {
@@ -194,8 +237,8 @@ async function buildProjectOverview(rootPathInput: string): Promise<ProjectOverv
       total: tasks.length,
       pending: pendingTasks.length,
       completed: tasks.filter((task) => task.completed).length,
-      overdue: pendingTasks.filter((task) => isOverdue(task, now)).length,
-      today: pendingTasks.filter((task) => isDueToday(task, now)).length,
+      overdue: pendingTasks.filter((task) => isOverdue(task.dueDate, now)).length,
+      today: pendingTasks.filter((task) => isDueToday(task.dueDate, now)).length,
     },
     historyStat: history.stat,
     recentDocuments: docs.slice(0, 8),
@@ -235,17 +278,3 @@ async function scanHistory(rootPath: string): Promise<{ stat: { totalVersions: n
   return { stat: { totalVersions, lastVersionAt }, activities };
 }
 
-function isOverdue(task: { dueDate?: string }, now = new Date()): boolean {
-  if (!task.dueDate) return false;
-  const due = new Date(task.dueDate);
-  if (Number.isNaN(due.getTime())) return false;
-  const start = new Date(now);
-  start.setHours(0, 0, 0, 0);
-  return due < start;
-}
-
-function isDueToday(task: { dueDate?: string }, now = new Date()): boolean {
-  if (!task.dueDate) return false;
-  const due = new Date(task.dueDate);
-  return !Number.isNaN(due.getTime()) && due.toDateString() === now.toDateString();
-}

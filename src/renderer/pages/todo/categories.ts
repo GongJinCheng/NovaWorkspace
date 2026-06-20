@@ -15,6 +15,7 @@ import {
   removeCategoryFromStore,
 } from './stores/todo.store';
 import { showInputPrompt, showModal } from '../../components/modal';
+import { escHtml } from '../../utils/escape';
 
 let sidebarFilterRefresh: () => Promise<void> = async () => {};
 let sidebarFullRefresh: () => Promise<void> = async () => {};
@@ -46,7 +47,7 @@ function renderSidebar(): void {
     html += `
       <div class="todo-sidebar-cat-item${isActive ? ' active' : ''}" data-action="filter-cat" data-cat-id="${cat.id}">
         <span class="todo-cat-color-dot" style="background:${cat.color}"></span>
-        <span class="todo-cat-name" style="color:${cat.color}">${esc(cat.name)}</span>
+        <span class="todo-cat-name" style="color:${cat.color}">${escHtml(cat.name)}</span>
         <span class="todo-cat-count">${count}</span>
         <button class="todo-sidebar-cat-delete" data-action="remove-cat" data-cat-id="${cat.id}" title="删除分类">&times;</button>
       </div>
@@ -70,7 +71,7 @@ function renderQuickAddPills(): void {
   for (const cat of store.data.categories) {
     html += `
       <span class="todo-cat-pill" data-cat-id="${cat.id}" style="border-color:${cat.color};color:${cat.color}">
-        ${esc(cat.name)}
+        ${escHtml(cat.name)}
       </span>
     `;
   }
@@ -181,10 +182,4 @@ export function initCategoryToolbar(onRefresh: () => Promise<void>): void {
       await bindAddAction();
     }
   });
-}
-
-function esc(text: string): string {
-  const d = document.createElement('div');
-  d.textContent = text;
-  return d.innerHTML;
 }

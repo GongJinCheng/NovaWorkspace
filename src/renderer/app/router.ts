@@ -4,13 +4,31 @@
 export type PageId = 'home' | 'project' | 'files' | 'ai' | 'todo' | 'knowledge' | 'settings';
 
 const pageInits = new Map<PageId, () => void | Promise<void>>();
+const pageCleanups = new Map<PageId, () => void>();
 let currentPage: PageId | null = null;
 
 export function registerPageInit(pageId: PageId, initFn: () => void | Promise<void>): void {
   pageInits.set(pageId, initFn);
 }
 
+/**
+ * Register a cleanup function for a page. Called when navigating away from the page.
+ * Pages should call this inside their init function each time to keep cleanup fresh.
+ */
+export function registerPageCleanup(pageId: PageId, cleanupFn: () => void): void {
+  pageCleanups.set(pageId, cleanupFn);
+}
+
 export async function switchPage(pageId: PageId): Promise<void> {
+  // Clean up previous page before switching
+  if (currentPage && currentPage !== pageId) {
+    const cleanupFn = pageCleanups.get(currentPage);
+    if (cleanupFn) {
+      cleanupFn();
+      pageCleanups.delete(currentPage);
+    }
+  }
+
   // Hide all pages
   document.querySelectorAll('.page').forEach(el => {
     el.classList.remove('active');

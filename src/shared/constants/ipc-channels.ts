@@ -98,6 +98,14 @@ export const IPC_CHANNELS = {
     IMPORT_WEB: 'knowledge:import-web',
     GET_STATS: 'knowledge:get-stats',
   },
+  FS_WATCH: {
+    /** Main → renderer push: a file/dir was added, changed, or deleted */
+    CHANGED: 'fs-watch:changed',
+    /** Renderer → main: start watching a workspace root */
+    WATCH: 'fs-watch:watch',
+    /** Renderer → main: stop watching a workspace root */
+    UNWATCH: 'fs-watch:unwatch',
+  },
 } as const;
 
 export type IpcChannel = typeof IPC_CHANNELS;

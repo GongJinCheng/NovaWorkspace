@@ -160,6 +160,140 @@
   border-top: 1px solid var(--border-subtle);
 }
 
+/* ── 工作区快速切换器 ── */
+.workspace-switcher {
+  position: relative;
+  padding: 0 10px 8px;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.workspace-switcher-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  font-size: 12px;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.workspace-switcher-btn:hover {
+  border-color: var(--accent);
+  background: var(--bg-hover);
+}
+
+.workspace-switcher-btn svg:first-child {
+  flex-shrink: 0;
+  opacity: 0.6;
+}
+
+.workspace-switcher-name {
+  flex: 1;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: 500;
+}
+
+.workspace-switcher-arrow {
+  flex-shrink: 0;
+  opacity: 0.5;
+  transition: transform 0.2s;
+}
+
+.workspace-switcher.open .workspace-switcher-arrow {
+  transform: rotate(180deg);
+}
+
+.workspace-switcher-dropdown {
+  position: absolute;
+  bottom: calc(100% + 4px);
+  left: 10px;
+  right: 10px;
+  max-height: 320px;
+  overflow-y: auto;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.12);
+  z-index: 100;
+  padding: 4px 0;
+}
+
+.workspace-switcher-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: background 0.1s;
+}
+
+.workspace-switcher-item:hover {
+  background: var(--bg-hover);
+}
+
+.workspace-switcher-item.active {
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+  color: var(--accent);
+}
+
+.workspace-switcher-item-icon {
+  flex-shrink: 0;
+  opacity: 0.6;
+}
+
+.workspace-switcher-item-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.workspace-switcher-item-name {
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.workspace-switcher-item-path {
+  font-size: 10px;
+  opacity: 0.5;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.workspace-switcher-divider {
+  height: 1px;
+  background: var(--border-subtle);
+  margin: 4px 0;
+}
+
+.workspace-switcher-action {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--text-secondary);
+  transition: background 0.1s;
+}
+
+.workspace-switcher-action:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.sidebar.collapsed .workspace-switcher { display: none; }
+
 .user-info {
   display: flex;
   align-items: center;

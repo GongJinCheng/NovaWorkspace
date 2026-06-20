@@ -382,9 +382,40 @@
   gap: 8px;
 }
 
-.toast.success { border-left: 3px solid var(--green); }
-.toast.error { border-left: 3px solid var(--red); }
-.toast.info { border-left: 3px solid var(--accent); }
+.toast.success, .toast.toast-success { border-left: 3px solid var(--green); }
+.toast.error, .toast.toast-error { border-left: 3px solid var(--red); }
+.toast.info, .toast.toast-info { border-left: 3px solid var(--accent); }
+.toast.warning, .toast.toast-warning { border-left: 3px solid #f59e0b; }
+
+.toast .toast-close {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 16px;
+  padding: 0 2px;
+  line-height: 1;
+  margin-left: 4px;
+}
+.toast .toast-close:hover { color: var(--text-primary); }
+
+.toast .toast-undo-btn {
+  background: none;
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 2px 8px;
+  margin-left: 4px;
+  white-space: nowrap;
+  transition: background 0.15s, color 0.15s;
+}
+.toast .toast-undo-btn:hover {
+  background: var(--accent);
+  color: #fff;
+}
 
 @keyframes slideUp {
   from { opacity: 0; transform: translateY(12px); }

@@ -7,6 +7,7 @@ import { registerWorkspaceHandlers } from './workspace.handlers';
 import { registerUpdateHandlers } from './update.handlers';
 import { registerChatHistoryHandlers } from './chat-history.handlers';
 import { registerKnowledgeHandlers } from './knowledge.handlers';
+import { registerFsWatchHandlers } from './fs-watch.handlers';
 
 /** 注册所有 IPC handlers */
 export function registerAllHandlers(): void {
@@ -19,4 +20,5 @@ export function registerAllHandlers(): void {
   registerAIHandlers();
   registerChatHistoryHandlers();
   registerKnowledgeHandlers();
+  registerFsWatchHandlers();
 }

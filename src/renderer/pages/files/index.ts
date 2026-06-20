@@ -10,6 +10,8 @@ import { registerPageInit, PageId } from '../../app/router';
 import { showInputPrompt } from '../../components/modal';
 import { aiService } from '../ai/ai-service';
 import { createDocumentFromTemplate } from '../../services/template-service';
+import { escHtml } from '../../utils/escape';
+import { refreshCurrentName as refreshWorkspaceSwitcherName } from '../../app/workspace-switcher';
 
 const store = new FilesStore();
 let fileTree: FileTree | null = null;
@@ -92,6 +94,7 @@ async function openWorkspaceRoot(rootPath: string, options: { restoreSession?: b
   } finally {
     isRestoringWorkspace = false;
     scheduleWorkspaceSessionSave();
+    void refreshWorkspaceSwitcherName();
   }
 }
 
@@ -184,7 +187,7 @@ function updateBreadcrumb(folderPath: string | null): void {
   for (const part of parts) {
     accum = accum + (accum.endsWith('/') || accum.endsWith('\\') ? '' : '/') + part;
     html += '<span class="breadcrumb-separator">/</span>';
-    html += '<span class="breadcrumb-item" data-path="' + accum + '">' + escHTML(part) + '</span>';
+    html += '<span class="breadcrumb-item" data-path="' + accum + '">' + escHtml(part) + '</span>';
   }
   breadcrumb.innerHTML = html;
   // Click to navigate
@@ -196,14 +199,8 @@ function updateBreadcrumb(folderPath: string | null): void {
   });
 }
 
-function escHTML(s: string): string {
-  const d = document.createElement('div');
-  d.textContent = s;
-  return d.innerHTML;
-}
-
 function escAttr(s: string): string {
-  return escHTML(s).replace(/\"/g, '&quot;');
+  return escHtml(s).replace(/\"/g, '&quot;');
 }
 
 
@@ -327,7 +324,7 @@ function renderQuickOpenResults(query: string): void {
       const name = p.split(/[/\\]/).pop() || p;
       const root = store.getWorkspaceRoot();
       const relative = root ? p.replace(root, '').replace(/^[/\\]/, '') : p;
-      return { path: p, score: 0, highlightName: escHTML(name), highlightPath: escHTML(relative) };
+      return { path: p, score: 0, highlightName: escHtml(name), highlightPath: escHtml(relative) };
     });
   } else {
     // Fuzzy match with scoring
@@ -348,7 +345,7 @@ function renderQuickOpenResults(query: string): void {
           path: m.path,
           score: m.score,
           highlightName: highlightMatch(name, q),
-          highlightPath: escHTML(relative),
+          highlightPath: escHtml(relative),
         };
       });
   }
@@ -424,7 +421,7 @@ function fuzzyScorePath(query: string, nameLower: string, pathLower: string): nu
 
 /** Highlight matched characters in a string with <mark> tags. */
 function highlightMatch(text: string, query: string): string {
-  if (!query) return escHTML(text);
+  if (!query) return escHtml(text);
   const q = query.toLowerCase();
   const t = text.toLowerCase();
   const result: string[] = [];
@@ -432,10 +429,10 @@ function highlightMatch(text: string, query: string): string {
 
   for (let i = 0; i < text.length; i++) {
     if (qi < q.length && t[i] === q[qi]) {
-      result.push('<mark>' + escHTML(text[i]) + '</mark>');
+      result.push('<mark>' + escHtml(text[i]) + '</mark>');
       qi++;
     } else {
-      result.push(escHTML(text[i]));
+      result.push(escHtml(text[i]));
     }
   }
   return result.join('');
@@ -724,6 +721,50 @@ if (searchInput) {
   });
 
   window.addEventListener('beforeunload', () => { void flushWorkspaceSession(); });
+
+  // ── 文件系统监听（外部变化自动刷新）──
+  let fsWatchCleanup: (() => void) | null = null;
+  let fsRefreshTimer: ReturnType<typeof setTimeout> | null = null;
+
+  function startFsWatch(rootPath: string): void {
+    stopFsWatch();
+    window.electronAPI.fsWatch.watch(rootPath);
+    fsWatchCleanup = window.electronAPI.fsWatch.onChanged((payload) => {
+      if (payload.rootPath !== rootPath) return;
+      if (fsRefreshTimer) clearTimeout(fsRefreshTimer);
+      fsRefreshTimer = setTimeout(() => {
+        fsRefreshTimer = null;
+        void fileTree?.refresh();
+      }, 500);
+    });
+  }
+
+  function stopFsWatch(): void {
+    if (fsWatchCleanup) {
+      fsWatchCleanup();
+      fsWatchCleanup = null;
+    }
+    if (fsRefreshTimer) {
+      clearTimeout(fsRefreshTimer);
+      fsRefreshTimer = null;
+    }
+    const root = fileTree?.getWorkspaceRoot();
+    if (root) window.electronAPI.fsWatch.unwatch(root);
+  }
+
+  // Hook into workspace changes
+  const origOpen = openWorkspaceRoot;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (window as any).__openWorkspaceRoot = async (rootPath: string, opts?: Record<string, unknown>) => {
+    await origOpen(rootPath, opts as any);
+    startFsWatch(rootPath);
+  };
+
+  // Start watching the currently restored workspace (if any)
+  const initialRoot = fileTree?.getWorkspaceRoot();
+  if (initialRoot) startFsWatch(initialRoot);
+
+  window.addEventListener('beforeunload', () => stopFsWatch());
 
   console.log('[Files] page initialized');
 }

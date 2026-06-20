@@ -6,6 +6,8 @@
  * raw text first and then supports the common Markdown blocks used by notes/docs.
  */
 
+import { escHtml } from '../../utils/escape';
+
 export function isMarkdownFile(fileNameOrPath: string): boolean {
   return /\.(md|markdown|mdown|mkdn)$/i.test(fileNameOrPath);
 }
@@ -69,11 +71,11 @@ export function renderMarkdownToHtml(markdown: string): string {
         codeLines = [];
       } else {
         if (codeLang.trim().toLowerCase() === 'mermaid') {
-          html.push('<div class="nova-mermaid mermaid">' + escapeHtml(codeLines.join('\n')) + '</div>');
+          html.push('<div class="nova-mermaid mermaid">' + escHtml(codeLines.join('\n')) + '</div>');
         } else {
           html.push(
             '<pre><code' + (codeLang ? ' class="language-' + escapeAttr(codeLang) + '"' : '') + '>' +
-            escapeHtml(codeLines.join('\n')) +
+            escHtml(codeLines.join('\n')) +
             '</code></pre>'
           );
         }
@@ -161,9 +163,9 @@ export function renderMarkdownToHtml(markdown: string): string {
 
   if (inCode) {
     if (codeLang.trim().toLowerCase() === 'mermaid') {
-      html.push('<div class="nova-mermaid mermaid">' + escapeHtml(codeLines.join('\n')) + '</div>');
+      html.push('<div class="nova-mermaid mermaid">' + escHtml(codeLines.join('\n')) + '</div>');
     } else {
-      html.push('<pre><code' + (codeLang ? ' class="language-' + escapeAttr(codeLang) + '"' : '') + '>' + escapeHtml(codeLines.join('\n')) + '</code></pre>');
+      html.push('<pre><code' + (codeLang ? ' class="language-' + escapeAttr(codeLang) + '"' : '') + '>' + escHtml(codeLines.join('\n')) + '</code></pre>');
     }
   }
   flushBlocks();
@@ -205,7 +207,7 @@ export async function renderMermaidBlocks(root: ParentNode): Promise<void> {
       block.dataset.rendered = 'true';
     } catch (error) {
       block.dataset.rendered = 'error';
-      block.innerHTML = '<pre><code>' + escapeHtml(source) + '</code></pre><div class="mermaid-error">Mermaid 渲染失败：' + escapeHtml(error instanceof Error ? error.message : String(error)) + '</div>';
+      block.innerHTML = '<pre><code>' + escHtml(source) + '</code></pre><div class="mermaid-error">Mermaid 渲染失败：' + escHtml(error instanceof Error ? error.message : String(error)) + '</div>';
     }
   }
 }
@@ -231,7 +233,7 @@ function splitTableRow(row: string): string[] {
 }
 
 function parseInline(input: string): string {
-  let text = escapeHtml(input);
+  let text = escHtml(input);
 
   text = text.replace(/`([^`]+)`/g, '<code>$1</code>');
   text = text.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img alt="$1" src="$2">');
@@ -243,15 +245,6 @@ function parseInline(input: string): string {
   text = text.replace(/~~([^~]+)~~/g, '<del>$1</del>');
 
   return text;
-}
-
-function escapeHtml(value: string): string {
-  return value
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
 }
 
 function escapeAttr(value: string): string {

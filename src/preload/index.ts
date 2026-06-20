@@ -138,6 +138,15 @@ contextBridge.exposeInMainWorld('electronAPI', {
     importWeb: (url: string, workspaceRoot?: string | null) => ipcRenderer.invoke(IPC_CHANNELS.KNOWLEDGE.IMPORT_WEB, url, workspaceRoot),
     getStats: (workspaceRoot?: string | null) => ipcRenderer.invoke(IPC_CHANNELS.KNOWLEDGE.GET_STATS, workspaceRoot),
   },
+  fsWatch: {
+    watch: (rootPath: string) => ipcRenderer.send(IPC_CHANNELS.FS_WATCH.WATCH, rootPath),
+    unwatch: (rootPath: string) => ipcRenderer.send(IPC_CHANNELS.FS_WATCH.UNWATCH, rootPath),
+    onChanged: (callback: (payload: { type: string; path: string; rootPath: string }) => void) => {
+      const handler = (_event: unknown, payload: { type: string; path: string; rootPath: string }) => callback(payload);
+      ipcRenderer.on(IPC_CHANNELS.FS_WATCH.CHANGED, handler);
+      return () => ipcRenderer.removeListener(IPC_CHANNELS.FS_WATCH.CHANGED, handler);
+    },
+  },
 } satisfies ElectronAPI);
 
 declare global {

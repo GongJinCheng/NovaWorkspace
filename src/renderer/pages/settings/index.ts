@@ -14,6 +14,7 @@ import {
   normalizeAIModelCapabilities,
 } from '../../../shared/utils/ai-capabilities';
 import { aiService } from '../ai/ai-service';
+import { escHtml } from '../../utils/escape';
 
 let settingsPageBound = false;
 let currentAISettings: AISettings | null = null;
@@ -154,7 +155,7 @@ function renderPresetOptions(): void {
   const select = document.getElementById('settings-ai-preset') as HTMLSelectElement | null;
   if (!select) return;
   select.innerHTML = AI_PROVIDER_PRESETS.map(preset =>
-    '<option value="' + escHTML(preset.type) + '">' + escHTML(preset.name) + '</option>'
+    '<option value="' + escHtml(preset.type) + '">' + escHtml(preset.name) + '</option>'
   ).join('');
 }
 
@@ -176,17 +177,17 @@ function renderProviderList(): void {
     const isActive = provider.id === activeId;
     const status = provider.enabled ? '启用' : '停用';
     return '<div class="settings-ai-provider-card ' + (isActive ? 'active' : '') + '">' +
-      '<div class="settings-ai-provider-main" data-ai-settings-action="edit-provider" data-provider-id="' + escHTML(provider.id) + '">' +
+      '<div class="settings-ai-provider-main" data-ai-settings-action="edit-provider" data-provider-id="' + escHtml(provider.id) + '">' +
         '<div class="settings-ai-provider-top">' +
-          '<strong>' + escHTML(provider.name) + '</strong>' +
+          '<strong>' + escHtml(provider.name) + '</strong>' +
           (isDefault ? '<span class="settings-ai-default-badge">默认</span>' : '') +
         '</div>' +
-        '<span>' + escHTML(provider.defaultModel || '-') + ' · ' + status + '</span>' +
+        '<span>' + escHtml(provider.defaultModel || '-') + ' · ' + status + '</span>' +
         renderCapabilityBadges(provider) +
       '</div>' +
       '<div class="settings-ai-provider-actions">' +
-        (!isDefault ? '<button data-ai-settings-action="set-default-provider" data-provider-id="' + escHTML(provider.id) + '">设为默认</button>' : '<button class="is-muted" data-ai-settings-action="edit-provider" data-provider-id="' + escHTML(provider.id) + '">正在使用</button>') +
-        '<button data-ai-settings-action="delete-provider" data-provider-id="' + escHTML(provider.id) + '">删除</button>' +
+        (!isDefault ? '<button data-ai-settings-action="set-default-provider" data-provider-id="' + escHtml(provider.id) + '">设为默认</button>' : '<button class="is-muted" data-ai-settings-action="edit-provider" data-provider-id="' + escHtml(provider.id) + '">正在使用</button>') +
+        '<button data-ai-settings-action="delete-provider" data-provider-id="' + escHtml(provider.id) + '">删除</button>' +
       '</div>' +
     '</div>';
   }).join('');
@@ -297,7 +298,7 @@ async function fetchModelsFromForm(): Promise<void> {
     if (models.length === 0) {
       setModelsMessage('没有获取到模型。');
     } else {
-      setModelsMessage(models.slice(0, 30).map(model => '<button class="settings-model-chip" data-model="' + escHTML(model) + '">' + escHTML(model) + '</button>').join(''));
+      setModelsMessage(models.slice(0, 30).map(model => '<button class="settings-model-chip" data-model="' + escHtml(model) + '">' + escHtml(model) + '</button>').join(''));
       const modelsEl = document.getElementById('settings-ai-models');
       modelsEl?.querySelectorAll('.settings-model-chip').forEach(chip => {
         chip.addEventListener('click', () => {
@@ -387,7 +388,7 @@ function renderCapabilityBadges(provider: AIProviderConfig): string {
   const capabilities = normalizeAIModelCapabilities(provider.capabilities, provider);
   return '<div class="settings-ai-capability-badges">' + CAPABILITY_KEYS.map(key => {
     const on = capabilities[key] === true;
-    return '<span class="settings-ai-capability-badge ' + (on ? 'on' : 'off') + '">' + escHTML(AI_CAPABILITY_LABELS[key]) + '</span>';
+    return '<span class="settings-ai-capability-badge ' + (on ? 'on' : 'off') + '">' + escHtml(AI_CAPABILITY_LABELS[key]) + '</span>';
   }).join('') + '</div>';
 }
 
@@ -417,10 +418,6 @@ function getValue(id: string): string {
 function setValue(id: string, value: string): void {
   const el = document.getElementById(id) as HTMLInputElement | HTMLSelectElement | null;
   if (el) el.value = value || '';
-}
-
-function escHTML(str: string): string {
-  return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
 registerPageInit('settings', initSettingsPage);

@@ -6,6 +6,8 @@
 
 import { ipcClient } from '../../services/ipc-client';
 import { measure } from '../../utils/performance';
+import { escHtml } from '../../utils/escape';
+import { showUndoToast } from '../../widgets/toast';
 import {
   getStore,
   getFilteredTasks,
@@ -20,6 +22,48 @@ import {
   PLANBOARD_BUCKETS,
 } from './stores/todo.store';
 import type { TodoTask } from '@shared/types/todo';
+
+// ── 撤销栈 ──────────────────────────────────────────────────────────────────
+
+type UndoEntry =
+  | { type: 'delete'; task: TodoTask }
+  | { type: 'complete'; taskId: string; previousCompleted: boolean; previousCompletedAt?: string };
+
+const MAX_UNDO_STACK = 10;
+const undoStack: UndoEntry[] = [];
+
+function pushUndo(entry: UndoEntry): void {
+  undoStack.push(entry);
+  if (undoStack.length > MAX_UNDO_STACK) undoStack.shift();
+}
+
+async function undoLastAction(): Promise<void> {
+  const entry = undoStack.pop();
+  if (!entry) return;
+
+  if (entry.type === 'delete') {
+    try {
+      await ipcClient.todo.addTask(entry.task as any);
+      await currentRefresh();
+    } catch (err) {
+      console.error('[Todo] Undo delete failed:', err);
+    }
+  } else if (entry.type === 'complete') {
+    try {
+      await ipcClient.todo.updateTask(entry.taskId, {
+        completed: entry.previousCompleted,
+        completedAt: entry.previousCompletedAt,
+      });
+      updateTaskInStore(entry.taskId, {
+        completed: entry.previousCompleted,
+        completedAt: entry.previousCompletedAt,
+      });
+      await currentRefresh();
+    } catch (err) {
+      console.error('[Todo] Undo complete failed:', err);
+    }
+  }
+}
 
 let currentRefresh: () => Promise<void> = async () => {};
 let currentSelectTask: ((id: string) => void) | undefined;
@@ -72,10 +116,10 @@ export function renderCompletedTasks(): void {
   let html = '';
   for (const task of completed) {
     const cat = task.categoryId ? getCategoryById(task.categoryId) : undefined;
-    html += '<div class="todo-timeline-item" data-id="' + task.id + '" title="' + esc(task.title) + '">' +
+    html += '<div class="todo-timeline-item" data-id="' + task.id + '" title="' + escHtml(task.title) + '">' +
       '<span class="todo-timeline-check">' + SMALL_CHECK_ICON + '</span>' +
-      '<span class="todo-timeline-title">' + esc(task.title) + '</span>' +
-      (cat ? '<span class="todo-timeline-cat" style="color:' + cat.color + '">' + esc(cat.name) + '</span>' : '') +
+      '<span class="todo-timeline-title">' + escHtml(task.title) + '</span>' +
+      (cat ? '<span class="todo-timeline-cat" style="color:' + cat.color + '">' + escHtml(cat.name) + '</span>' : '') +
     '</div>';
   }
   list.innerHTML = html;
@@ -94,9 +138,9 @@ function renderPlanboard(area: HTMLElement): void {
 
     html += '<div class="timeline-group' + (bucketTasks.length === 0 ? ' empty' : '') + '" data-group="' + dotClass + '">' +
       '<div class="timeline-dot ' + dotClass + '"></div>' +
-      '<div class="group-header" data-action="toggle-group" data-bucket="' + esc(bucket) + '">' +
+      '<div class="group-header" data-action="toggle-group" data-bucket="' + escHtml(bucket) + '">' +
         '<div class="group-title">' +
-          '<span class="group-label">' + esc(bucket) + '</span>' +
+          '<span class="group-label">' + escHtml(bucket) + '</span>' +
           '<span class="count-badge">' + bucketTasks.length + ' 项</span>' +
         '</div>' +
         '<div class="group-toggle">' + CHEVRON_DOWN_ICON + '</div>' +
@@ -152,11 +196,19 @@ function renderBoardView(area: HTMLElement): void {
     ? baseTasks.filter(t => t.categoryId === store.selectedCatId)
     : baseTasks;
 
-  // Group tasks by category
+  // Group tasks by category, sorted by sortOrder (desc) then createdAt
   const columns = new Map<string, TodoTask[]>();
   const uncategorized: TodoTask[] = [];
 
-  for (const task of catFiltered) {
+  // Sort tasks: sortOrder desc (nulls last), then priority, then dueDate
+  const sortedTasks = [...catFiltered].sort((a, b) => {
+    const sa = a.sortOrder ?? 0;
+    const sb = b.sortOrder ?? 0;
+    if (sa !== sb) return sb - sa;
+    return 0;
+  });
+
+  for (const task of sortedTasks) {
     if (task.categoryId) {
       if (!columns.has(task.categoryId)) columns.set(task.categoryId, []);
       columns.get(task.categoryId)!.push(task);
@@ -221,17 +273,20 @@ function renderBoardView(area: HTMLElement): void {
         body.style.display = 'block';
       }
     });
+
+    // Bind drag & drop for kanban
+    bindKanbanDragDrop(board);
   });
 }
 
 function renderKanbanColumn(catId: string, name: string, color: string, tasks: TodoTask[]): string {
-  return '<div class="kanban-column">' +
+  return '<div class="kanban-column" data-cat-id="' + escAttr(catId) + '">' +
     '<div class="kanban-column-header">' +
-      '<span class="kanban-column-dot" style="background:' + esc(color) + '"></span>' +
-      '<span class="kanban-column-name">' + esc(name) + '</span>' +
+      '<span class="kanban-column-dot" style="background:' + escHtml(color) + '"></span>' +
+      '<span class="kanban-column-name">' + escHtml(name) + '</span>' +
       '<span class="kanban-column-count">' + tasks.length + '</span>' +
     '</div>' +
-    '<div class="kanban-column-body">' +
+    '<div class="kanban-column-body" data-cat-id="' + escAttr(catId) + '">' +
       (tasks.length > 0
         ? tasks.map(t => renderTaskCard(t)).join('')
         : '<div class="kanban-column-empty">暂无任务</div>') +
@@ -247,21 +302,21 @@ function renderTaskCard(task: TodoTask): string {
   const subtasksTotal = task.subtasks?.length || 0;
   const isSelected = getStore().selectedTaskId === task.id;
 
-  return '<div class="todo-task-card ' + (task.completed ? 'completed' : '') + (isSelected ? ' selected' : '') + '" data-id="' + task.id + '">' +
+  return '<div class="todo-task-card ' + (task.completed ? 'completed' : '') + (isSelected ? ' selected' : '') + '" data-id="' + task.id + '" draggable="true">' +
     '<div class="todo-task-pri-bar" style="background:' + priColor + '"></div>' +
     '<div class="todo-task-body">' +
       '<div class="todo-task-header">' +
         '<button class="todo-check-btn ' + (task.completed ? 'checked' : '') + '" data-action="toggle" data-id="' + task.id + '">' +
           (task.completed ? CHECK_ICON : '') +
         '</button>' +
-        '<span class="todo-task-title ' + (task.completed ? 'strike' : '') + '" data-action="inline-edit" data-id="' + task.id + '">' + esc(task.title) + '</span>' +
+        '<span class="todo-task-title ' + (task.completed ? 'strike' : '') + '" data-action="inline-edit" data-id="' + task.id + '">' + escHtml(task.title) + '</span>' +
         '<div class="todo-task-actions">' +
           '<button class="todo-action-btn" data-action="delete" data-id="' + task.id + '" title="删除">' + DELETE_ICON + '</button>' +
         '</div>' +
       '</div>' +
       '<div class="todo-task-meta">' +
         (dueInfo ? '<span class="todo-due-badge ' + dueInfo.cls + '">' + dueInfo.text + '</span>' : '') +
-        (cat ? '<span class="todo-cat-tag" style="color:' + cat.color + '">' + esc(cat.name) + '</span>' : '') +
+        (cat ? '<span class="todo-cat-tag" style="color:' + cat.color + '">' + escHtml(cat.name) + '</span>' : '') +
         '<span class="todo-pri-tag" style="color:' + priColor + '">' + PRI_LABELS[task.priority] + '</span>' +
         (subtasksTotal > 0 ? '<span class="todo-subtask-count" data-action="toggle-subtasks" data-id="' + task.id + '" title="展开子任务">' + subtasksDone + '/' + subtasksTotal + '</span>' : '') +
       '</div>' +
@@ -278,7 +333,7 @@ function renderSubtasks(task: TodoTask): string {
       '<button class="todo-subtask-check ' + (sub.done ? 'checked' : '') + '" data-action="toggle-subtask" data-id="' + task.id + '" data-subtask-id="' + sub.id + '">' +
         (sub.done ? SMALL_CHECK_ICON : '') +
       '</button>' +
-      '<span class="todo-subtask-text ' + (sub.done ? 'strike' : '') + '">' + esc(sub.text) + '</span>' +
+      '<span class="todo-subtask-text ' + (sub.done ? 'strike' : '') + '">' + escHtml(sub.text) + '</span>' +
     '</div>';
   }
   html += '</div>';
@@ -358,14 +413,23 @@ async function toggleTask(taskId: string, actionBtn: HTMLElement): Promise<void>
   const completed = !previousCompleted;
   const completedAt = completed ? new Date().toISOString() : undefined;
 
+  // Push undo entry only when marking as complete (completing is the action to undo)
+  if (completed) {
+    pushUndo({ type: 'complete', taskId, previousCompleted, previousCompletedAt });
+  }
+
   updateTaskInStore(taskId, { completed, completedAt });
   patchTaskCardCompletion(actionBtn, completed);
 
   try {
     await ipcClient.todo.updateTask(taskId, { completed, completedAt });
     await currentRefresh();
+    if (completed) {
+      showUndoToast(`已完成「${task.title.slice(0, 20)}${task.title.length > 20 ? '…' : ''}」`, undoLastAction);
+    }
   } catch (err) {
     console.error('[Todo] Toggle failed, rolling back:', err);
+    undoStack.pop(); // remove the undo entry we just added since the operation failed
     updateTaskInStore(taskId, { completed: previousCompleted, completedAt: previousCompletedAt });
     await currentRefresh();
   }
@@ -375,13 +439,25 @@ async function deleteTask(taskId: string): Promise<void> {
   const previousTask = getTaskById(taskId);
   const card = document.querySelector('.todo-task-card[data-id="' + taskId + '"]');
   if (card) card.remove();
+
+  if (previousTask) {
+    pushUndo({ type: 'delete', task: { ...previousTask } });
+  }
+
   removeTaskFromStore(taskId);
 
   try {
     await ipcClient.todo.deleteTask(taskId);
     await currentRefresh();
+    if (previousTask) {
+      showUndoToast(
+        `已删除「${previousTask.title.slice(0, 20)}${previousTask.title.length > 20 ? '…' : ''}」`,
+        undoLastAction
+      );
+    }
   } catch (err) {
     console.error('[Todo] Delete failed, refreshing:', err, previousTask);
+    undoStack.pop(); // remove the undo entry since the operation failed
     await currentRefresh();
   }
 }
@@ -536,12 +612,6 @@ function renderEmptyState(filter: string): string {
   '</div>';
 }
 
-function esc(text: string): string {
-  const d = document.createElement('div');
-  d.textContent = text;
-  return d.innerHTML;
-}
-
 const CHECK_ICON = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>';
 const SMALL_CHECK_ICON = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>';
 const DELETE_ICON = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>';
@@ -554,3 +624,112 @@ const BUCKET_DOT_CLASS: Record<string, string> = {
   '本周': 'week',
   '更后': 'later',
 };
+
+// ── 看板拖拽排序 ──
+
+let draggedTaskId: string | null = null;
+let draggedFromCatId: string | null = null;
+
+function bindKanbanDragDrop(board: HTMLElement): void {
+  const cards = board.querySelectorAll<HTMLElement>('.todo-task-card[draggable="true"]');
+  const bodies = board.querySelectorAll<HTMLElement>('.kanban-column-body');
+
+  cards.forEach((card) => {
+    card.addEventListener('dragstart', (e) => {
+      draggedTaskId = card.dataset.id || null;
+      const body = card.closest('.kanban-column-body') as HTMLElement | null;
+      draggedFromCatId = body?.dataset.catId || '';
+      card.classList.add('dragging');
+      if (e.dataTransfer) {
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', draggedTaskId || '');
+      }
+    });
+
+    card.addEventListener('dragend', () => {
+      card.classList.remove('dragging');
+      draggedTaskId = null;
+      draggedFromCatId = null;
+      // Clean up visual indicators
+      board.querySelectorAll('.kanban-column-body').forEach((b) => {
+        b.classList.remove('drag-over');
+      });
+    });
+  });
+
+  bodies.forEach((body) => {
+    body.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
+      body.classList.add('drag-over');
+    });
+
+    body.addEventListener('dragleave', (e) => {
+      // Only remove if leaving the body entirely, not entering a child
+      const related = e.relatedTarget as Node | null;
+      if (related && body.contains(related)) return;
+      body.classList.remove('drag-over');
+    });
+
+    body.addEventListener('drop', async (e) => {
+      e.preventDefault();
+      body.classList.remove('drag-over');
+      const targetCatId = body.dataset.catId || '';
+      const taskId = draggedTaskId;
+      if (!taskId) return;
+
+      // Determine insertion position within the column
+      const afterElement = getDragAfterElement(body, e.clientY);
+      const task = getTaskById(taskId);
+      if (!task) return;
+
+      const prevCatId = task.categoryId || '';
+      const prevSort = task.sortOrder ?? 0;
+
+      // Optimistically update store
+      let newSortOrder = Date.now();
+      if (afterElement) {
+        const afterId = (afterElement as HTMLElement).dataset.id;
+        const afterTask = afterId ? getTaskById(afterId) : null;
+        if (afterTask) {
+          newSortOrder = (afterTask.sortOrder ?? Date.now()) - 1;
+        }
+      }
+
+      const categoryIdChanged = prevCatId !== targetCatId;
+      updateTaskInStore(taskId, {
+        categoryId: targetCatId || undefined,
+        sortOrder: newSortOrder,
+      });
+
+      try {
+        await ipcClient.todo.updateTask(taskId, {
+          categoryId: targetCatId || undefined,
+          sortOrder: newSortOrder,
+        });
+        await currentRefresh();
+      } catch (err) {
+        console.error('[Todo] Drag-drop failed, rolling back:', err);
+        updateTaskInStore(taskId, { categoryId: prevCatId || undefined, sortOrder: prevSort });
+        await currentRefresh();
+      }
+    });
+  });
+}
+
+/** Find the element before which the dragged item should be inserted */
+function getDragAfterElement(container: HTMLElement, y: number): HTMLElement | null {
+  const cards = Array.from(container.querySelectorAll<HTMLElement>('.todo-task-card:not(.dragging)'));
+  let closest: HTMLElement | null = null;
+  let closestOffset = Number.NEGATIVE_INFINITY;
+
+  for (const card of cards) {
+    const box = card.getBoundingClientRect();
+    const offset = y - box.top - box.height / 2;
+    if (offset < 0 && offset > closestOffset) {
+      closestOffset = offset;
+      closest = card;
+    }
+  }
+  return closest;
+}

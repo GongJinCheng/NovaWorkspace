@@ -15,6 +15,7 @@
 import { switchPage, registerPageInit } from '../../app/router';
 import { ipcClient } from '../../services/ipc-client';
 import { getCurrentWorkspaceRoot } from '../../services/workspace-context';
+import { escHtml } from '../../utils/escape';
 import type { KnowledgeItem, KnowledgeIndex, KnowledgeStats, KnowledgeSourceType } from '../../../shared/types/knowledge';
 
 let items: KnowledgeItem[] = [];
@@ -25,6 +26,12 @@ let selectedItems = new Set<string>();
 export function initKnowledgePage(): void {
   bindEvents();
   refreshKnowledgePage();
+
+  // Expose knowledge item opener for command palette
+  window.__openKnowledgeItem = async (itemId: string) => {
+    await refreshKnowledgePage();
+    void viewItem(itemId);
+  };
 }
 
 function bindEvents(): void {
@@ -150,7 +157,7 @@ function renderList(): void {
 
   if (searchQuery && filtered.length === 0) {
     listEl.innerHTML = `<div class="kb-empty">
-      <p>没有匹配"${escapeHtml(searchQuery)}"的资料</p>
+      <p>没有匹配"${escHtml(searchQuery)}"的资料</p>
     </div>`;
     return;
   }
@@ -166,13 +173,13 @@ function renderList(): void {
       <div class="kb-card-main">
         <div class="kb-card-icon">${sourceIcon(item.sourceType)}</div>
         <div class="kb-card-info">
-          <div class="kb-card-title">${highlightMatch(escapeHtml(item.title), searchQuery)}</div>
+          <div class="kb-card-title">${highlightMatch(escHtml(item.title), searchQuery)}</div>
           <div class="kb-card-meta">
             <span class="kb-card-source">${item.sourceName}</span>
             <span class="kb-card-words">${item.wordCount.toLocaleString()} 字</span>
             <span class="kb-card-date">${formatDate(item.createdAt)}</span>
           </div>
-          ${item.summary ? `<div class="kb-card-summary">${highlightMatch(escapeHtml(item.summary), searchQuery)}</div>` : ''}
+          ${item.summary ? `<div class="kb-card-summary">${highlightMatch(escHtml(item.summary), searchQuery)}</div>` : ''}
         </div>
       </div>
       <div class="kb-card-actions">
@@ -461,7 +468,7 @@ function handleImportClipboard(): void {
     modal.style.display = 'flex';
     navigator.clipboard.readText().then((text) => {
       (document.getElementById('kb-clip-textarea') as HTMLTextAreaElement).value = text;
-    }).catch(() => {});
+    }).catch((err) => { console.error('Clipboard read failed:', err); });
     (document.getElementById('kb-clip-title') as HTMLInputElement).focus();
   }
 }
@@ -591,12 +598,6 @@ function sourceIcon(type: KnowledgeSourceType): string {
 function formatDate(iso: string): string {
   const d = new Date(iso);
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-}
-
-function escapeHtml(text: string): string {
-  const div = document.createElement('div');
-  div.textContent = text;
-  return div.innerHTML;
 }
 
 function highlightMatch(text: string, query: string): string {

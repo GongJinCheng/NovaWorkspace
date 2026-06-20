@@ -1,5 +1,6 @@
 import { ipcClient } from './ipc-client';
 import { renderMarkdownToHtml } from '../pages/files/markdown-preview';
+import { escHtml } from '../utils/escape';
 
 export type ExportFormat = 'markdown' | 'html' | 'pdf';
 
@@ -119,7 +120,7 @@ export function buildExportHtml(input: { title: string; subtitle?: string; bodyH
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
-  <title>${escapeHtml(input.title)}</title>
+  <title>${escHtml(input.title)}</title>
   <style>
     :root {
       color-scheme: light;
@@ -197,8 +198,8 @@ export function buildExportHtml(input: { title: string; subtitle?: string; bodyH
 <body>
   <article class="nova-export">
     <header class="nova-export-header">
-      <span class="nova-export-kicker">${escapeHtml(input.subtitle || 'Nova Export')}</span>
-      <h1>${escapeHtml(input.title)}</h1>
+      <span class="nova-export-kicker">${escHtml(input.subtitle || 'Nova Export')}</span>
+      <h1>${escHtml(input.title)}</h1>
       <p>由 Nova Workspace 导出 · ${formatDateTime(new Date().toISOString())}</p>
     </header>
     <section class="nova-export-body">
@@ -221,8 +222,4 @@ function formatDateTime(value: string): string {
   } catch {
     return value;
   }
-}
-
-function escapeHtml(value: string): string {
-  return String(value).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }

@@ -28,6 +28,7 @@ import { renderCategories, initCategoryToolbar } from './categories';
 import { startReminderCheck } from './reminders';
 import { registerPageInit, switchPage } from '../../app/router';
 import { measure, measureAsync } from '../../utils/performance';
+import { escHtml } from '../../utils/escape';
 import type { TodoTask } from '@shared/types/todo';
 import { getCurrentWorkspaceRoot, resolveWorkspacePath } from '../../services/workspace-context';
 
@@ -250,18 +251,18 @@ function renderDrawerContent(): void {
   content.innerHTML =
     '<div class="todo-drawer-field">' +
       '<span class="todo-drawer-field-label">\u6807\u9898</span>' +
-      '<input type="text" id="drawer-task-title" class="todo-drawer-title-input" value="' + esc(task.title) + '" />' +
+      '<input type="text" id="drawer-task-title" class="todo-drawer-title-input" value="' + escHtml(task.title) + '" />' +
     '</div>' +
     '<div class="todo-drawer-field">' +
       '<span class="todo-drawer-field-label">\u63CF\u8FF0</span>' +
-      '<textarea id="drawer-task-desc" class="todo-drawer-desc-textarea" placeholder="\u6DFB\u52A0\u63CF\u8FF0...">' + esc(task.description || '') + '</textarea>' +
+      '<textarea id="drawer-task-desc" class="todo-drawer-desc-textarea" placeholder="\u6DFB\u52A0\u63CF\u8FF0...">' + escHtml(task.description || '') + '</textarea>' +
     '</div>' +
     '<div class="todo-drawer-row">' +
       '<div class="todo-drawer-field">' +
         '<span class="todo-drawer-field-label">\u5206\u7C7B</span>' +
         '<select id="drawer-task-cat" class="todo-drawer-select">' +
           '<option value="">\u65E0</option>' +
-          store.data.categories.map(c => '<option value="' + c.id + '"' + (c.id === task.categoryId ? ' selected' : '') + '>' + esc(c.name) + '</option>').join('') +
+          store.data.categories.map(c => '<option value="' + c.id + '"' + (c.id === task.categoryId ? ' selected' : '') + '>' + escHtml(c.name) + '</option>').join('') +
         '</select>' +
       '</div>' +
       '<div class="todo-drawer-field">' +
@@ -296,8 +297,8 @@ function renderTaskSource(task: TodoTask): string {
   const title = task.sourceTitle || task.sourceFilePath.split(/[/\\]/).pop() || '来源文档';
   return '<div class="todo-drawer-field todo-source-field">' +
     '<span class="todo-drawer-field-label">来源</span>' +
-    '<button class="todo-source-link" id="drawer-open-source" title="打开来源文档">' + esc(title) + '</button>' +
-    '<div class="todo-source-path">' + esc(task.sourceFilePath) + '</div>' +
+    '<button class="todo-source-link" id="drawer-open-source" title="打开来源文档">' + escHtml(title) + '</button>' +
+    '<div class="todo-source-path">' + escHtml(task.sourceFilePath) + '</div>' +
   '</div>';
 }
 
@@ -308,7 +309,7 @@ function renderDrawerSubtasks(task: TodoTask): string {
       '<button class="todo-drawer-subtask-check ' + (sub.done ? 'checked' : '') + '" data-action="drawer-toggle-subtask">' +
         (sub.done ? '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>' : '') +
       '</button>' +
-      '<input type="text" class="todo-drawer-subtask-text ' + (sub.done ? 'done' : '') + '" data-action="drawer-edit-subtask" value="' + esc(sub.text) + '" />' +
+      '<input type="text" class="todo-drawer-subtask-text ' + (sub.done ? 'done' : '') + '" data-action="drawer-edit-subtask" value="' + escHtml(sub.text) + '" />' +
       '<button class="todo-drawer-subtask-delete" data-action="drawer-delete-subtask" title="\u5220\u9664">' +
         '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>' +
       '</button>' +
@@ -493,12 +494,6 @@ function bindDrawerEvents(taskId: string): void {
       (target as HTMLInputElement).blur();
     }
   });
-}
-
-function esc(text: string): string {
-  const d = document.createElement('div');
-  d.textContent = text;
-  return d.innerHTML;
 }
 
 export function scrollToTodayBucket(): void {

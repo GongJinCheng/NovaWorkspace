@@ -10,9 +10,11 @@ import { stripReasoningBlocks } from '@shared/utils/ai-capabilities';
 import type { FilesStore } from './files-store';
 import { isMarkdownFile, renderMarkdownToHtml, renderMermaidBlocks } from './markdown-preview';
 import { showInputPrompt, showConfirmDialog, showTaskConfirmDialog } from '../../components/modal';
+import { showToast } from '../../widgets/toast';
 import { switchPage } from '../../app/router';
 import { getCurrentWorkspaceRoot, getRelativePath } from '../../services/workspace-context';
 import { exportMarkdownDocument, type ExportFormat } from '../../services/export-service';
+import { escHtml as _escHtml, escAttr as _escAttr } from '../../utils/escape';
 
 /** Convert a browser File (e.g. clipboard screenshot) to a base64 string. */
 function fileToBase64(file: File): Promise<string> {
@@ -100,6 +102,7 @@ export class EditorManager {
   private markdownToolbar: HTMLElement | null = null;
   private markdownMode: MarkdownViewMode = 'edit';
   private markdownPreviewTimer: ReturnType<typeof setTimeout> | null = null;
+  private editorResizeObserver: ResizeObserver | null = null;
   private markdownAiBusy = false;
   private todoCreationBusy = false;
   private autoSaveTimers = new Map<string, ReturnType<typeof setTimeout>>();
@@ -156,6 +159,12 @@ export class EditorManager {
   }
 
   private createEditor(): void {
+    // Clean up previous ResizeObserver
+    if (this.editorResizeObserver) {
+      this.editorResizeObserver.disconnect();
+      this.editorResizeObserver = null;
+    }
+
     this.container.innerHTML = '';
     this.editorHost = null;
     this.markdownPreview = null;
@@ -259,6 +268,14 @@ export class EditorManager {
 
     this.applyMarkdownMode();
     this.bindImageDropPaste();
+
+    // Use ResizeObserver for accurate layout updates instead of setTimeout hacks
+    if (this.editorHost) {
+      this.editorResizeObserver = new ResizeObserver(() => {
+        this.editor?.layout();
+      });
+      this.editorResizeObserver.observe(this.editorHost);
+    }
   }
 
 
@@ -467,12 +484,11 @@ export class EditorManager {
       workspace.style.pointerEvents = '';
     }
 
-    setTimeout(() => {
-      this.editor?.layout();
-      if (options.focus && this.markdownMode !== 'preview') {
+    if (options.focus && this.markdownMode !== 'preview') {
+      setTimeout(() => {
         try { this.editor?.focus(); } catch {}
-      }
-    }, 50);
+      }, 50);
+    }
   }
 
   private scheduleMarkdownPreviewUpdate(): void {
@@ -611,7 +627,7 @@ export class EditorManager {
 
   setMarkdownMode(mode: MarkdownViewMode): void {
     if (!this.isActiveMarkdown()) {
-      window.alert('请先在文件管理器中打开一个 Markdown 文档');
+      showToast('请先在文件管理器中打开一个 Markdown 文档', 'info');
       return;
     }
     this.markdownMode = mode;
@@ -620,12 +636,12 @@ export class EditorManager {
 
   async exportCurrentMarkdown(format: ExportFormat): Promise<void> {
     if (!this.activeEditorPath) {
-      window.alert('请先打开一个 Markdown 文档');
+      showToast('请先打开一个 Markdown 文档', 'info');
       return;
     }
     const tab = this.editors.get(this.activeEditorPath);
     if (!tab || !isMarkdownFile(tab.fileName)) {
-      window.alert('当前文件不是 Markdown 文档');
+      showToast('当前文件不是 Markdown 文档', 'info');
       return;
     }
     await this.exportActiveMarkdown(tab, format);
@@ -644,7 +660,7 @@ export class EditorManager {
         this.updateSaveStatus(format === 'pdf' ? 'PDF 已导出' : format === 'html' ? 'HTML 已导出' : 'Markdown 已导出');
       }
     } catch (error) {
-      window.alert('导出失败：' + (error instanceof Error ? error.message : String(error)));
+      showToast('导出失败：' + (error instanceof Error ? error.message : String(error)), 'error');
     } finally {
       // 导出会打开系统保存弹窗和隐藏打印窗口。结束后主动恢复 Monaco 的编辑能力，
       // 避免焦点、hidden 状态或只读状态异常导致“编辑失效”。
@@ -709,7 +725,7 @@ export class EditorManager {
 
       const content = tab.model.getValue();
       if (!content.trim()) {
-        window.alert('当前 Markdown 文档为空');
+        showToast('当前 Markdown 文档为空', 'info');
         return;
       }
 
@@ -747,7 +763,7 @@ ${content}
       button.textContent = '完成';
     } catch (error) {
       console.error('[EditorManager] Markdown AI action failed:', error);
-      window.alert('AI 操作失败：' + this.toFriendlyAiError(error));
+      showToast('AI 操作失败：' + this.toFriendlyAiError(error), 'error');
       button.textContent = '失败';
     } finally {
       setTimeout(() => {
@@ -765,7 +781,7 @@ ${content}
 
     const selected = tab.model.getValueInRange(selection).trim();
     if (!selected) {
-      window.alert('请先选中要改写的 Markdown 内容');
+      showToast('请先选中要改写的 Markdown 内容', 'info');
       return;
     }
 
@@ -834,7 +850,7 @@ ${content}
         this.scheduleMarkdownPreviewUpdate();
         insertBtn.textContent = '已插入';
       } catch (error) {
-        window.alert('插入失败：' + (error instanceof Error ? error.message : String(error)));
+        showToast('插入失败：' + (error instanceof Error ? error.message : String(error)), 'error');
       } finally {
         setTimeout(() => { insertBtn.disabled = false; insertBtn.textContent = oldText; }, 900);
       }
@@ -853,13 +869,13 @@ ${content}
 
   private async createTodosFromText(content: string, tab?: EditorTab, useAi = false): Promise<void> {
     if (this.todoCreationBusy) {
-      window.alert('正在生成或创建待办，请稍后。');
+      showToast('正在生成或创建待办，请稍后。', 'warning');
       return;
     }
 
     const sourceText = content.trim();
     if (!sourceText) {
-      window.alert('没有可生成待办的内容');
+      showToast('没有可生成待办的内容', 'info');
       return;
     }
 
@@ -888,7 +904,7 @@ ${content}
 
       tasks = this.dedupeTasks(tasks);
       if (tasks.length === 0) {
-        window.alert('没有识别到可创建的待办');
+        showToast('没有识别到可创建的待办', 'info');
         return;
       }
 
@@ -924,7 +940,7 @@ ${content}
       if (goTodo) void switchPage('todo');
     } catch (error) {
       console.error('[EditorManager] Create todos failed:', error);
-      window.alert('创建待办失败：' + this.toFriendlyAiError(error));
+      showToast('创建待办失败：' + this.toFriendlyAiError(error), 'error');
     } finally {
       this.todoCreationBusy = false;
       modalTodoButton = document.querySelector('.markdown-ai-todo-btn');
@@ -1092,7 +1108,7 @@ ${content}
 
         this.updateStatusBar();
         this.updateMarkdownChrome();
-        setTimeout(() => this.editor?.layout(), 50);
+        requestAnimationFrame(() => this.editor?.layout());
         return;
       }
 
@@ -1279,7 +1295,7 @@ ${content}
     this.store?.setActive(filePath);
     this.updateStatusBar();
     this.updateMarkdownChrome();
-    setTimeout(() => this.editor?.layout(), 50);
+    requestAnimationFrame(() => this.editor?.layout());
   }
 
   async closeTab(filePath: string, options?: { force?: boolean }): Promise<void> {
@@ -1355,7 +1371,7 @@ ${content}
     if (this.editor) {
       this.editor.setModel(null);
       this.updateMarkdownChrome();
-      setTimeout(() => this.editor?.layout(), 50);
+      requestAnimationFrame(() => this.editor?.layout());
     }
   }
 
@@ -1456,7 +1472,7 @@ ${content}
   private async createVersionBackup(tab: EditorTab, reason: string, options: { notify?: boolean } = {}): Promise<boolean> {
     const workspaceRoot = this.store?.getWorkspaceRoot();
     if (!workspaceRoot) {
-      if (options.notify) window.alert('请先打开一个工作区，再保存版本。');
+      if (options.notify) showToast('请先打开一个工作区，再保存版本。', 'info');
       return false;
     }
     try {
@@ -1470,7 +1486,7 @@ ${content}
       return true;
     } catch (error) {
       console.warn('[EditorManager] Create version backup failed:', error);
-      if (options.notify) window.alert('保存版本失败：' + (error instanceof Error ? error.message : String(error)));
+      if (options.notify) showToast('保存版本失败：' + (error instanceof Error ? error.message : String(error)), 'error');
       return false;
     }
   }
@@ -1478,14 +1494,14 @@ ${content}
   private async showVersionHistory(tab: EditorTab): Promise<void> {
     const workspaceRoot = this.store?.getWorkspaceRoot();
     if (!workspaceRoot) {
-      window.alert('请先打开一个工作区。');
+      showToast('请先打开一个工作区。', 'info');
       return;
     }
     let backups;
     try {
       backups = await ipcClient.fs.listBackups({ workspaceRoot, filePath: tab.filePath });
     } catch (error) {
-      window.alert('读取版本历史失败：' + (error instanceof Error ? error.message : String(error)));
+      showToast('读取版本历史失败：' + (error instanceof Error ? error.message : String(error)), 'error');
       return;
     }
 
@@ -1528,7 +1544,7 @@ ${content}
           const backup = await ipcClient.fs.readBackup({ workspaceRoot, backupPath });
           this.showVersionPreview(tab, backup.content);
         } catch (error) {
-          window.alert('预览失败：' + (error instanceof Error ? error.message : String(error)));
+          showToast('预览失败：' + (error instanceof Error ? error.message : String(error)), 'error');
         }
       });
     });
@@ -1556,7 +1572,7 @@ ${content}
             if (list) list.innerHTML = '<div class="version-history-empty">还没有历史版本。点击“保存版本”，或使用 AI 插入/改写后会自动创建备份。</div>';
           }
         } catch (error) {
-          window.alert('删除失败：' + (error instanceof Error ? error.message : String(error)));
+          showToast('删除失败：' + (error instanceof Error ? error.message : String(error)), 'error');
         }
       });
     });
@@ -1586,7 +1602,7 @@ ${content}
           this.scheduleMarkdownPreviewUpdate();
           modal?.remove();
         } catch (error) {
-          window.alert('恢复失败：' + (error instanceof Error ? error.message : String(error)));
+          showToast('恢复失败：' + (error instanceof Error ? error.message : String(error)), 'error');
         }
       });
     });
@@ -1681,13 +1697,6 @@ ${content}
     return map[ext] ?? 'plaintext';
   }
 
-  private escHTML(str: string): string {
-    const d = document.createElement('div');
-    d.textContent = str;
-    return d.innerHTML;
-  }
-
-  private escAttr(str: string): string {
-    return this.escHTML(str).replace(/"/g, '&quot;');
-  }
+  private escHTML(str: string): string { return _escHtml(str); }
+  private escAttr(str: string): string { return _escAttr(str); }
 }

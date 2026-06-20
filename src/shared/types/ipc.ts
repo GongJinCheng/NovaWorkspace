@@ -109,4 +109,9 @@ export interface ElectronAPI {
     importWeb(url: string, workspaceRoot?: string | null): Promise<KnowledgeItem>;
     getStats(workspaceRoot?: string | null): Promise<KnowledgeStats>;
   };
+  fsWatch: {
+    watch(rootPath: string): void;
+    unwatch(rootPath: string): void;
+    onChanged(callback: (payload: { type: string; path: string; rootPath: string }) => void): () => void;
+  };
 }

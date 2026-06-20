@@ -17,6 +17,7 @@ declare global {
 
     /** 打开指定待办任务 */
     __openTodoTask: (taskId: string) => Promise<void>;
+    __openKnowledgeItem: (itemId: string) => Promise<void>;
 
     /** 聚焦待办快速输入框 */
     __focusTodoQuickInput: () => void;

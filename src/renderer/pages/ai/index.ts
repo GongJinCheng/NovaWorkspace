@@ -6,12 +6,13 @@
 import { aiService, type ChatMessage } from './ai-service';
 import type { AIImageAttachment, AIMessageContent, AIModelCapabilities, AIProviderConfig } from '../../../shared/types/ai';
 import { AI_CAPABILITY_LABELS, normalizeAIModelCapabilities, providerSupportsCapability, stripReasoningBlocks } from '../../../shared/utils/ai-capabilities';
-import { registerPageInit } from '../../app/router';
+import { registerPageInit, registerPageCleanup } from '../../app/router';
 import { aiStats } from '../../app/index';
 import { renderMarkdown } from '../../utils/markdown-renderer';
 import { renderMermaidBlocks } from '../files/markdown-preview';
 import type { Conversation, ChatHistoryMessage } from '../../../shared/types/chat-history';
 import { getCurrentWorkspaceRoot } from '../../services/workspace-context';
+import { escHtml, escAttr } from '../../utils/escape';
 
 window.aiService = aiService;
 
@@ -220,7 +221,7 @@ function estimateMessageLength(content: AIMessageContent): number {
 function renderUserBubble(bubble: HTMLElement, text: string, images: AIImageAttachment[]): void {
   const imageHtml = images.length
     ? '<div class="ai-msg-images">' + images.map((image) =>
-        '<figure class="ai-msg-image"><img src="' + escAttr(image.dataUrl) + '" alt="' + escAttr(image.name) + '"><figcaption>' + escHTML(image.name) + '</figcaption></figure>'
+        '<figure class="ai-msg-image"><img src="' + escAttr(image.dataUrl) + '" alt="' + escAttr(image.name) + '"><figcaption>' + escHtml(image.name) + '</figcaption></figure>'
       ).join('') + '</div>'
     : '';
   bubble.innerHTML = (text ? '<div class="ai-msg-text">' + textToHtml(text) + '</div>' : '') + imageHtml;
@@ -246,7 +247,7 @@ function renderReasoningAwareText(content: string): string {
     }
     const thinking = match[1] || '';
     if (thinking.trim()) {
-      blocks.push('<details class="ai-think"><summary>思考过程（默认隐藏）</summary><pre>' + escHTML(thinking.trim()) + '</pre></details>');
+      blocks.push('<details class="ai-think"><summary>思考过程（默认隐藏）</summary><pre>' + escHtml(thinking.trim()) + '</pre></details>');
     }
     cursor = regex.lastIndex;
   }
@@ -268,14 +269,14 @@ function bindCodeCopyButtons(container: HTMLElement): void {
         navigator.clipboard.writeText(code).then(() => {
           btn.classList.add('copied');
           setTimeout(() => btn.classList.remove('copied'), 1500);
-        }).catch(() => { /* ignore */ });
+        }).catch((err) => { console.error('Clipboard write failed:', err); });
       }
     });
   });
 }
 
 function textToHtml(text: string): string {
-  return escHTML(text).replace(/\n/g, '<br>');
+  return escHtml(text).replace(/\n/g, '<br>');
 }
 
 
@@ -368,7 +369,7 @@ function renderPendingImages(): void {
   tray.innerHTML = pendingImages.map((image, index) =>
     '<div class="ai-attachment" data-index="' + index + '">' +
       '<img src="' + escAttr(image.dataUrl) + '" alt="' + escAttr(image.name) + '">' +
-      '<span>' + escHTML(image.name) + '</span>' +
+      '<span>' + escHtml(image.name) + '</span>' +
       '<button type="button" data-action="remove-ai-image" data-index="' + index + '" title="移除图片">×</button>' +
     '</div>'
   ).join('');
@@ -406,7 +407,7 @@ function renderPendingFiles(): void {
         '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>' +
         '<polyline points="14 2 14 8 20 8"/>' +
       '</svg>' +
-      '<span>' + escHTML(file.name) + '</span>' +
+      '<span>' + escHtml(file.name) + '</span>' +
       '<button type="button" data-action="remove-ai-file" data-index="' + index + '" title="移除文件">×</button>' +
     '</div>'
   ).join('');
@@ -451,7 +452,7 @@ function renderKnowledgeAttachments(): void {
   tray.innerHTML = pendingKnowledgeItems.map((item, index) =>
     '<div class="ai-knowledge-attachment">' +
       '<span class="ai-kb-icon">📚</span>' +
-      '<span>' + escHTML(item.name) + '</span>' +
+      '<span>' + escHtml(item.name) + '</span>' +
       '<button type="button" data-action="remove-ai-kb" data-index="' + index + '" title="移除引用">×</button>' +
     '</div>'
   ).join('');
@@ -487,8 +488,8 @@ function showKnowledgePicker(
             '<div class="ai-kb-picker-item" data-kb-id="' + escAttr(item.id) + '">' +
               '<div class="ai-kb-picker-item-icon">' + sourceIcon(item.sourceType) + '</div>' +
               '<div class="ai-kb-picker-item-info">' +
-                '<div class="ai-kb-picker-item-title">' + escHTML(item.title) + '</div>' +
-                '<div class="ai-kb-picker-item-meta">' + item.wordCount.toLocaleString() + ' 字' + (item.summary ? ' · ' + escHTML(item.summary.slice(0, 40)) : '') + '</div>' +
+                '<div class="ai-kb-picker-item-title">' + escHtml(item.title) + '</div>' +
+                '<div class="ai-kb-picker-item-meta">' + item.wordCount.toLocaleString() + ' 字' + (item.summary ? ' · ' + escHtml(item.summary.slice(0, 40)) : '') + '</div>' +
               '</div>' +
             '</div>').join('')
         ) +
@@ -771,18 +772,6 @@ async function fetchModels(): Promise<void> {
   }
 }
 
-function escHTML(str: string): string {
-  return String(str)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
-}
-
-function escAttr(str: string): string {
-  return escHTML(str).replace(/`/g, '&#96;');
-}
 
 
 function showAIModal(title: string, content: string, onApply?: () => void): void {
@@ -806,7 +795,7 @@ function showAIModal(title: string, content: string, onApply?: () => void): void
   const resultEl = modal.querySelector('#ai-modal-result');
   const actionsEl = modal.querySelector('#ai-modal-actions') as HTMLElement | null;
   if (titleEl) titleEl.textContent = title;
-  if (resultEl) resultEl.innerHTML = escHTML(content);
+  if (resultEl) resultEl.innerHTML = escHtml(content);
   if (actionsEl) {
     actionsEl.innerHTML = onApply
       ? '<button class="ai-save" id="ai-modal-apply"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg> 应用到文件</button>'
@@ -905,7 +894,7 @@ function renderCapabilityBadges(capabilities: AIModelCapabilities): string {
   const keys = Object.keys(AI_CAPABILITY_LABELS) as Array<keyof AIModelCapabilities>;
   return keys.map(key => {
     const on = capabilities[key] === true;
-    return '<span class="ai-capability-badge ' + (on ? 'on' : 'off') + '">' + escHTML(AI_CAPABILITY_LABELS[key]) + '</span>';
+    return '<span class="ai-capability-badge ' + (on ? 'on' : 'off') + '">' + escHtml(AI_CAPABILITY_LABELS[key]) + '</span>';
   }).join('');
 }
 
@@ -927,7 +916,7 @@ function renderCurrentProviderInfo(provider: ReturnType<typeof aiService.getActi
 
   const capabilities = normalizeAIModelCapabilities(provider.capabilities, provider);
   info.innerHTML =
-    '<div class="ai-current-provider-line">当前默认：' + escHTML(provider.name) + ' / ' + escHTML(provider.defaultModel) + '</div>' +
+    '<div class="ai-current-provider-line">当前默认：' + escHtml(provider.name) + ' / ' + escHtml(provider.defaultModel) + '</div>' +
     '<div class="ai-capability-badges">' + renderCapabilityBadges(capabilities) + '</div>';
 }
 
@@ -1190,7 +1179,7 @@ async function refreshHistoryPanel(): Promise<void> {
       const timeStr = formatConversationTime(item.updatedAt);
       return '<div class="ai-history-item' + (isActive ? ' active' : '') + '" data-conv-id="' + escAttr(item.id) + '">' +
         '<div class="ai-history-item-info">' +
-          '<div class="ai-history-item-title">' + escHTML(item.title) + '</div>' +
+          '<div class="ai-history-item-title">' + escHtml(item.title) + '</div>' +
           '<div class="ai-history-item-meta">' + item.messageCount + ' messages · ' + timeStr + '</div>' +
         '</div>' +
         '<button class="ai-history-item-delete" data-delete-id="' + escAttr(item.id) + '" title="Delete">' +
@@ -1353,6 +1342,14 @@ function initAIPage(): void {
       void loadConversationHistory();
     }
   }, 1000);
+
+  // Clean up interval when navigating away from AI page
+  registerPageCleanup('ai', () => {
+    if (workspaceCheckInterval) {
+      clearInterval(workspaceCheckInterval);
+      workspaceCheckInterval = null;
+    }
+  });
 
   // Handle knowledge base summarize requests
   void handleKnowledgeSummarize();

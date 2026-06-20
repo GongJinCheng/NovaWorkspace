@@ -9,6 +9,8 @@ import { switchPage, registerPageInit, initializeActivePage } from './router';
 import { ipcClient } from '../services/ipc-client';
 import { showInputPrompt } from '../components/modal';
 import { buildTemplateCommandResults } from '../services/template-service';
+import { escHtml } from '../utils/escape';
+import { initWorkspaceSwitcher } from './workspace-switcher';
 
 // Page modules - must be imported so esbuild includes them and their registerPageInit side effects run
 import '../pages/home/index';
@@ -34,6 +36,7 @@ async function initApp(): Promise<void> {
   registerPageInits();
   initializeActivePage();
   initSidebarCollapse();
+  initWorkspaceSwitcher();
   initLocalLogin();
   initAutoUpdateStatus();
   console.log('[App] \u521D\u59CB\u5316\u5B8C\u6210');
@@ -204,7 +207,7 @@ async function renderSearchResults(query: string): Promise<void> {
     return;
   }
 
-  container.innerHTML = '<div class="search-empty">正在搜索文件、文档内容和待办...</div>';
+  container.innerHTML = '<div class="search-empty">正在搜索文件、文档、待办和知识库...</div>';
   const lower = q.toLowerCase();
   const actions = getCommandActions().filter((item) => (item.title + ' ' + (item.subtitle || '')).toLowerCase().includes(lower));
   const todos = await searchTodoResults(lower);
@@ -212,9 +215,13 @@ async function renderSearchResults(query: string): Promise<void> {
     console.warn('[Palette] workspace search failed:', error);
     return [] as PaletteResult[];
   });
+  const knowledge = await searchKnowledgeResults(lower).catch((error) => {
+    console.warn('[Palette] knowledge search failed:', error);
+    return [] as PaletteResult[];
+  });
 
   if (paletteLastQuery !== q) return;
-  paletteResults = [...actions, ...files, ...todos].slice(0, 80);
+  paletteResults = [...actions, ...files, ...knowledge, ...todos].slice(0, 80);
   renderPaletteSections(container, paletteResults);
 }
 
@@ -282,6 +289,83 @@ async function searchTodoResults(lowerQuery: string): Promise<PaletteResult[]> {
         void window.__openTodoTask?.(task.id);
       },
     }));
+  } catch {
+    return [];
+  }
+}
+
+async function searchKnowledgeResults(lowerQuery: string): Promise<PaletteResult[]> {
+  const root = getCurrentWorkspaceRoot();
+  if (!root) return [];
+  try {
+    const index = await ipcClient.knowledge.list(root);
+    const items = index.items || [];
+
+    // Phase 1: Match title, summary, tags (fast)
+    const titleMatched: typeof items = [];
+    const unmatched: typeof items = [];
+    for (const item of items) {
+      const haystack = (item.title + ' ' + (item.summary || '') + ' ' + (item.tags || []).join(' ')).toLowerCase();
+      if (haystack.includes(lowerQuery)) {
+        titleMatched.push(item);
+      } else {
+        unmatched.push(item);
+      }
+    }
+
+    // Phase 2: Full-text search on unmatched items (limited to first 20 for performance)
+    const contentMatched: { item: typeof items[0]; snippet: string }[] = [];
+    const toSearch = unmatched.slice(0, 20);
+    await Promise.all(toSearch.map(async (item) => {
+      try {
+        const text = await ipcClient.knowledge.getText(item.id, root);
+        const lowerText = text.toLowerCase();
+        const idx = lowerText.indexOf(lowerQuery);
+        if (idx >= 0) {
+          const start = Math.max(0, idx - 40);
+          const end = Math.min(text.length, idx + lowerQuery.length + 40);
+          const snippet = text.slice(start, end).replace(/\s+/g, ' ').trim();
+          contentMatched.push({ item, snippet });
+        }
+      } catch {
+        // skip
+      }
+    }));
+
+    const sourceIcons: Record<string, string> = { pdf: '📄', md: '📋', txt: '📝', clipboard: '📋', url: '🌐' };
+    const results: PaletteResult[] = [];
+
+    // Title matches first (higher priority)
+    for (const item of titleMatched.slice(0, 10)) {
+      results.push({
+        id: 'kb-' + item.id,
+        group: '知识库',
+        title: item.title,
+        subtitle: (item.summary ? item.summary.slice(0, 60) + (item.summary.length > 60 ? '…' : '') : '无摘要') + ' · ' + (sourceIcons[item.sourceType] || '📚') + ' ' + item.sourceType,
+        icon: sourceIcons[item.sourceType] || '📚',
+        action: async () => {
+          await switchPage('knowledge');
+          void window.__openKnowledgeItem?.(item.id);
+        },
+      });
+    }
+
+    // Content matches
+    for (const { item, snippet } of contentMatched.slice(0, 5)) {
+      results.push({
+        id: 'kb-content-' + item.id,
+        group: '知识库内容',
+        title: item.title,
+        subtitle: '🔎 ' + snippet.slice(0, 80) + (snippet.length > 80 ? '…' : ''),
+        icon: '🔎',
+        action: async () => {
+          await switchPage('knowledge');
+          void window.__openKnowledgeItem?.(item.id);
+        },
+      });
+    }
+
+    return results;
   } catch {
     return [];
   }
@@ -410,12 +494,12 @@ function renderPaletteSections(container: HTMLElement, results: PaletteResult[])
     const rows = items.map((item) => {
       const index = globalIndex++;
       return '<div class="search-item command-palette-item' + (index === paletteSelectedIndex ? ' selected' : '') + '" data-index="' + index + '">' +
-        '<span class="search-item-icon">' + escHTML(item.icon) + '</span>' +
-        '<span class="search-item-main"><span class="search-item-name">' + escHTML(item.title) + '</span>' +
-        (item.subtitle ? '<span class="search-item-subtitle">' + escHTML(item.subtitle) + '</span>' : '') + '</span>' +
+        '<span class="search-item-icon">' + escHtml(item.icon) + '</span>' +
+        '<span class="search-item-main"><span class="search-item-name">' + escHtml(item.title) + '</span>' +
+        (item.subtitle ? '<span class="search-item-subtitle">' + escHtml(item.subtitle) + '</span>' : '') + '</span>' +
       '</div>';
     }).join('');
-    return '<div class="search-section"><div class="search-section-title">' + escHTML(group) + '</div>' + rows + '</div>';
+    return '<div class="search-section"><div class="search-section-title">' + escHtml(group) + '</div>' + rows + '</div>';
   }).join('') + '<div class="search-footer">↑↓ 选择 · Enter 执行 · Esc 关闭</div>';
 
   bindSearchResultClicks(container);
@@ -494,12 +578,8 @@ function relativePath(root: string, fullPath: string): string {
   return fullPath.replace(root, '').replace(/^[/\\]/, '') || fullPath;
 }
 
-function escHTML(str: string): string {
-  return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-}
-
 function escAttr(str: string): string {
-  return escHTML(str).replace(/"/g, '&quot;');
+  return escHtml(str).replace(/"/g, '&quot;');
 }
 
 function loadAIStats(): void {

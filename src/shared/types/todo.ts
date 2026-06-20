@@ -25,6 +25,8 @@ export interface TodoTask {
   reminded: boolean;
   createdAt: string;
   completedAt?: string;
+  /** 排序权重（看板拖拽用），数值越大越靠前 */
+  sortOrder?: number;
   /** 任务来源：手动、AI 或文档 */
   sourceType?: 'manual' | 'ai' | 'document';
   /** 来源文档绝对路径 */

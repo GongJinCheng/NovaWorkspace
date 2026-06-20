@@ -2,6 +2,7 @@ import { showInputPrompt, showModal } from '../components/modal';
 import { ipcClient } from './ipc-client';
 import { getCurrentWorkspaceRoot } from './workspace-context';
 import { aiService } from '../pages/ai/ai-service';
+import { escHtml } from '../utils/escape';
 
 export type BuiltInTemplateId =
   | 'blank'
@@ -201,8 +202,8 @@ async function showTemplateCreateDialog(templateId: string | undefined, input: {
     const currentTemplate = () => findTemplate(selectedId) || templates[0];
     const cards = sortTemplatesByRecent(templates).map((template) =>
       '<button class="template-card' + (template.id === selectedId ? ' selected' : '') + '" data-template-id="' + escAttr(template.id) + '">' +
-        '<span class="template-card-icon">' + esc(template.icon) + '</span>' +
-        '<span class="template-card-main"><strong>' + esc(template.name) + '</strong><em>' + esc(template.description) + '</em></span>' +
+        '<span class="template-card-icon">' + escHtml(template.icon) + '</span>' +
+        '<span class="template-card-main"><strong>' + escHtml(template.name) + '</strong><em>' + escHtml(template.description) + '</em></span>' +
       '</button>'
     ).join('');
 
@@ -216,7 +217,7 @@ async function showTemplateCreateDialog(templateId: string | undefined, input: {
           '<div>' +
             '<p class="modal-message">选择一个文档模板，Nova 会在当前工作区生成 Markdown。你也可以让 AI 根据主题直接填充完整内容。</p>' +
           '</div>' +
-          '<span class="template-create-project-pill">项目：' + esc(input.projectName) + '</span>' +
+          '<span class="template-create-project-pill">项目：' + escHtml(input.projectName) + '</span>' +
         '</div>' +
         '<div class="template-create-layout">' +
           '<section class="template-picker-section">' +
@@ -296,7 +297,7 @@ async function showTemplateCreateDialog(templateId: string | undefined, input: {
 async function generateTemplateContentWithAI(request: TemplateCreateRequest, projectName: string, baseContent: string): Promise<string> {
   const loading = showModal({
     title: 'AI 正在生成文档',
-    content: '<p class="modal-message">正在根据“' + esc(request.topic) + '”填充 ' + esc(request.template.name) + '，请稍候...</p><div class="template-loading-bar"><span></span></div>',
+    content: '<p class="modal-message">正在根据“' + escHtml(request.topic) + '”填充 ' + escHtml(request.template.name) + '，请稍候...</p><div class="template-loading-bar"><span></span></div>',
     actions: [],
   });
 
@@ -423,12 +424,6 @@ function getRecentTemplateIds(): BuiltInTemplateId[] {
   }
 }
 
-function esc(text: string): string {
-  const div = document.createElement('div');
-  div.textContent = text;
-  return div.innerHTML;
-}
-
 function escAttr(text: string): string {
-  return esc(text).replace(/"/g, '&quot;');
+  return escHtml(text).replace(/"/g, '&quot;');
 }

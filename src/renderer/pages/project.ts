@@ -5,6 +5,7 @@ import { getCurrentWorkspaceRoot } from '../services/workspace-context';
 import { showInputPrompt } from '../components/modal';
 import { getBuiltInTemplates } from '../services/template-service';
 import { exportProjectReport, type ExportFormat } from '../services/export-service';
+import { escHtml } from '../utils/escape';
 import type { ProjectOverview, ProjectActivityItem, ProjectRecentDocument } from '@shared/types/workspace';
 
 let currentOverview: ProjectOverview | null = null;
@@ -91,7 +92,7 @@ function renderRecentDocs(docs: ProjectRecentDocument[]): void {
   el.innerHTML = docs.map(doc =>
     '<button class="project-doc-row" data-path="' + escAttr(doc.path) + '">' +
       '<span class="project-doc-badge">MD</span>' +
-      '<span class="project-doc-main"><strong>' + esc(doc.name) + '</strong><em>' + esc(doc.relativePath) + '</em></span>' +
+      '<span class="project-doc-main"><strong>' + escHtml(doc.name) + '</strong><em>' + escHtml(doc.relativePath) + '</em></span>' +
       '<span class="project-doc-time">' + formatRelativeTime(doc.modifiedAt) + '</span>' +
     '</button>'
   ).join('');
@@ -114,8 +115,8 @@ function renderTemplateShortcuts(): void {
   const quickTemplates = getBuiltInTemplates().filter((template) => ['prd', 'meeting', 'tech-plan', 'weekly-report'].includes(template.id));
   host.innerHTML = quickTemplates.map((template) =>
     '<button class="project-template-card" data-template-id="' + escAttr(template.id) + '">' +
-      '<span class="project-template-icon">' + esc(template.icon) + '</span>' +
-      '<span><strong>' + esc(template.name) + '</strong><em>' + esc(template.description) + '</em></span>' +
+      '<span class="project-template-icon">' + escHtml(template.icon) + '</span>' +
+      '<span><strong>' + escHtml(template.name) + '</strong><em>' + escHtml(template.description) + '</em></span>' +
     '</button>'
   ).join('');
   host.querySelectorAll('.project-template-card').forEach((card) => {
@@ -138,8 +139,8 @@ function renderActivities(items: ProjectActivityItem[]): void {
   el.innerHTML = items.map(item =>
     '<div class="project-activity-item" data-path="' + escAttr(item.targetPath || '') + '">' +
       '<span class="project-activity-dot type-' + escAttr(item.type) + '"></span>' +
-      '<div class="project-activity-main"><strong>' + esc(item.title) + '</strong>' +
-      (item.subtitle ? '<em>' + esc(item.subtitle) + '</em>' : '') + '</div>' +
+      '<div class="project-activity-main"><strong>' + escHtml(item.title) + '</strong>' +
+      (item.subtitle ? '<em>' + escHtml(item.subtitle) + '</em>' : '') + '</div>' +
       '<span class="project-activity-time">' + formatRelativeTime(item.createdAt) + '</span>' +
     '</div>'
   ).join('');
@@ -233,12 +234,6 @@ function formatRelativeTime(isoStr: string): string {
   if (days === 1) return '昨天';
   if (days < 7) return days + ' 天前';
   return date.toLocaleDateString('zh-CN');
-}
-
-function esc(str: string): string {
-  const div = document.createElement('div');
-  div.textContent = str;
-  return div.innerHTML;
 }
 
 function escAttr(str: string): string {

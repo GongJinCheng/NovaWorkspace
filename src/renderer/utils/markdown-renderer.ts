@@ -26,6 +26,7 @@ import ruby from 'highlight.js/lib/languages/ruby';
 import shell from 'highlight.js/lib/languages/shell';
 import markdown from 'highlight.js/lib/languages/markdown';
 import diff from 'highlight.js/lib/languages/diff';
+import { escHtml } from './escape';
 
 hljs.registerLanguage('javascript', javascript);
 hljs.registerLanguage('js', javascript);
@@ -65,18 +66,18 @@ const marked = new Marked({
     code({ text, lang }: { text: string; lang?: string }): string {
       // Mermaid diagrams: wrap in a special div for async rendering
       if (lang === 'mermaid') {
-        return '<div class="nova-mermaid mermaid">' + escapeHtml(text) + '</div>';
+        return '<div class="nova-mermaid mermaid">' + escHtml(text) + '</div>';
       }
       const language = lang && hljs.getLanguage(lang) ? lang : '';
       let highlighted: string;
       try {
         highlighted = language
           ? hljs.highlight(text, { language }).value
-          : escapeHtml(text);
+          : escHtml(text);
       } catch {
-        highlighted = escapeHtml(text);
+        highlighted = escHtml(text);
       }
-      const langLabel = language ? '<span class="md-code-lang">' + escapeHtml(language) + '</span>' : '';
+      const langLabel = language ? '<span class="md-code-lang">' + escHtml(language) + '</span>' : '';
       const copyBtn = '<button class="md-code-copy" title="Copy code" data-code="' + escapeAttr(text) + '"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>';
       return '<div class="md-code-block">' +
         '<div class="md-code-header">' + langLabel + copyBtn + '</div>' +
@@ -89,17 +90,8 @@ const marked = new Marked({
   },
 });
 
-function escapeHtml(str: string): string {
-  return String(str)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
-}
-
 function escapeAttr(str: string): string {
-  return escapeHtml(str).replace(/`/g, '&#96;');
+  return escHtml(str).replace(/`/g, '&#96;');
 }
 
 /**
@@ -113,7 +105,7 @@ export function renderMarkdown(content: string): string {
     return typeof result === 'string' ? result : '';
   } catch {
     // Fallback: basic HTML escaping with line breaks
-    return escapeHtml(content).replace(/\n/g, '<br>');
+    return escHtml(content).replace(/\n/g, '<br>');
   }
 }
 
@@ -127,6 +119,6 @@ export function renderMarkdownStream(content: string): string {
     const result = marked.parse(content);
     return typeof result === 'string' ? result : '';
   } catch {
-    return escapeHtml(content).replace(/\n/g, '<br>');
+    return escHtml(content).replace(/\n/g, '<br>');
   }
 }

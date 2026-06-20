@@ -4,6 +4,7 @@
  */
 
 import { ipcClient } from '../../services/ipc-client';
+import { escHtml } from '../../utils/escape';
 
 const REMINDER_INTERVAL_MS = 30_000;
 const TOAST_DURATION_MS = 8_000;
@@ -76,7 +77,7 @@ function showInAppToast(title: string): void {
     <svg class="todo-notif-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
       <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
     </svg>
-    <span class="todo-notif-text">${esc(title)} 将在 30 分钟内到期</span>
+    <span class="todo-notif-text">${escHtml(title)} 将在 30 分钟内到期</span>
     <button class="todo-notif-close">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <path d="M18 6L6 18M6 6l12 12"/>
@@ -85,10 +86,4 @@ function showInAppToast(title: string): void {
   document.body.appendChild(toast);
   toast.querySelector('.todo-notif-close')?.addEventListener('click', () => toast.remove());
   setTimeout(() => { if (toast.parentNode) toast.remove(); }, TOAST_DURATION_MS);
-}
-
-function esc(text: string): string {
-  const d = document.createElement('div');
-  d.textContent = text;
-  return d.innerHTML;
 }

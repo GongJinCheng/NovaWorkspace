@@ -8,6 +8,8 @@ import { ipcClient } from '../../services/ipc-client';
 import type { Workspace } from '@shared/types/workspace';
 import type { TodoTask } from '@shared/types/todo';
 import type { RecentMarkdownFile } from '@shared/types/file';
+import { escHtml, escAttr } from '../../utils/escape';
+import { isOverdue, isDueToday } from '../../utils/date';
 
 let quickActionsBound = false;
 let cachedAppVersion: string | null = null;
@@ -52,7 +54,7 @@ function showOnboardingModal(): void {
     modal.className = 'nova-onboarding-modal';
     modal.innerHTML =
       '<div class="nova-onboarding-card">' +
-      '<div class="nova-onboarding-badge">Nova v' + esc(cachedAppVersion || '2.9') + '</div>' +
+      '<div class="nova-onboarding-badge">Nova v' + escHtml(cachedAppVersion || '2.9') + '</div>' +
         '<h2>欢迎使用 Nova</h2>' +
         '<p>一个面向深度工作的 AI 工作台。你可以在这里管理 Markdown 文档、使用 AI 助手、整理待办任务，并把项目推进下去。</p>' +
         '<div class="nova-onboarding-steps">' +
@@ -138,8 +140,8 @@ async function renderTodoSummary(): Promise<void> {
     const now = new Date();
     const pendingTasks = tasks.filter(t => !t.completed);
     const pending = pendingTasks.length;
-    const overdue = pendingTasks.filter(t => isOverdue(t, now)).length;
-    const todayTasks = pendingTasks.filter(t => isDueToday(t, now));
+    const overdue = pendingTasks.filter(t => isOverdue(t.dueDate, now)).length;
+    const todayTasks = pendingTasks.filter(t => isDueToday(t.dueDate, now));
     const completed = tasks.filter(t => t.completed).length;
     const nextTask = sortTasksForToday(pendingTasks)[0] || null;
 
@@ -166,15 +168,15 @@ function renderTodayTaskList(tasks: TodoTask[]): void {
   }
 
   container.innerHTML = visible.map(task => {
-    const dueClass = isOverdue(task) ? 'overdue' : isDueToday(task) ? 'today' : '';
+    const dueClass = isOverdue(task.dueDate) ? 'overdue' : isDueToday(task.dueDate) ? 'today' : '';
     const source = task.sourceTitle || (task.sourceFilePath ? basename(task.sourceFilePath) : '手动创建');
     return '<div class="home-task-row" data-id="' + escAttr(task.id) + '">' +
       '<button class="home-task-done" data-id="' + escAttr(task.id) + '" title="完成任务">✓</button>' +
       '<div class="home-task-main">' +
-        '<div class="home-task-title">' + esc(task.title) + '</div>' +
+        '<div class="home-task-title">' + escHtml(task.title) + '</div>' +
         '<div class="home-task-meta"><span class="home-priority home-priority-' + escAttr(task.priority) + '">' + priorityLabel(task.priority) + '</span>' +
         (task.dueDate ? '<span class="home-task-due ' + dueClass + '">' + formatDueDate(task.dueDate) + '</span>' : '<span>无截止时间</span>') +
-        '<span>来源：' + esc(source) + '</span></div>' +
+        '<span>来源：' + escHtml(source) + '</span></div>' +
       '</div>' +
       '<button class="home-task-open" data-id="' + escAttr(task.id) + '">查看</button>' +
     '</div>';
@@ -211,27 +213,9 @@ function sortTasksForToday(tasks: TodoTask[]): TodoTask[] {
 }
 
 function taskUrgencyScore(task: TodoTask, now = new Date()): number {
-  if (isOverdue(task, now)) return 0;
-  if (isDueToday(task, now)) return 1;
+  if (isOverdue(task.dueDate, now)) return 0;
+  if (isDueToday(task.dueDate, now)) return 1;
   return 2;
-}
-
-function isOverdue(task: TodoTask, now = new Date()): boolean {
-  if (!task.dueDate) return false;
-  const due = new Date(task.dueDate);
-  return !Number.isNaN(due.getTime()) && due < startOfDay(now);
-}
-
-function isDueToday(task: TodoTask, now = new Date()): boolean {
-  if (!task.dueDate) return false;
-  const due = new Date(task.dueDate);
-  return !Number.isNaN(due.getTime()) && due.toDateString() === now.toDateString();
-}
-
-function startOfDay(date: Date): Date {
-  const d = new Date(date);
-  d.setHours(0, 0, 0, 0);
-  return d;
 }
 
 function priorityWeight(priority: string): number {
@@ -265,8 +249,8 @@ async function renderRecentDocs(): Promise<void> {
     container.innerHTML = docs.slice(0, 6).map(doc =>
       '<div class="home-doc-item" data-path="' + escAttr(doc.path) + '">' +
         '<div class="home-doc-icon">MD</div>' +
-        '<div class="home-doc-main"><div class="home-doc-name">' + esc(doc.name) + '</div>' +
-        '<div class="home-doc-meta">' + esc(doc.workspaceName) + ' · ' + formatRelativeTime(doc.modifiedAt) + '</div></div>' +
+        '<div class="home-doc-main"><div class="home-doc-name">' + escHtml(doc.name) + '</div>' +
+        '<div class="home-doc-meta">' + escHtml(doc.workspaceName) + ' · ' + formatRelativeTime(doc.modifiedAt) + '</div></div>' +
       '</div>'
     ).join('');
 
@@ -304,7 +288,7 @@ async function renderAIStatus(): Promise<void> {
 
     container.innerHTML = '<div class="home-ai-card">' +
       '<div class="home-ai-dot ' + (provider.enabled ? 'enabled' : '') + '"></div>' +
-      '<div class="home-ai-info"><strong>' + esc(provider.name) + '</strong><span>' + esc(provider.defaultModel || '未选择模型') + '</span></div>' +
+      '<div class="home-ai-info"><strong>' + escHtml(provider.name) + '</strong><span>' + escHtml(provider.defaultModel || '未选择模型') + '</span></div>' +
       '<button class="btn-ghost" id="btn-home-test-ai">测试连接</button>' +
     '</div>';
 
@@ -357,7 +341,7 @@ async function renderRecentProjects(): Promise<void> {
     container.innerHTML = projects.slice(0, 6).map((p: Workspace) =>
       '<div class="home-recent-item" data-path="' + escAttr(p.rootPath) + '">' +
       '<div class="home-recent-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg></div>' +
-      '<div class="home-recent-info"><div class="home-recent-name">' + esc(p.name) + '</div><div class="home-recent-path">' + esc(p.rootPath) + '</div></div>' +
+      '<div class="home-recent-info"><div class="home-recent-name">' + escHtml(p.name) + '</div><div class="home-recent-path">' + escHtml(p.rootPath) + '</div></div>' +
       '<div class="home-recent-meta"><span class="home-recent-time">' + formatRelativeTime(p.lastOpened) + '</span>' +
       '<button class="home-recent-remove" data-path="' + escAttr(p.rootPath) + '" title="移除记录"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>' +
       '</div></div>'
@@ -451,15 +435,6 @@ function setText(id: string, text: string): void {
   if (el) el.textContent = text;
 }
 
-function esc(str: string): string {
-  const d = document.createElement('div');
-  d.textContent = str;
-  return d.innerHTML;
-}
-
-function escAttr(str: string): string {
-  return str.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-}
 
 function basename(filePath: string): string {
   return filePath.split(/[/\\]/).pop() || filePath;
