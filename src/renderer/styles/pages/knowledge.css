@@ -69,6 +69,133 @@
   flex-wrap: wrap;
 }
 
+.kb-toolbar-spacer {
+  flex: 1;
+  min-width: 16px;
+}
+
+/* ── Search ─────────────────────────────────────────────────────── */
+
+.kb-search-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 12px;
+  border: 1px solid var(--border-color, #d1d5db);
+  border-radius: 8px;
+  background: var(--bg-secondary, #f9fafb);
+  min-width: 220px;
+  transition: border-color 0.15s;
+}
+
+.kb-search-wrap:focus-within {
+  border-color: var(--accent-color, #6366f1);
+  background: var(--bg-primary, #ffffff);
+}
+
+.kb-search-wrap svg {
+  flex-shrink: 0;
+  color: var(--text-secondary, #9ca3af);
+}
+
+.kb-search-wrap input {
+  flex: 1;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 13px;
+  color: var(--text-primary, #111827);
+  min-width: 0;
+}
+
+.kb-search-wrap input::placeholder {
+  color: var(--text-secondary, #9ca3af);
+}
+
+/* ── Highlight ──────────────────────────────────────────────────── */
+
+.kb-highlight {
+  background: var(--accent-color-light, rgba(99, 102, 241, 0.15));
+  color: var(--accent-color, #6366f1);
+  border-radius: 2px;
+  padding: 0 1px;
+}
+
+/* ── Checkbox ───────────────────────────────────────────────────── */
+
+.kb-card-check {
+  display: flex;
+  align-items: flex-start;
+  padding-top: 2px;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.kb-checkbox {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: var(--accent-color, #6366f1);
+  border-radius: 4px;
+}
+
+.kb-card-selected {
+  border-color: var(--accent-color, #6366f1) !important;
+  background: var(--accent-color-subtle, rgba(99, 102, 241, 0.04));
+}
+
+/* ── Summarizing state ──────────────────────────────────────────── */
+
+.kb-summarizing {
+  color: var(--accent-color, #6366f1) !important;
+  font-style: italic;
+  animation: kb-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes kb-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+/* ── Batch Bar ──────────────────────────────────────────────────── */
+
+.kb-batch-bar {
+  display: none;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 20px;
+  background: var(--accent-color-subtle, rgba(99, 102, 241, 0.06));
+  border-bottom: 1px solid var(--accent-color, rgba(99, 102, 241, 0.2));
+  flex-shrink: 0;
+  animation: kb-slide-in 0.2s ease-out;
+}
+
+@keyframes kb-slide-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.kb-batch-count {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent-color, #6366f1);
+}
+
+.kb-batch-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.kb-btn-danger {
+  border-color: #fca5a5 !important;
+  color: #ef4444 !important;
+}
+
+.kb-btn-danger:hover {
+  background: #fef2f2 !important;
+  border-color: #ef4444 !important;
+}
+
 .kb-btn {
   display: inline-flex;
   align-items: center;

@@ -21,6 +21,7 @@ let isGenerating = false;
 let aiPageBound = false;
 let pendingImages: AIImageAttachment[] = [];
 let pendingFiles: Array<{ path: string; name: string }> = [];
+let pendingKnowledgeItems: Array<{ id: string; name: string; text: string }> = [];
 
 // Chat history / conversation state
 let currentConversationId: string | null = null;
@@ -97,6 +98,16 @@ async function sendMessage(text: string): Promise<string> {
   pendingImages = [];
   renderPendingImages();
 
+  // 读取引用知识库资料，拼入内容作为 AI 上下文
+  let knowledgeContext = '';
+  const kbNames: string[] = [];
+  for (const kbItem of pendingKnowledgeItems) {
+    knowledgeContext += '--- 知识库: ' + kbItem.name + ' ---\n' + kbItem.text.slice(0, 6000) + '\n--- END ---\n\n';
+    kbNames.push(kbItem.name);
+  }
+  pendingKnowledgeItems = [];
+  renderKnowledgeAttachments();
+
   // 读取待引用文件，拼入文件内容作为 AI 上下文
   let fileContext = '';
   const fileNames: string[] = [];
@@ -112,10 +123,11 @@ async function sendMessage(text: string): Promise<string> {
   pendingFiles = [];
   renderPendingFiles();
 
-  const combinedText = fileContext + (inputText || (images.length > 0 ? '（已发送图片）' : '（已引用文件）'));
-  const displayText = fileNames.length > 0
-    ? '📎 ' + fileNames.join(', ') + (inputText ? '\n\n' + inputText : '')
-    : (inputText || (images.length > 0 ? '（已发送图片）' : '（已引用文件）'));
+  const combinedText = knowledgeContext + fileContext + (inputText || (images.length > 0 ? '（已发送图片）' : '（已引用文件）'));
+  const displayParts: string[] = [];
+  if (kbNames.length > 0) displayParts.push('📚 ' + kbNames.join(', '));
+  if (fileNames.length > 0) displayParts.push('📎 ' + fileNames.join(', '));
+  const displayText = displayParts.join('\n') + (inputText ? '\n\n' + inputText : (images.length > 0 ? '（已发送图片）' : '')) || inputText || (images.length > 0 ? '（已发送图片）' : '（已引用资料）');
 
   appendMessage('user', displayText, images);
   const userContent = buildUserMessageContent(combinedText, images);
@@ -401,6 +413,106 @@ function renderPendingFiles(): void {
   tray.hidden = pendingFiles.length === 0;
 }
 
+async function pickKnowledgeItems(): Promise<void> {
+  const workspaceRoot = getCurrentWorkspaceRoot();
+  if (!workspaceRoot) {
+    showMsg('请先打开一个工作区', 'warn');
+    return;
+  }
+
+  // Load knowledge items
+  let kbItems: Array<{ id: string; title: string; sourceType: string; summary?: string; wordCount: number }> = [];
+  try {
+    const index = await window.electronAPI.knowledge.list(workspaceRoot);
+    kbItems = index.items || [];
+  } catch (err) {
+    console.warn('Failed to load knowledge items:', err);
+  }
+
+  // Show picker popup
+  showKnowledgePicker(kbItems, async (itemId) => {
+    try {
+      const text = await window.electronAPI.knowledge.getText(itemId, workspaceRoot);
+      const item = kbItems.find(i => i.id === itemId);
+      if (item && text) {
+        pendingKnowledgeItems.push({ id: item.id, name: item.title, text });
+        renderKnowledgeAttachments();
+        showMsg('已引用知识库：「' + item.title + '」', 'success');
+      }
+    } catch (err) {
+      showMsg('读取知识库内容失败', 'error');
+    }
+  });
+}
+
+function renderKnowledgeAttachments(): void {
+  const tray = document.getElementById('ai-knowledge-attachments');
+  if (!tray) return;
+  tray.innerHTML = pendingKnowledgeItems.map((item, index) =>
+    '<div class="ai-knowledge-attachment">' +
+      '<span class="ai-kb-icon">📚</span>' +
+      '<span>' + escHTML(item.name) + '</span>' +
+      '<button type="button" data-action="remove-ai-kb" data-index="' + index + '" title="移除引用">×</button>' +
+    '</div>'
+  ).join('');
+  tray.hidden = pendingKnowledgeItems.length === 0;
+}
+
+function showKnowledgePicker(
+  items: Array<{ id: string; title: string; sourceType: string; summary?: string; wordCount: number }>,
+  onSelect: (id: string) => void
+): void {
+  // Remove existing picker
+  const existing = document.querySelector('.ai-kb-picker-overlay');
+  if (existing) existing.remove();
+
+  const overlay = document.createElement('div');
+  overlay.className = 'ai-kb-picker-overlay';
+
+  const sourceIcon = (type: string) => ({ pdf: '📄', txt: '📝', md: '📑', clipboard: '📋', url: '🌐' }[type] || '📄');
+
+  overlay.innerHTML =
+    '<div class="ai-kb-picker-backdrop"></div>' +
+    '<div class="ai-kb-picker-panel">' +
+      '<div class="ai-kb-picker-header">' +
+        '<h3>选择知识库资料</h3>' +
+        '<button class="ai-kb-picker-close" id="ai-kb-picker-close">' +
+          '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>' +
+        '</button>' +
+      '</div>' +
+      '<div class="ai-kb-picker-list" id="ai-kb-picker-list">' +
+        (items.length === 0
+          ? '<div class="ai-kb-picker-empty">知识库为空，请先在知识库页面导入资料</div>'
+          : items.map(item =>
+            '<div class="ai-kb-picker-item" data-kb-id="' + escAttr(item.id) + '">' +
+              '<div class="ai-kb-picker-item-icon">' + sourceIcon(item.sourceType) + '</div>' +
+              '<div class="ai-kb-picker-item-info">' +
+                '<div class="ai-kb-picker-item-title">' + escHTML(item.title) + '</div>' +
+                '<div class="ai-kb-picker-item-meta">' + item.wordCount.toLocaleString() + ' 字' + (item.summary ? ' · ' + escHTML(item.summary.slice(0, 40)) : '') + '</div>' +
+              '</div>' +
+            '</div>').join('')
+        ) +
+      '</div>' +
+      '<div class="ai-kb-picker-hint">点击资料将其作为 AI 对话上下文引用</div>' +
+    '</div>';
+
+  document.body.appendChild(overlay);
+
+  // Event bindings
+  overlay.querySelector('.ai-kb-picker-backdrop')?.addEventListener('click', () => overlay.remove());
+  overlay.querySelector('#ai-kb-picker-close')?.addEventListener('click', () => overlay.remove());
+
+  overlay.querySelector('#ai-kb-picker-list')?.addEventListener('click', (e) => {
+    const item = (e.target as HTMLElement).closest('.ai-kb-picker-item') as HTMLElement | null;
+    if (!item) return;
+    const kbId = item.dataset.kbId;
+    if (kbId) {
+      onSelect(kbId);
+      overlay.remove();
+    }
+  });
+}
+
 function updateSendButton(): void {
   const btn = document.getElementById('btn-ai-send') as HTMLButtonElement;
   if (btn) btn.disabled = isGenerating;
@@ -458,6 +570,9 @@ function initChatInput(): void {
   const fileAttachBtn = document.getElementById('btn-ai-attach-file');
   fileAttachBtn?.addEventListener('click', () => { void pickProjectFiles(); });
 
+  const knowledgeAttachBtn = document.getElementById('btn-ai-attach-knowledge');
+  knowledgeAttachBtn?.addEventListener('click', () => { void pickKnowledgeItems(); });
+
   attachments?.addEventListener('click', (event) => {
     const target = event.target as HTMLElement | null;
     const removeBtn = target?.closest('[data-action="remove-ai-image"]') as HTMLElement | null;
@@ -478,6 +593,18 @@ function initChatInput(): void {
     if (index >= 0) {
       pendingFiles.splice(index, 1);
       renderPendingFiles();
+    }
+  });
+
+  const knowledgeAttachments = document.getElementById('ai-knowledge-attachments');
+  knowledgeAttachments?.addEventListener('click', (event) => {
+    const target = event.target as HTMLElement | null;
+    const removeBtn = target?.closest('[data-action="remove-ai-kb"]') as HTMLElement | null;
+    if (!removeBtn) return;
+    const index = Number(removeBtn.dataset.index || -1);
+    if (index >= 0) {
+      pendingKnowledgeItems.splice(index, 1);
+      renderKnowledgeAttachments();
     }
   });
 
