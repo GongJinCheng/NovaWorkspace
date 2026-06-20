@@ -4,6 +4,13 @@ import path from 'path';
 import { IPC_CHANNELS } from '@shared/constants/ipc-channels';
 import { getMainWindow } from '../windows/main-window';
 import { handleExportDocument } from '../services/export-service';
+import { getActiveWorkspaceRoot } from '../utils/active-workspace';
+import {
+  searchWorkspace as indexSearch,
+  updateFileInIndex,
+  removeFileFromIndex,
+  renameFileInIndex,
+} from '../services/search-index';
 
 
 function normalizePathForCompare(value: string): string {
@@ -25,6 +32,16 @@ function safeHistoryName(filePath: string, workspaceRoot: string): string {
 
 function timestampForFileName(date = new Date()): string {
   return date.toISOString().replace(/[:.]/g, '-');
+}
+
+/**
+ * Validates that the target path is inside the active workspace.
+ * Silently skips when no workspace is active (e.g. before any workspace is opened).
+ */
+function ensureInsideActiveWorkspace(targetPath: string): void {
+  const root = getActiveWorkspaceRoot();
+  if (!root) return;
+  ensureInsideWorkspace(root, targetPath);
 }
 
 
@@ -72,7 +89,9 @@ export function registerFsHandlers(): void {
 
   ipcMain.handle(IPC_CHANNELS.FS.WRITE_FILE, async (_event, filePath: string, content: string) => {
     try {
+      ensureInsideActiveWorkspace(filePath);
       await fs.writeFile(filePath, content, 'utf-8');
+      void updateFileInIndex(filePath);
       return true;
     } catch (error: unknown) {
       const msg = error instanceof Error ? error.message : String(error);
@@ -83,7 +102,9 @@ export function registerFsHandlers(): void {
   ipcMain.handle(IPC_CHANNELS.FS.CREATE_FILE, async (_event, dirPath: string, fileName: string) => {
     try {
       const filePath = path.join(dirPath, fileName);
+      ensureInsideActiveWorkspace(filePath);
       await fs.writeFile(filePath, '', 'utf-8');
+      void updateFileInIndex(filePath);
       return filePath;
     } catch (error: unknown) {
       const msg = error instanceof Error ? error.message : String(error);
@@ -94,6 +115,7 @@ export function registerFsHandlers(): void {
   ipcMain.handle(IPC_CHANNELS.FS.CREATE_DIR, async (_event, parentPath: string, dirName: string) => {
     try {
       const dirPath = path.join(parentPath, dirName);
+      ensureInsideActiveWorkspace(dirPath);
       await fs.mkdir(dirPath);
       return dirPath;
     } catch (error: unknown) {
@@ -104,7 +126,9 @@ export function registerFsHandlers(): void {
 
   ipcMain.handle(IPC_CHANNELS.FS.DELETE_ITEM, async (_event, itemPath: string) => {
     try {
+      ensureInsideActiveWorkspace(itemPath);
       await fs.rm(itemPath, { recursive: true, force: true });
+      void removeFileFromIndex(itemPath);
       return true;
     } catch (error: unknown) {
       const msg = error instanceof Error ? error.message : String(error);
@@ -114,9 +138,11 @@ export function registerFsHandlers(): void {
 
   ipcMain.handle(IPC_CHANNELS.FS.RENAME_ITEM, async (_event, oldPath: string, newName: string) => {
     try {
+      ensureInsideActiveWorkspace(oldPath);
       const dir = path.dirname(oldPath);
       const newPath = path.join(dir, newName);
       await fs.rename(oldPath, newPath);
+      void renameFileInIndex(oldPath, newPath);
       return newPath;
     } catch (error: unknown) {
       const msg = error instanceof Error ? error.message : String(error);
@@ -197,56 +223,36 @@ export function registerFsHandlers(): void {
   });
 
 
-  ipcMain.handle(IPC_CHANNELS.FS.SEARCH_WORKSPACE, async (_event, input: { rootPath: string; query: string; limit?: number }) => {
+  ipcMain.handle(IPC_CHANNELS.FS.SEARCH_WORKSPACE, async (_event, input: { rootPath: string; query: string; limit?: number; filter?: { ext?: string; type?: 'file' | 'content' } }) => {
     const rootPath = path.resolve(input.rootPath || '');
-    const query = String(input.query || '').trim().toLowerCase();
+    const query = String(input.query || '').trim();
     const limit = Math.min(Math.max(Number(input.limit || 60), 10), 120);
     if (!rootPath || !query) return [];
 
-    const ignored = new Set(['node_modules', '.git', '.nova', 'dist', 'release', 'build', 'out', '.next', '.cache', 'coverage']);
-    const textExt = new Set(['.md', '.txt', '.json', '.ts', '.tsx', '.js', '.jsx', '.css', '.html', '.yml', '.yaml']);
-    const results: Array<{ type: 'file' | 'content'; name: string; path: string; workspacePath: string; workspaceName: string; line?: number; snippet?: string; modifiedAt?: string }> = [];
-
-    async function walk(dirPath: string, depth: number): Promise<void> {
-      if (depth > 7 || results.length >= limit) return;
-      let entries: Array<{ name: string; isDirectory(): boolean; isFile(): boolean }>;
-      try { entries = await fs.readdir(dirPath, { withFileTypes: true }); } catch { return; }
-
-      for (const entry of entries) {
-        if (results.length >= limit) return;
-        if (ignored.has(entry.name)) continue;
-        const itemPath = path.join(dirPath, entry.name);
-        if (entry.isDirectory()) { await walk(itemPath, depth + 1); continue; }
-        if (!entry.isFile()) continue;
-
-        const lowerName = entry.name.toLowerCase();
-        const ext = path.extname(entry.name).toLowerCase();
-        let statTime = '';
-        try { statTime = (await fs.stat(itemPath)).mtime.toISOString(); } catch { /* ignore */ }
-
-        if (lowerName.includes(query)) {
-          results.push({ type: 'file', name: entry.name, path: itemPath, workspacePath: rootPath, workspaceName: path.basename(rootPath) || rootPath, modifiedAt: statTime });
-          if (results.length >= limit) return;
-        }
-
-        if (!textExt.has(ext)) continue;
-        try {
-          const raw = await fs.readFile(itemPath, 'utf-8');
-          const lower = raw.toLowerCase();
-          const idx = lower.indexOf(query);
-          if (idx === -1) continue;
-          const before = raw.slice(0, idx);
-          const line = before.split(/\r?\n/).length;
-          const snippetStart = Math.max(0, idx - 50);
-          const snippetEnd = Math.min(raw.length, idx + query.length + 90);
-          const snippet = raw.slice(snippetStart, snippetEnd).replace(/\s+/g, ' ').trim();
-          results.push({ type: 'content', name: entry.name, path: itemPath, workspacePath: rootPath, workspaceName: path.basename(rootPath) || rootPath, line, snippet, modifiedAt: statTime });
-        } catch { /* ignore binary or unreadable */ }
-      }
+    try {
+      const results = await indexSearch(rootPath, query, limit, input.filter);
+      // Map to the expected WorkspaceSearchResult shape (with backward compat)
+      return results.map(r => ({
+        type: r.type,
+        name: r.name,
+        path: r.path,
+        workspacePath: r.workspacePath,
+        workspaceName: r.workspaceName,
+        line: r.matches[0]?.line,
+        snippet: r.matches[0]?.snippet,
+        modifiedAt: r.modifiedAt,
+        ext: r.ext,
+        relativePath: r.relativePath,
+        size: r.size,
+        matchCount: r.matchCount,
+        matches: r.matches,
+        score: r.score,
+      }));
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : String(error);
+      console.error('[Search] index search failed:', msg);
+      return [];
     }
-
-    await walk(rootPath, 0);
-    return results.slice(0, limit);
   });
 
   ipcMain.handle(IPC_CHANNELS.FS.GET_RECENT_MARKDOWN, async (_event, rootPaths?: string[]) => {
@@ -452,6 +458,36 @@ export function registerFsHandlers(): void {
     } catch (error: unknown) {
       const msg = error instanceof Error ? error.message : String(error);
       throw new Error('无法读取图片: ' + msg);
+    }
+  });
+
+  ipcMain.handle(IPC_CHANNELS.FS.COPY_FILE, async (_event, input: { sourcePath: string; targetPath: string }) => {
+    try {
+      const sourcePath = path.resolve(input.sourcePath);
+      const targetPath = path.resolve(input.targetPath);
+      ensureInsideActiveWorkspace(targetPath);
+      await fs.mkdir(path.dirname(targetPath), { recursive: true });
+      await fs.copyFile(sourcePath, targetPath);
+      void updateFileInIndex(targetPath);
+      return { targetPath };
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : String(error);
+      throw new Error('无法复制文件: ' + msg);
+    }
+  });
+
+  ipcMain.handle(IPC_CHANNELS.FS.WRITE_BINARY, async (_event, input: { filePath: string; base64: string }) => {
+    try {
+      const filePath = path.resolve(input.filePath);
+      ensureInsideActiveWorkspace(filePath);
+      await fs.mkdir(path.dirname(filePath), { recursive: true });
+      const buffer = Buffer.from(input.base64, 'base64');
+      await fs.writeFile(filePath, buffer);
+      void updateFileInIndex(filePath);
+      return { filePath };
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : String(error);
+      throw new Error('无法写入二进制文件: ' + msg);
     }
   });
 

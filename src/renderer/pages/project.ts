@@ -22,10 +22,10 @@ function bindOnce(): void {
   document.getElementById('btn-project-open-workspace')?.addEventListener('click', openWorkspacePicker);
   document.getElementById('btn-project-refresh')?.addEventListener('click', () => { void renderProjectDashboard(); });
   document.getElementById('btn-project-edit-meta')?.addEventListener('click', () => { void editProjectMeta(); });
-  document.getElementById('btn-project-new-doc')?.addEventListener('click', () => { switchPage('files'); setTimeout(() => window.__handleNewFile?.(), 220); });
-  document.getElementById('btn-project-new-todo')?.addEventListener('click', () => { switchPage('todo'); setTimeout(() => window.__focusTodoQuickInput?.(), 220); });
-  document.getElementById('btn-project-files')?.addEventListener('click', () => switchPage('files'));
-  document.getElementById('btn-project-ai')?.addEventListener('click', () => switchPage('ai'));
+  document.getElementById('btn-project-new-doc')?.addEventListener('click', () => { void (async () => { await switchPage('files'); void window.__handleNewFile?.(); })(); });
+  document.getElementById('btn-project-new-todo')?.addEventListener('click', () => { void (async () => { await switchPage('todo'); void window.__focusTodoQuickInput?.(); })(); });
+  document.getElementById('btn-project-files')?.addEventListener('click', () => { void switchPage('files'); });
+  document.getElementById('btn-project-ai')?.addEventListener('click', () => { void switchPage('ai'); });
   document.getElementById('btn-project-summary')?.addEventListener('click', () => runProjectAI('summary'));
   document.getElementById('btn-project-plan')?.addEventListener('click', () => runProjectAI('plan'));
   document.getElementById('btn-project-export-report-md')?.addEventListener('click', () => { void exportCurrentProjectReport('markdown'); });
@@ -99,8 +99,10 @@ function renderRecentDocs(docs: ProjectRecentDocument[]): void {
     row.addEventListener('click', () => {
       const filePath = (row as HTMLElement).dataset.path;
       if (!filePath) return;
-      switchPage('files');
-      setTimeout(() => { void window.__openFilePath?.(filePath); }, 220);
+      void (async () => {
+        await switchPage('files');
+        void window.__openFilePath?.(filePath);
+      })();
     });
   });
 }
@@ -120,8 +122,8 @@ function renderTemplateShortcuts(): void {
     card.addEventListener('click', async () => {
       const templateId = (card as HTMLElement).dataset.templateId;
       if (!templateId) return;
-      switchPage('files');
-      setTimeout(() => { void window.__handleNewFileFromTemplate?.(templateId); }, 260);
+      await switchPage('files');
+      void window.__handleNewFileFromTemplate?.(templateId);
     });
   });
 }
@@ -155,13 +157,11 @@ async function editProjectMeta(): Promise<void> {
 }
 
 async function openWorkspacePicker(): Promise<void> {
-  switchPage('files');
-  setTimeout(async () => {
-    const chooseWorkspace = window.__chooseWorkspaceFolder;
-    const ft = window.__fileTree;
-    if (typeof chooseWorkspace === 'function') await chooseWorkspace();
-    else if (ft?.openFolder) await ft.openFolder();
-  }, 200);
+  await switchPage('files');
+  const chooseWorkspace = window.__chooseWorkspaceFolder;
+  const ft = window.__fileTree;
+  if (typeof chooseWorkspace === 'function') await chooseWorkspace();
+  else if (ft?.openFolder) await ft.openFolder();
 }
 
 async function exportCurrentProjectReport(format: ExportFormat): Promise<void> {
@@ -190,15 +190,15 @@ async function exportCurrentProjectReport(format: ExportFormat): Promise<void> {
 function runProjectAI(mode: 'summary' | 'plan'): void {
   if (!currentOverview) return;
   const prompt = buildProjectPrompt(mode, currentOverview);
-  switchPage('ai');
-  setTimeout(() => {
+  void (async () => {
+    await switchPage('ai');
     const input = document.getElementById('ai-chat-input') as HTMLTextAreaElement | null;
     if (input) {
       input.value = prompt;
       input.dispatchEvent(new Event('input', { bubbles: true }));
       input.focus();
     }
-  }, 260);
+  })();
 }
 
 function buildProjectPrompt(mode: 'summary' | 'plan', overview: ProjectOverview): string {

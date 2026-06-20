@@ -346,13 +346,13 @@ function bindDrawerEvents(taskId: string): void {
     const task = getTaskById(taskId);
     const sourcePath = task?.sourceFilePath || resolveWorkspacePath(getCurrentWorkspaceRoot(), task?.sourceRelativePath);
     if (!sourcePath) return;
-    switchPage('files');
-    setTimeout(() => {
+    void (async () => {
+      await switchPage('files');
       const openFilePath = window.__openFilePath;
       if (typeof openFilePath === 'function') {
         void openFilePath(sourcePath);
       }
-    }, 250);
+    })();
   });
 
   titleInput?.addEventListener('blur', () => {

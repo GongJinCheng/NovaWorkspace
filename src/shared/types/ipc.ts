@@ -15,6 +15,9 @@ export interface ElectronAPI {
     maximize(): void;
     close(): void;
   };
+  app: {
+    getVersion(): Promise<string>;
+  };
   fs: {
     readDirectory(dirPath: string): Promise<FileEntry[]>;
     readFile(filePath: string): Promise<string>;
@@ -27,7 +30,7 @@ export interface ElectronAPI {
     showOpenDialog(options: Record<string, unknown>): Promise<DialogResult>;
     createSampleWorkspace(): Promise<string>;
     getRecentMarkdown(rootPaths?: string[]): Promise<RecentMarkdownFile[]>;
-    searchWorkspace(input: { rootPath: string; query: string; limit?: number }): Promise<WorkspaceSearchResult[]>;
+    searchWorkspace(input: { rootPath: string; query: string; limit?: number; filter?: { ext?: string; type?: 'file' | 'content' } }): Promise<WorkspaceSearchResult[]>;
     createBackup(input: { workspaceRoot: string; filePath: string; content: string; reason?: string }): Promise<FileBackupEntry>;
     listBackups(input: { workspaceRoot: string; filePath: string }): Promise<FileBackupEntry[]>;
     readBackup(input: { workspaceRoot: string; backupPath: string }): Promise<{ content: string }>;
@@ -35,6 +38,8 @@ export interface ElectronAPI {
     deleteBackup(input: { workspaceRoot: string; backupPath: string }): Promise<boolean>;
     exportDocument(input: ExportDocumentInput): Promise<ExportDocumentResult>;
     readImageAsDataUrl(filePath: string): Promise<AIImageAttachment>;
+    copyFile(input: { sourcePath: string; targetPath: string }): Promise<{ targetPath: string }>;
+    writeBinary(input: { filePath: string; base64: string }): Promise<{ filePath: string }>;
   };
   todo: {
     load(workspaceRoot?: string | null): Promise<TodoData>;

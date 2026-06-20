@@ -51,9 +51,23 @@ export interface WorkspaceSearchResult {
   path: string;
   workspacePath: string;
   workspaceName: string;
+  /** @deprecated Use matches[] instead */
   line?: number;
+  /** @deprecated Use matches[] instead */
   snippet?: string;
   modifiedAt?: string;
+  /** File extension (e.g. '.md', '.ts') */
+  ext?: string;
+  /** Relative path from workspace root */
+  relativePath?: string;
+  /** File size in bytes */
+  size?: number;
+  /** Total number of content matches */
+  matchCount?: number;
+  /** Individual content matches with line numbers and snippets */
+  matches?: Array<{ line: number; snippet: string }>;
+  /** Relevance score (higher = more relevant) */
+  score?: number;
 }
 
 

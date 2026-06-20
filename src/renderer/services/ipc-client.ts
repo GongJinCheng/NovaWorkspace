@@ -16,6 +16,9 @@ export const ipcClient = {
     maximize: () => api().window.maximize(),
     close: () => api().window.close(),
   },
+  app: {
+    getVersion: (): Promise<string> => api().app.getVersion(),
+  },
   fs: {
     readDirectory: (dirPath: string): Promise<FileEntry[]> => api().fs.readDirectory(dirPath),
     readFile: (filePath: string): Promise<string> => api().fs.readFile(filePath),
@@ -28,7 +31,7 @@ export const ipcClient = {
     showOpenDialog: (options: Record<string, unknown>): Promise<DialogResult> => api().fs.showOpenDialog(options),
     createSampleWorkspace: (): Promise<string> => api().fs.createSampleWorkspace(),
     getRecentMarkdown: (rootPaths?: string[]): Promise<RecentMarkdownFile[]> => api().fs.getRecentMarkdown(rootPaths),
-    searchWorkspace: (input: { rootPath: string; query: string; limit?: number }): Promise<WorkspaceSearchResult[]> => api().fs.searchWorkspace(input),
+    searchWorkspace: (input: { rootPath: string; query: string; limit?: number; filter?: { ext?: string; type?: 'file' | 'content' } }): Promise<WorkspaceSearchResult[]> => api().fs.searchWorkspace(input),
     createBackup: (input: { workspaceRoot: string; filePath: string; content: string; reason?: string }): Promise<FileBackupEntry> => api().fs.createBackup(input),
     listBackups: (input: { workspaceRoot: string; filePath: string }): Promise<FileBackupEntry[]> => api().fs.listBackups(input),
     readBackup: (input: { workspaceRoot: string; backupPath: string }): Promise<{ content: string }> => api().fs.readBackup(input),
@@ -36,6 +39,8 @@ export const ipcClient = {
     deleteBackup: (input: { workspaceRoot: string; backupPath: string }): Promise<boolean> => api().fs.deleteBackup(input),
     exportDocument: (input: ExportDocumentInput): Promise<ExportDocumentResult> => api().fs.exportDocument(input),
     readImageAsDataUrl: (filePath: string): Promise<AIImageAttachment> => api().fs.readImageAsDataUrl(filePath),
+    copyFile: (input: { sourcePath: string; targetPath: string }): Promise<{ targetPath: string }> => api().fs.copyFile(input),
+    writeBinary: (input: { filePath: string; base64: string }): Promise<{ filePath: string }> => api().fs.writeBinary(input),
   },
   todo: {
     load: (workspaceRoot = getCurrentWorkspaceRoot()): Promise<TodoData> => api().todo.load(workspaceRoot),

@@ -941,6 +941,14 @@
   font-weight: 500;
 }
 
+.quick-open-file-name mark {
+  background: var(--accent-soft, rgba(100, 140, 255, 0.2));
+  color: var(--accent, #6488ff);
+  font-weight: 700;
+  border-radius: 2px;
+  padding: 0 1px;
+}
+
 .quick-open-file-path {
   min-width: 0;
   overflow: hidden;
@@ -1187,4 +1195,101 @@
   color: var(--red);
   font-size: 12px;
   text-align: left;
+}
+
+/* === Image Drag-and-Drop Feedback === */
+.monaco-editor-host.editor-drop-active {
+  position: relative;
+}
+
+.monaco-editor-host.editor-drop-active::after {
+  content: '拖放图片到编辑器';
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(99, 102, 241, 0.08);
+  border: 2px dashed var(--accent);
+  border-radius: 8px;
+  color: var(--accent);
+  font-size: 15px;
+  font-weight: 600;
+  pointer-events: none;
+  z-index: 10;
+  backdrop-filter: blur(2px);
+}
+
+/* === Document Outline Panel === */
+.markdown-outline-toggle-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.markdown-outline-panel {
+  display: none;
+  width: 220px;
+  flex-shrink: 0;
+  border-left: 1px solid var(--border-subtle);
+  background: var(--bg-surface);
+  overflow-y: auto;
+  flex-direction: column;
+}
+
+.markdown-outline-panel[data-visible="true"] {
+  display: flex;
+}
+
+.markdown-outline-panel .outline-header {
+  padding: 12px 14px 8px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-tertiary);
+  border-bottom: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+}
+
+.markdown-outline-panel .outline-list {
+  display: flex;
+  flex-direction: column;
+  padding: 8px 0;
+}
+
+.markdown-outline-panel .outline-item {
+  display: block;
+  padding: 4px 14px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+  cursor: pointer;
+  text-decoration: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: all 0.15s ease;
+  border-left: 2px solid transparent;
+}
+
+.markdown-outline-panel .outline-item:hover {
+  color: var(--accent);
+  background: var(--accent-soft);
+  border-left-color: var(--accent);
+}
+
+.markdown-outline-panel .outline-h1 { padding-left: 14px; font-weight: 600; }
+.markdown-outline-panel .outline-h2 { padding-left: 26px; }
+.markdown-outline-panel .outline-h3 { padding-left: 38px; font-size: 11.5px; }
+.markdown-outline-panel .outline-h4 { padding-left: 50px; font-size: 11.5px; }
+.markdown-outline-panel .outline-h5,
+.markdown-outline-panel .outline-h6 { padding-left: 62px; font-size: 11px; }
+
+.markdown-outline-panel .outline-empty {
+  padding: 20px 14px;
+  text-align: center;
+  color: var(--text-tertiary);
+  font-size: 12px;
 }

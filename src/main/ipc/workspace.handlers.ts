@@ -5,6 +5,7 @@ import { IPC_CHANNELS } from '@shared/constants/ipc-channels';
 import { workspaceStore } from '../services/workspace-store';
 import * as todoStore from '../services/todo-store';
 import { getAISettings } from '../services/settings-store';
+import { setActiveWorkspaceRoot } from '../utils/active-workspace';
 import type { OpenWorkspaceInput, SaveWorkspaceSessionInput, ProjectMeta, ProjectOverview, ProjectActivityItem, ProjectRecentDocument, UpdateProjectMetaInput } from '@shared/types/workspace';
 
 const IGNORED_DIRS = new Set(['node_modules', '.git', 'dist', 'release', 'build', 'out', '.next', '.cache', 'coverage']);
@@ -16,6 +17,7 @@ export function registerWorkspaceHandlers(): void {
 
   ipcMain.handle(IPC_CHANNELS.WORKSPACE.OPEN, async (_event, input: OpenWorkspaceInput) => {
     const workspace = await workspaceStore.open(input);
+    setActiveWorkspaceRoot(workspace.rootPath);
     await ensureProjectMeta(workspace.rootPath, input.name || workspace.name).catch(() => null);
     return workspace;
   });

@@ -63,6 +63,10 @@ const marked = new Marked({
   breaks: true,
   renderer: {
     code({ text, lang }: { text: string; lang?: string }): string {
+      // Mermaid diagrams: wrap in a special div for async rendering
+      if (lang === 'mermaid') {
+        return '<div class="nova-mermaid mermaid">' + escapeHtml(text) + '</div>';
+      }
       const language = lang && hljs.getLanguage(lang) ? lang : '';
       let highlighted: string;
       try {

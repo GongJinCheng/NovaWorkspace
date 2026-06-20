@@ -10,7 +10,7 @@ export function registerPageInit(pageId: PageId, initFn: () => void | Promise<vo
   pageInits.set(pageId, initFn);
 }
 
-export function switchPage(pageId: PageId): void {
+export async function switchPage(pageId: PageId): Promise<void> {
   // Hide all pages
   document.querySelectorAll('.page').forEach(el => {
     el.classList.remove('active');
@@ -26,7 +26,8 @@ export function switchPage(pageId: PageId): void {
   // Individual pages keep their own one-time binding guards, but this lets pages
   // refresh data/config after settings changes or background writes.
   if (currentPage !== pageId || pageId === 'ai' || pageId === 'todo' || pageId === 'files') {
-    pageInits.get(pageId)?.();
+    const initFn = pageInits.get(pageId);
+    if (initFn) await initFn();
   }
 
   currentPage = pageId;

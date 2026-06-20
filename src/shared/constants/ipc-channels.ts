@@ -8,6 +8,9 @@ export const IPC_CHANNELS = {
     MAXIMIZE: 'window:maximize',
     CLOSE: 'window:close',
   },
+  APP: {
+    GET_VERSION: 'app:get-version',
+  },
   FS: {
     READ_DIR: 'fs:read-directory',
     READ_FILE: 'fs:read-file',
@@ -28,6 +31,8 @@ export const IPC_CHANNELS = {
     DELETE_BACKUP: 'fs:delete-backup',
     EXPORT_DOCUMENT: 'fs:export-document',
     READ_IMAGE_AS_DATA_URL: 'fs:read-image-as-data-url',
+    COPY_FILE: 'fs:copy-file',
+    WRITE_BINARY: 'fs:write-binary',
   },
   TODO: {
     LOAD: 'todo:load',

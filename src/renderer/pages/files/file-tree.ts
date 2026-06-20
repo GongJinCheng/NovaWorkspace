@@ -295,15 +295,13 @@ export class FileTree {
     try {
       const content = await ipcClient.fs.readFile(filePath);
       const { switchPage } = await import('../../app/router');
-      switchPage('ai');
-      setTimeout(() => {
-        const aiInput = document.getElementById('ai-chat-input') as HTMLTextAreaElement;
-        if (aiInput) {
-          aiInput.value = '\u8BF7\u5206\u6790\u4EE5\u4E0B\u6587\u4EF6\u5185\u5BB9\uFF1A\n\n```\n' + content.slice(0, 3000) + '\n```';
-          const sendBtn = document.getElementById('btn-ai-send');
-          sendBtn?.click();
-        }
-      }, 300);
+      await switchPage('ai');
+      const aiInput = document.getElementById('ai-chat-input') as HTMLTextAreaElement;
+      if (aiInput) {
+        aiInput.value = '\u8BF7\u5206\u6790\u4EE5\u4E0B\u6587\u4EF6\u5185\u5BB9\uFF1A\n\n```\n' + content.slice(0, 3000) + '\n```';
+        const sendBtn = document.getElementById('btn-ai-send');
+        sendBtn?.click();
+      }
     } catch (err) {
       console.error('[FileTree] AI analysis failed:', err);
     }

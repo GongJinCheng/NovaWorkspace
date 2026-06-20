@@ -14,6 +14,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
     maximize: () => ipcRenderer.send(IPC_CHANNELS.WINDOW.MAXIMIZE),
     close: () => ipcRenderer.send(IPC_CHANNELS.WINDOW.CLOSE),
   },
+  app: {
+    getVersion: () => ipcRenderer.invoke(IPC_CHANNELS.APP.GET_VERSION),
+  },
   fs: {
     readDirectory: (dirPath: string) => ipcRenderer.invoke(IPC_CHANNELS.FS.READ_DIR, dirPath),
     readFile: (filePath: string) => ipcRenderer.invoke(IPC_CHANNELS.FS.READ_FILE, filePath),
@@ -26,7 +29,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     showOpenDialog: (options: Record<string, unknown>) => ipcRenderer.invoke(IPC_CHANNELS.FS.SHOW_OPEN_DIALOG, options),
     createSampleWorkspace: () => ipcRenderer.invoke(IPC_CHANNELS.FS.CREATE_SAMPLE_WORKSPACE),
     getRecentMarkdown: (rootPaths?: string[]) => ipcRenderer.invoke(IPC_CHANNELS.FS.GET_RECENT_MARKDOWN, rootPaths),
-    searchWorkspace: (input: { rootPath: string; query: string; limit?: number }) => ipcRenderer.invoke(IPC_CHANNELS.FS.SEARCH_WORKSPACE, input),
+    searchWorkspace: (input: { rootPath: string; query: string; limit?: number; filter?: { ext?: string; type?: 'file' | 'content' } }) => ipcRenderer.invoke(IPC_CHANNELS.FS.SEARCH_WORKSPACE, input),
     createBackup: (input: { workspaceRoot: string; filePath: string; content: string; reason?: string }) => ipcRenderer.invoke(IPC_CHANNELS.FS.CREATE_BACKUP, input),
     listBackups: (input: { workspaceRoot: string; filePath: string }) => ipcRenderer.invoke(IPC_CHANNELS.FS.LIST_BACKUPS, input),
     readBackup: (input: { workspaceRoot: string; backupPath: string }) => ipcRenderer.invoke(IPC_CHANNELS.FS.READ_BACKUP, input),
@@ -34,6 +37,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
     deleteBackup: (input: { workspaceRoot: string; backupPath: string }) => ipcRenderer.invoke(IPC_CHANNELS.FS.DELETE_BACKUP, input),
     exportDocument: (input) => ipcRenderer.invoke(IPC_CHANNELS.FS.EXPORT_DOCUMENT, input),
     readImageAsDataUrl: (filePath: string) => ipcRenderer.invoke(IPC_CHANNELS.FS.READ_IMAGE_AS_DATA_URL, filePath),
+    copyFile: (input: { sourcePath: string; targetPath: string }) => ipcRenderer.invoke(IPC_CHANNELS.FS.COPY_FILE, input),
+    writeBinary: (input: { filePath: string; base64: string }) => ipcRenderer.invoke(IPC_CHANNELS.FS.WRITE_BINARY, input),
   },
   todo: {
     load: (workspaceRoot?: string | null) => ipcRenderer.invoke(IPC_CHANNELS.TODO.LOAD, workspaceRoot),

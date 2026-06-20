@@ -1,4 +1,4 @@
-import { ipcMain } from 'electron';
+import { ipcMain, app } from 'electron';
 import { IPC_CHANNELS } from '@shared/constants/ipc-channels';
 import { getMainWindow } from '../windows/main-window';
 
@@ -15,5 +15,9 @@ export function registerWindowHandlers(): void {
 
   ipcMain.on(IPC_CHANNELS.WINDOW.CLOSE, () => {
     getMainWindow()?.close();
+  });
+
+  ipcMain.handle(IPC_CHANNELS.APP.GET_VERSION, () => {
+    return app.getVersion();
   });
 }

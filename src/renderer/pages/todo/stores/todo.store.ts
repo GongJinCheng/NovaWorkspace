@@ -35,7 +35,7 @@ const PRI_ORDER: Record<string, number> = {
 export const PLANBOARD_BUCKETS = ['已逾期', '今天', '明天', '本周', '更后'] as const;
 
 export type FilterType = 'all' | 'today' | 'upcoming' | 'overdue' | 'completed';
-export type ViewMode = 'timeline' | 'list';
+export type ViewMode = 'timeline' | 'list' | 'board';
 
 interface TodoStore {
   data: TodoData;

@@ -9,6 +9,7 @@ import { AI_CAPABILITY_LABELS, normalizeAIModelCapabilities, providerSupportsCap
 import { registerPageInit } from '../../app/router';
 import { aiStats } from '../../app/index';
 import { renderMarkdown } from '../../utils/markdown-renderer';
+import { renderMermaidBlocks } from '../files/markdown-preview';
 import type { Conversation, ChatHistoryMessage } from '../../../shared/types/chat-history';
 import { getCurrentWorkspaceRoot } from '../../services/workspace-context';
 
@@ -214,6 +215,8 @@ function renderUserBubble(bubble: HTMLElement, text: string, images: AIImageAtta
 function renderAssistantBubble(bubble: HTMLElement, content: string): void {
   bubble.innerHTML = renderReasoningAwareText(content);
   bindCodeCopyButtons(bubble);
+  // Render Mermaid diagrams asynchronously (if any mermaid code blocks exist)
+  void renderMermaidBlocks(bubble);
 }
 
 function renderReasoningAwareText(content: string): string {

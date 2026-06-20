@@ -14,6 +14,20 @@ import { switchPage } from '../../app/router';
 import { getCurrentWorkspaceRoot, getRelativePath } from '../../services/workspace-context';
 import { exportMarkdownDocument, type ExportFormat } from '../../services/export-service';
 
+/** Convert a browser File (e.g. clipboard screenshot) to a base64 string. */
+function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result as string;
+      // data URL format: "data:<mime>;base64,<payload>" — strip the prefix
+      const comma = result.indexOf(',');
+      resolve(comma >= 0 ? result.slice(comma + 1) : result);
+    };
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(file);
+  });
+}
 
 interface MonacoEditor {
   create(container: HTMLElement, options: Record<string, unknown>): MonacoEditorInstance;
@@ -205,10 +219,17 @@ export class EditorManager {
           '<button class="markdown-tool-btn" data-md-action="saveversion">保存版本</button>' +
           '<button class="markdown-tool-btn" data-md-action="history">版本历史</button>' +
         '</div>' +
+        '<div class="markdown-outline-toggle-group">' +
+          '<button class="markdown-tool-btn" data-md-action="toggle-outline" title="文档大纲">大纲</button>' +
+        '</div>' +
       '</div>' +
       '<div class="markdown-workspace">' +
         '<div class="monaco-editor-host"></div>' +
         '<article class="markdown-preview-pane" aria-label="Markdown Preview"></article>' +
+        '<aside class="markdown-outline-panel" data-visible="false">' +
+          '<div class="outline-header">文档大纲</div>' +
+          '<nav class="outline-list"></nav>' +
+        '</aside>' +
       '</div>';
     this.container.appendChild(shell);
     this.editorHost = shell.querySelector('.monaco-editor-host');
@@ -237,6 +258,7 @@ export class EditorManager {
     });
 
     this.applyMarkdownMode();
+    this.bindImageDropPaste();
   }
 
 
@@ -258,6 +280,136 @@ export class EditorManager {
         await this.runMarkdownAiAction(actionButton.dataset.mdAction || '', actionButton);
       }
     });
+  }
+
+  /**
+   * Bind image paste and drag-and-drop handlers to the editor.
+   * When an image is pasted or dropped into a Markdown file, it's copied to
+   * .nova/images/ and a Markdown image reference is inserted at the cursor.
+   */
+  private _documentPasteHandler: ((e: ClipboardEvent) => void) | null = null;
+
+  private bindImageDropPaste(): void {
+    const editorHost = this.editorHost;
+    if (!editorHost) return;
+
+    /**
+     * Process image files: copy to .nova/images/ and insert Markdown image syntax.
+     * Uses workspace-root-relative paths that work regardless of file depth.
+     */
+    const handleImageFiles = async (files: FileList | File[]): Promise<void> => {
+      if (!this.isActiveMarkdown() || !this.editor) return;
+      const imageFiles = Array.from(files).filter(f => f.type.startsWith('image/'));
+      if (imageFiles.length === 0) return;
+
+      const workspaceRoot = getCurrentWorkspaceRoot();
+      if (!workspaceRoot) return;
+
+      const imagesDir = workspaceRoot + '/.nova/images';
+      // Ensure .nova/images directory exists
+      await ipcClient.fs.createDirectory(workspaceRoot + '/.nova', 'images').catch(() => null);
+
+      for (const file of imageFiles) {
+        try {
+          const ext = file.name.split('.').pop() || 'png';
+          const timestamp = Date.now().toString(36);
+          const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_') || 'image.' + ext;
+          const targetName = timestamp + '-' + safeName;
+          const targetPath = imagesDir + '/' + targetName;
+
+          // Electron drag files have a .path property; clipboard paste images do not
+          const electronFile = (file as unknown as { path?: string });
+          if (electronFile.path) {
+            // Copy from original path (handles drag-and-drop from Finder/Explorer)
+            await ipcClient.fs.copyFile({ sourcePath: electronFile.path, targetPath });
+          } else {
+            // Clipboard image (e.g. screenshot paste): read as base64 and write
+            const base64 = await fileToBase64(file);
+            await ipcClient.fs.writeBinary({ filePath: targetPath, base64 });
+          }
+
+          // Always use workspace-root-relative path (works for any file depth)
+          const relativePath = '.nova/images/' + targetName;
+
+          // Insert Markdown image syntax at cursor position
+          const position = this.editor.getPosition();
+          const displayName = file.name.replace(/\.[^.]+$/, '') || 'image';
+          const imageMarkdown = '\n![' + displayName + '](' + relativePath + ')\n';
+          if (position) {
+            const model = this.editor.getModel();
+            if (model) {
+              const range = {
+                startLineNumber: position.lineNumber,
+                startColumn: position.column,
+                endLineNumber: position.lineNumber,
+                endColumn: position.column,
+              };
+              model.pushEditOperations([], [{ range, text: imageMarkdown }], () => null);
+            }
+          }
+        } catch (err) {
+          console.error('[Editor] Image drop/paste failed:', err);
+        }
+      }
+    };
+
+    // --- Paste handler (document-level to intercept before Monaco) ---
+    // Monaco's textarea captures paste events, so editorHost listeners don't fire.
+    // A document-level capture listener runs first and can prevent Monaco's default.
+    if (this._documentPasteHandler) {
+      document.removeEventListener('paste', this._documentPasteHandler, true);
+    }
+    this._documentPasteHandler = (e: ClipboardEvent) => {
+      // Only act when Monaco editor has focus
+      const active = document.activeElement;
+      if (!active || !active.closest('.monaco-editor')) return;
+      if (!this.isActiveMarkdown() || !this.editor) return;
+
+      const items = e.clipboardData?.items;
+      if (!items) return;
+      const imageFiles: File[] = [];
+      for (let i = 0; i < items.length; i++) {
+        if (items[i].type.startsWith('image/')) {
+          const file = items[i].getAsFile();
+          if (file) imageFiles.push(file);
+        }
+      }
+      if (imageFiles.length > 0) {
+        e.preventDefault();
+        e.stopPropagation();
+        void handleImageFiles(imageFiles);
+      }
+    };
+    document.addEventListener('paste', this._documentPasteHandler, true);
+
+    // --- Drag-and-drop handlers ---
+    editorHost.addEventListener('dragover', (e: DragEvent) => {
+      if (e.dataTransfer?.types.includes('Files')) {
+        e.preventDefault(); // Required to allow drop
+        e.dataTransfer.dropEffect = 'copy';
+        editorHost.classList.add('editor-drop-active');
+      }
+    });
+
+    editorHost.addEventListener('dragleave', (e: DragEvent) => {
+      // Only remove highlight when actually leaving the host
+      if (!editorHost.contains(e.relatedTarget as Node)) {
+        editorHost.classList.remove('editor-drop-active');
+      }
+    });
+
+    editorHost.addEventListener('drop', (e: DragEvent) => {
+      editorHost.classList.remove('editor-drop-active');
+      const files = e.dataTransfer?.files;
+      if (!files || files.length === 0) return;
+      const hasImages = Array.from(files).some(f => f.type.startsWith('image/'));
+      if (hasImages) {
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation(); // Prevent Monaco from inserting file path as text
+        void handleImageFiles(files);
+      }
+    }, true); // capture phase — run before Monaco's own drop handler
   }
 
   private isActiveMarkdown(): boolean {
@@ -333,8 +485,111 @@ export class EditorManager {
     if (!this.markdownPreview || !this.activeEditorPath) return;
     const tab = this.editors.get(this.activeEditorPath);
     if (!tab || !this.isActiveMarkdown()) return;
-    this.markdownPreview.innerHTML = renderMarkdownToHtml(tab.model.getValue());
+    const md = tab.model.getValue();
+    this.markdownPreview.innerHTML = renderMarkdownToHtml(md);
     void renderMermaidBlocks(this.markdownPreview);
+    this.resolvePreviewImagePaths(tab.filePath);
+    this.updateOutline(md);
+  }
+
+  /**
+   * Post-process <img> elements in the preview pane, converting relative
+   * paths to absolute file:// URLs so they render correctly in innerHTML.
+   */
+  private resolvePreviewImagePaths(currentFilePath: string): void {
+    if (!this.markdownPreview) return;
+    const workspaceRoot = getCurrentWorkspaceRoot();
+    if (!workspaceRoot) return;
+
+    // Determine the directory of the current file for relative-path resolution
+    const sep = currentFilePath.includes('/') ? '/' : '\\';
+    const fileDir = currentFilePath.substring(0, currentFilePath.lastIndexOf(sep));
+    const rootDir = workspaceRoot.replace(/[\\/]+$/, '');
+
+    this.markdownPreview.querySelectorAll<HTMLImageElement>('img').forEach(img => {
+      const src = img.getAttribute('src') || '';
+      if (!src) return;
+      // Skip already-absolute URLs
+      if (/^(https?:|file:|data:|blob:)/i.test(src)) return;
+      if (src.startsWith('/') || src.startsWith('\\')) return;
+
+      // Try workspace-root-relative first (e.g. ".nova/images/foo.png")
+      let absPath: string;
+      if (src.startsWith('.nova/') || src.startsWith('.nova\\')) {
+        absPath = rootDir + '/' + src;
+      } else {
+        // Otherwise resolve relative to the file's directory
+        absPath = fileDir + '/' + src;
+      }
+      // Normalise to forward slashes and encode for file:// URL
+      absPath = absPath.replace(/\\/g, '/');
+      img.src = 'file:///' + absPath.replace(/^\/+/, '');
+    });
+  }
+
+  /**
+   * Extract headings from Markdown source and render them in the outline panel.
+   * In preview/split mode: clicking scrolls the preview pane to the heading.
+   * In edit mode: clicking navigates Monaco to the heading line.
+   */
+  private updateOutline(markdown: string): void {
+    const panel = this.container.querySelector('.markdown-outline-panel') as HTMLElement | null;
+    if (!panel || panel.dataset.visible !== 'true') return;
+    const listEl = panel.querySelector('.outline-list') as HTMLElement | null;
+    if (!listEl) return;
+
+    const headings: { level: number; text: string; slug: string; line: number }[] = [];
+    const lines = markdown.split('\n');
+    let inCode = false;
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (line.startsWith('```')) { inCode = !inCode; continue; }
+      if (inCode) continue;
+      const m = line.match(/^(#{1,6})\s+(.+)$/);
+      if (m) {
+        const text = m[2].trim();
+        headings.push({
+          level: m[1].length,
+          text,
+          slug: text.toLowerCase().replace(/[^\w\u4e00-\u9fa5]+/g, '-').replace(/^-+|-+$/g, '') || 'section',
+          line: i + 1, // 1-based line number
+        });
+      }
+    }
+
+    if (headings.length === 0) {
+      listEl.innerHTML = '<div class="outline-empty">暂无标题</div>';
+      return;
+    }
+
+    const preview = this.markdownPreview;
+    listEl.innerHTML = headings.map(h =>
+      '<a class="outline-item outline-h' + h.level + '" data-slug="' + this.escAttr(h.slug) + '" data-line="' + h.line + '">' +
+        this.escHTML(h.text) +
+      '</a>'
+    ).join('');
+
+    // Bind click-to-navigate (works in both edit and preview modes)
+    listEl.querySelectorAll<HTMLElement>('.outline-item').forEach(el => {
+      el.addEventListener('click', () => {
+        const slug = el.dataset.slug || '';
+        const lineNum = parseInt(el.dataset.line || '0', 10);
+
+        // Scroll preview pane if visible (preview / split mode)
+        if (preview && !preview.hidden) {
+          const target = preview.querySelector('#' + CSS.escape(slug));
+          if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        // Always navigate Monaco to the heading line
+        // (in edit mode this is the primary action; in split mode it syncs both panels)
+        if (this.editor && lineNum > 0) {
+          (this.editor as any).revealLineInCenter(lineNum);
+          (this.editor as any).setPosition({ lineNumber: lineNum, column: 1 });
+          if (!preview || preview.hidden) this.editor.focus();
+        }
+      });
+    });
   }
 
   async runMarkdownCommand(action: string): Promise<void> {
@@ -420,6 +675,16 @@ export class EditorManager {
     }
     if (action === 'exportpdf') {
       await this.exportActiveMarkdown(tab, 'pdf');
+      return;
+    }
+    if (action === 'toggle-outline') {
+      const outline = this.container.querySelector('.markdown-outline-panel') as HTMLElement | null;
+      if (outline) {
+        const isVisible = outline.dataset.visible === 'true';
+        outline.dataset.visible = isVisible ? 'false' : 'true';
+        button.classList.toggle('active', !isVisible);
+        if (!isVisible) this.updateOutline(tab.model.getValue());
+      }
       return;
     }
 
@@ -656,7 +921,7 @@ ${content}
         confirmText: '去待办中心',
         cancelText: '留在当前页',
       });
-      if (goTodo) switchPage('todo');
+      if (goTodo) void switchPage('todo');
     } catch (error) {
       console.error('[EditorManager] Create todos failed:', error);
       window.alert('创建待办失败：' + this.toFriendlyAiError(error));
@@ -716,7 +981,7 @@ ${content}
       confirmText: '去设置',
       cancelText: '稍后',
     });
-    if (goSettings) switchPage('settings');
+    if (goSettings) void switchPage('settings');
   }
 
   private toFriendlyAiError(error: unknown): string {
@@ -1060,6 +1325,10 @@ ${content}
 
   resetForWorkspace(): void {
     this.removeTabContextMenu();
+    if (this._documentPasteHandler) {
+      document.removeEventListener('paste', this._documentPasteHandler, true);
+      this._documentPasteHandler = null;
+    }
     if (this.markdownPreviewTimer) {
       clearTimeout(this.markdownPreviewTimer);
       this.markdownPreviewTimer = null;

@@ -80,7 +80,7 @@ function bindNavEvents(): void {
     item.addEventListener('click', (e) => {
       e.preventDefault();
       const page = (item as HTMLElement).dataset.page;
-      if (page) switchPage(page as any);
+      if (page) void switchPage(page as any);
     });
   });
 }
@@ -114,18 +114,20 @@ function bindKeyboardShortcuts(): void {
 
     if (key === 'o') {
       e.preventDefault();
-      switchPage('files');
-      setTimeout(() => {
+      void (async () => {
+        await switchPage('files');
         const ft = window.__fileTree;
         if (ft) ft.openFolder();
-      }, 200);
+      })();
       return;
     }
 
     if (key === 'n') {
       e.preventDefault();
-      switchPage('files');
-      setTimeout(() => { window.__handleNewFile?.(); }, 200);
+      void (async () => {
+        await switchPage('files');
+        window.__handleNewFile?.();
+      })();
       return;
     }
 
@@ -218,28 +220,30 @@ async function renderSearchResults(query: string): Promise<void> {
 function getDefaultPaletteActions(): PaletteResult[] {
   return [
     ...getCommandActions().slice(0, 18),
-    { id: 'page-home', group: '页面', title: '首页', subtitle: '回到今日工作台', icon: '🏠', action: () => switchPage('home') },
-    { id: 'page-project', group: '页面', title: '项目概览', subtitle: '查看当前工作区状态、统计和项目 AI', icon: '📊', action: () => switchPage('project') },
-    { id: 'page-files', group: '页面', title: '文件管理', subtitle: '浏览和编辑工作区文件', icon: '📁', action: () => switchPage('files') },
-    { id: 'page-ai', group: '页面', title: 'AI 助手', subtitle: '打开 AI 对话与配置侧栏', icon: '🤖', action: () => switchPage('ai') },
-    { id: 'page-todo', group: '页面', title: '待办中心', subtitle: '查看和管理任务', icon: '✅', action: () => switchPage('todo') },
-    { id: 'page-settings', group: '页面', title: '设置', subtitle: '模型、主题和快捷键', icon: '⚙️', action: () => switchPage('settings') },
+    { id: 'page-home', group: '页面', title: '首页', subtitle: '回到今日工作台', icon: '🏠', action: () => { void switchPage('home'); } },
+    { id: 'page-project', group: '页面', title: '项目概览', subtitle: '查看当前工作区状态、统计和项目 AI', icon: '📊', action: () => { void switchPage('project'); } },
+    { id: 'page-files', group: '页面', title: '文件管理', subtitle: '浏览和编辑工作区文件', icon: '📁', action: () => { void switchPage('files'); } },
+    { id: 'page-ai', group: '页面', title: 'AI 助手', subtitle: '打开 AI 对话与配置侧栏', icon: '🤖', action: () => { void switchPage('ai'); } },
+    { id: 'page-todo', group: '页面', title: '待办中心', subtitle: '查看和管理任务', icon: '✅', action: () => { void switchPage('todo'); } },
+    { id: 'page-settings', group: '页面', title: '设置', subtitle: '模型、主题和快捷键', icon: '⚙️', action: () => { void switchPage('settings'); } },
   ];
 }
 
 function getCommandActions(): PaletteResult[] {
   const templateActions = buildTemplateCommandResults((template) => {
-    switchPage('files');
-    setTimeout(() => { void window.__handleNewFileFromTemplate?.(template.id); }, 220);
+    void (async () => {
+      await switchPage('files');
+      void window.__handleNewFileFromTemplate?.(template.id);
+    })();
   });
 
   return [
-    { id: 'cmd-open-folder', group: '命令', title: '打开工作区', subtitle: '选择一个本地文件夹作为项目', icon: '📂', action: () => { switchPage('files'); setTimeout(() => window.__fileTree?.openFolder?.() || window.__chooseWorkspaceFolder?.(), 200); } },
-    { id: 'cmd-project-overview', group: '命令', title: '打开项目概览', subtitle: '查看当前工作区统计和动态', icon: '📊', action: () => switchPage('project') },
-    { id: 'cmd-new-file', group: '命令', title: '新建文档', subtitle: '选择模板并创建 Markdown 文档', icon: '📝', action: () => { switchPage('files'); setTimeout(() => window.__handleNewFile?.(), 200); } },
+    { id: 'cmd-open-folder', group: '命令', title: '打开工作区', subtitle: '选择一个本地文件夹作为项目', icon: '📂', action: async () => { await switchPage('files'); void (window.__fileTree?.openFolder?.() || window.__chooseWorkspaceFolder?.()); } },
+    { id: 'cmd-project-overview', group: '命令', title: '打开项目概览', subtitle: '查看当前工作区统计和动态', icon: '📊', action: () => { void switchPage('project'); } },
+    { id: 'cmd-new-file', group: '命令', title: '新建文档', subtitle: '选择模板并创建 Markdown 文档', icon: '📝', action: async () => { await switchPage('files'); void window.__handleNewFile?.(); } },
     { id: 'cmd-new-todo', group: '命令', title: '新建待办', subtitle: '快速创建一条任务', icon: '➕', action: createQuickTodo },
-    { id: 'cmd-settings', group: '命令', title: '打开设置', subtitle: '配置 AI Provider、主题和快捷键', icon: '⚙️', action: () => switchPage('settings') },
-    { id: 'cmd-ai', group: '命令', title: '打开 AI 助手', subtitle: '进入 AI 对话页', icon: '🤖', action: () => switchPage('ai') },
+    { id: 'cmd-settings', group: '命令', title: '打开设置', subtitle: '配置 AI Provider、主题和快捷键', icon: '⚙️', action: () => { void switchPage('settings'); } },
+    { id: 'cmd-ai', group: '命令', title: '打开 AI 助手', subtitle: '进入 AI 对话页', icon: '🤖', action: () => { void switchPage('ai'); } },
     { id: 'cmd-edit-mode', group: '文档命令', title: '切换到编辑模式', subtitle: '仅显示 Markdown 编辑器', icon: '📝', action: () => runActiveMarkdownModeCommand('edit') },
     { id: 'cmd-preview-mode', group: '文档命令', title: '切换到预览模式', subtitle: '仅显示 Markdown 渲染预览', icon: '👁️', action: () => runActiveMarkdownModeCommand('preview') },
     { id: 'cmd-split-mode', group: '文档命令', title: '切换到分屏模式', subtitle: '左侧编辑右侧预览', icon: '↔️', action: () => runActiveMarkdownModeCommand('split') },
@@ -272,8 +276,8 @@ async function searchTodoResults(lowerQuery: string): Promise<PaletteResult[]> {
       subtitle: (task.completed ? '已完成' : '未完成') + ' · ' + priorityLabel(task.priority) + (task.sourceTitle ? ' · 来源：' + task.sourceTitle : ''),
       icon: task.completed ? '☑️' : '✅',
       action: async () => {
-        switchPage('todo');
-        setTimeout(() => { void window.__openTodoTask?.(task.id); }, 250);
+        await switchPage('todo');
+        void window.__openTodoTask?.(task.id);
       },
     }));
   } catch {
@@ -285,16 +289,44 @@ async function searchWorkspaceResults(query: string): Promise<PaletteResult[]> {
   const root = getCurrentWorkspaceRoot();
   if (!root) return [];
   const results = await ipcClient.fs.searchWorkspace({ rootPath: root, query, limit: 50 });
-  return results.map((item, index) => ({
-    id: item.type + '-' + index + '-' + item.path,
-    group: item.type === 'content' ? '文档内容' : '文件',
-    title: item.name,
-    subtitle: item.type === 'content'
-      ? `第 ${item.line || 1} 行 · ${item.snippet || item.path}`
-      : relativePath(root, item.path),
-    icon: item.type === 'content' ? '🔎' : fileIcon(item.name),
-    action: () => openFileFromPalette(item.path),
-  }));
+  const paletteResults: PaletteResult[] = [];
+
+  for (let i = 0; i < results.length; i++) {
+    const item = results[i];
+    const relPath = item.relativePath || relativePath(root, item.path);
+    const matchCount = item.matchCount || 0;
+    const extBadge = item.ext ? item.ext.slice(1).toUpperCase() : '';
+
+    // Add the main result
+    paletteResults.push({
+      id: item.type + '-' + i + '-' + item.path,
+      group: item.type === 'content' ? '文档内容' : '文件',
+      title: item.name,
+      subtitle: item.type === 'content'
+        ? (matchCount > 1 ? `${matchCount} 处匹配 · ` : '') + `第 ${item.line || item.matches?.[0]?.line || 1} 行 · ${item.snippet || item.matches?.[0]?.snippet || relPath}`
+        : (extBadge ? `[${extBadge}] ` : '') + relPath,
+      icon: item.type === 'content' ? '🔎' : fileIcon(item.name),
+      action: () => openFileFromPalette(item.path),
+    });
+
+    // Add extra matches for content results (up to 2 additional matches)
+    if (item.type === 'content' && item.matches && item.matches.length > 1) {
+      const extraMatches = item.matches.slice(1, 3);
+      for (let j = 0; j < extraMatches.length; j++) {
+        const match = extraMatches[j];
+        paletteResults.push({
+          id: item.type + '-' + i + '-m' + j + '-' + item.path,
+          group: '文档内容',
+          title: '  ↳ ' + item.name,
+          subtitle: `第 ${match.line} 行 · ${match.snippet}`,
+          icon: '🔎',
+          action: () => openFileFromPalette(item.path),
+        });
+      }
+    }
+  }
+
+  return paletteResults;
 }
 
 function getCurrentWorkspaceRoot(): string {
@@ -304,42 +336,42 @@ function getCurrentWorkspaceRoot(): string {
 }
 
 function openFileFromPalette(filePath: string): void {
-  switchPage('files');
-  setTimeout(() => {
+  void (async () => {
+    await switchPage('files');
     const openFilePath = window.__openFilePath;
     if (typeof openFilePath === 'function') void openFilePath(filePath);
-  }, 220);
+  })();
 }
 
 function runActiveMarkdownCommand(action: string): void {
-  switchPage('files');
-  setTimeout(() => {
+  void (async () => {
+    await switchPage('files');
     const em = window.__editorManager;
     if (!em?.activeEditor) {
       alert('请先在文件管理器中打开一个 Markdown 文档');
       return;
     }
     void em.runMarkdownCommand?.(action);
-  }, 220);
+  })();
 }
 
 function runActiveMarkdownModeCommand(mode: 'edit' | 'preview' | 'split'): void {
-  switchPage('files');
-  setTimeout(() => {
+  void (async () => {
+    await switchPage('files');
     const em = window.__editorManager;
     if (!em?.activeEditor) {
       alert('请先在文件管理器中打开一个 Markdown 文档');
       return;
     }
     em.setMarkdownMode?.(mode);
-  }, 220);
+  })();
 }
 
 function runProjectExportCommand(format: 'markdown' | 'pdf' | 'html'): void {
-  switchPage('project');
-  setTimeout(() => {
+  void (async () => {
+    await switchPage('project');
     void window.__exportProjectReport?.(format);
-  }, 260);
+  })();
 }
 
 async function createQuickTodo(): Promise<void> {
@@ -356,8 +388,8 @@ async function createQuickTodo(): Promise<void> {
     sourceType: 'manual',
   });
   window.dispatchEvent(new CustomEvent('nova:todo-data-changed'));
-  switchPage('todo');
-  setTimeout(() => window.__focusTodoQuickInput?.(), 250);
+  await switchPage('todo');
+  window.__focusTodoQuickInput?.();
 }
 
 function renderPaletteSections(container: HTMLElement, results: PaletteResult[]): void {

@@ -12,6 +12,7 @@ import {
   getPlanboardGroups,
   getTaskById,
   getCategoryById,
+  getCategoryOpenCounts,
   removeTaskFromStore,
   updateTaskInStore,
   PRI_COLORS,
@@ -37,8 +38,11 @@ export function renderTaskList(onRefresh: () => Promise<void>, onSelectTask?: (i
 
   measure('todo.renderTaskList', () => {
     const store = getStore();
+    area.dataset.view = store.viewMode;
     if (store.viewMode === 'timeline') {
       renderPlanboard(area);
+    } else if (store.viewMode === 'board') {
+      renderBoardView(area);
     } else {
       renderListView(area);
     }
@@ -132,6 +136,107 @@ function renderListView(area: HTMLElement): void {
   html += '</div>';
 
   area.innerHTML = html;
+}
+
+/**
+ * Kanban board view: group tasks by category into columns.
+ * Uncategorized tasks appear in a dedicated "未分类" column.
+ */
+function renderBoardView(area: HTMLElement): void {
+  const store = getStore();
+  const baseTasks = store.currentFilter === 'completed'
+    ? store.data.tasks.filter(t => t.completed)
+    : store.data.tasks.filter(t => store.showCompletedInMain ? true : !t.completed);
+
+  const catFiltered = store.selectedCatId
+    ? baseTasks.filter(t => t.categoryId === store.selectedCatId)
+    : baseTasks;
+
+  // Group tasks by category
+  const columns = new Map<string, TodoTask[]>();
+  const uncategorized: TodoTask[] = [];
+
+  for (const task of catFiltered) {
+    if (task.categoryId) {
+      if (!columns.has(task.categoryId)) columns.set(task.categoryId, []);
+      columns.get(task.categoryId)!.push(task);
+    } else {
+      uncategorized.push(task);
+    }
+  }
+
+  if (catFiltered.length === 0) {
+    area.innerHTML = renderEmptyState(store.currentFilter);
+    return;
+  }
+
+  let html = '<div class="kanban-board">';
+
+  // Uncategorized column (always show if there are uncategorized tasks or no categories)
+  if (uncategorized.length > 0 || store.data.categories.length === 0) {
+    html += renderKanbanColumn('', '未分类', '#888', uncategorized);
+  }
+
+  // All category columns (always show, even if empty — standard Kanban behavior)
+  for (const cat of store.data.categories) {
+    if (store.selectedCatId && cat.id !== store.selectedCatId) continue;
+    const colTasks = columns.get(cat.id) || [];
+    html += renderKanbanColumn(cat.id, cat.name, cat.color, colTasks);
+  }
+
+  html += '</div>';
+  area.innerHTML = html;
+
+  // Enforce column scrolling via JS — fix the flex-shrink issue
+  requestAnimationFrame(() => {
+    area.style.position = 'relative';
+    area.style.overflow = 'hidden';
+
+    const board = area.querySelector('.kanban-board') as HTMLElement | null;
+    if (!board) return;
+    const areaHeight = area.clientHeight;
+    if (areaHeight <= 0) return;
+    board.style.position = 'absolute';
+    board.style.top = '0';
+    board.style.left = '0';
+    board.style.right = '0';
+    board.style.bottom = '0';
+    board.style.overflowX = 'auto';
+    board.style.overflowY = 'hidden';
+    board.style.display = 'flex';
+
+    const columns = board.querySelectorAll<HTMLElement>('.kanban-column');
+    columns.forEach(col => {
+      col.style.height = board.clientHeight + 'px';
+      col.style.display = 'flex';
+      col.style.flexDirection = 'column';
+      col.style.overflow = 'hidden';
+
+      const body = col.querySelector('.kanban-column-body') as HTMLElement | null;
+      if (body) {
+        body.style.flex = '1 1 0';
+        body.style.minHeight = '0';
+        body.style.overflowY = 'auto';
+        // CRITICAL: prevent task cards from flex-shrinking
+        body.style.display = 'block';
+      }
+    });
+  });
+}
+
+function renderKanbanColumn(catId: string, name: string, color: string, tasks: TodoTask[]): string {
+  return '<div class="kanban-column">' +
+    '<div class="kanban-column-header">' +
+      '<span class="kanban-column-dot" style="background:' + esc(color) + '"></span>' +
+      '<span class="kanban-column-name">' + esc(name) + '</span>' +
+      '<span class="kanban-column-count">' + tasks.length + '</span>' +
+    '</div>' +
+    '<div class="kanban-column-body">' +
+      (tasks.length > 0
+        ? tasks.map(t => renderTaskCard(t)).join('')
+        : '<div class="kanban-column-empty">暂无任务</div>') +
+    '</div>' +
+  '</div>';
 }
 
 function renderTaskCard(task: TodoTask): string {

@@ -10,10 +10,14 @@ import type { TodoTask } from '@shared/types/todo';
 import type { RecentMarkdownFile } from '@shared/types/file';
 
 let quickActionsBound = false;
+let cachedAppVersion: string | null = null;
 
 async function initHomePage(): Promise<void> {
   ensureOnboardingStyles();
   renderGreeting();
+  if (!cachedAppVersion) {
+    cachedAppVersion = await ipcClient.app.getVersion().catch(() => '');
+  }
   await Promise.allSettled([
     renderTodoSummary(),
     renderRecentProjects(),
@@ -48,7 +52,7 @@ function showOnboardingModal(): void {
     modal.className = 'nova-onboarding-modal';
     modal.innerHTML =
       '<div class="nova-onboarding-card">' +
-        '<div class="nova-onboarding-badge">Nova v2.2</div>' +
+      '<div class="nova-onboarding-badge">Nova v' + esc(cachedAppVersion || '2.9') + '</div>' +
         '<h2>欢迎使用 Nova</h2>' +
         '<p>一个面向深度工作的 AI 工作台。你可以在这里管理 Markdown 文档、使用 AI 助手、整理待办任务，并把项目推进下去。</p>' +
         '<div class="nova-onboarding-steps">' +
@@ -74,7 +78,7 @@ function showOnboardingModal(): void {
 
   document.getElementById('onboarding-skip')?.addEventListener('click', close, { once: true });
   document.getElementById('onboarding-open-folder')?.addEventListener('click', () => { close(); void openWorkspacePicker(); }, { once: true });
-  document.getElementById('onboarding-settings')?.addEventListener('click', () => { close(); switchPage('settings'); }, { once: true });
+  document.getElementById('onboarding-settings')?.addEventListener('click', () => { close(); void switchPage('settings'); }, { once: true });
   document.getElementById('onboarding-create-sample')?.addEventListener('click', async () => {
     const btn = document.getElementById('onboarding-create-sample') as HTMLButtonElement | null;
     if (btn) { btn.disabled = true; btn.textContent = '正在创建...'; }
@@ -157,7 +161,7 @@ function renderTodayTaskList(tasks: TodoTask[]): void {
   const visible = tasks.slice(0, 6);
   if (visible.length === 0) {
     container.innerHTML = '<div class="home-empty-state"><strong>今天没有待办</strong><span>可以从 Markdown 文档里用 AI 生成任务，或手动创建一个待办。</span><button class="btn-ghost" id="btn-home-empty-todo">新建待办</button></div>';
-    document.getElementById('btn-home-empty-todo')?.addEventListener('click', () => switchPage('todo'));
+    document.getElementById('btn-home-empty-todo')?.addEventListener('click', () => { void switchPage('todo'); });
     return;
   }
 
@@ -187,7 +191,7 @@ function renderTodayTaskList(tasks: TodoTask[]): void {
       return;
     }
     const openBtn = target.closest('.home-task-open, .home-task-row') as HTMLElement | null;
-    if (openBtn) switchPage('todo');
+    if (openBtn) void switchPage('todo');
   };
 }
 
@@ -277,11 +281,11 @@ async function renderRecentDocs(): Promise<void> {
 }
 
 function openMarkdownFile(filePath: string): void {
-  switchPage('files');
-  setTimeout(() => {
+  void (async () => {
+    await switchPage('files');
     const openFilePath = window.__openFilePath;
     if (typeof openFilePath === 'function') void openFilePath(filePath);
-  }, 250);
+  })();
 }
 
 // ── AI 状态 ──
@@ -294,7 +298,7 @@ async function renderAIStatus(): Promise<void> {
     const provider = settings.providers.find(item => item.id === settings.defaultProviderId) || settings.providers.find(item => item.enabled) || settings.providers[0];
     if (!provider) {
       container.innerHTML = '<div class="home-ai-empty"><div><strong>尚未配置 AI 模型</strong><span>配置 DeepSeek、通义千问、Kimi、MiMo、Ollama 或自定义 OpenAI Compatible 接口后即可使用。</span></div><button class="btn-primary" id="btn-home-config-ai">去配置</button></div>';
-      document.getElementById('btn-home-config-ai')?.addEventListener('click', () => switchPage('settings'));
+      document.getElementById('btn-home-config-ai')?.addEventListener('click', () => { void switchPage('settings'); });
       return;
     }
 
@@ -391,35 +395,31 @@ async function renderRecentProjects(): Promise<void> {
 
 async function openRecentProject(projectPath: string): Promise<void> {
   await ipcClient.workspace.open({ rootPath: projectPath }).catch(() => null);
-  switchPage('files');
-  setTimeout(async () => {
-    const openWorkspace = window.__openWorkspaceRoot;
-    const ft = window.__fileTree;
-    const store = window.__filesStore;
+  await switchPage('files');
+  const openWorkspace = window.__openWorkspaceRoot;
+  const ft = window.__fileTree;
+  const store = window.__filesStore;
 
-    if (typeof openWorkspace === 'function') {
-      await openWorkspace(projectPath, { restoreSession: true });
-      return;
-    }
+  if (typeof openWorkspace === 'function') {
+    await openWorkspace(projectPath, { restoreSession: true });
+    return;
+  }
 
-    if (ft?.openProjectPath) {
-      await ft.openProjectPath(projectPath);
-      if (store) store.setWorkspaceRoot(projectPath);
-    }
-  }, 200);
+  if (ft?.openProjectPath) {
+    await ft.openProjectPath(projectPath);
+    if (store) store.setWorkspaceRoot(projectPath);
+  }
 }
 
 async function openWorkspacePicker(): Promise<void> {
-  switchPage('files');
-  setTimeout(async () => {
-    const chooseWorkspace = window.__chooseWorkspaceFolder;
-    const ft = window.__fileTree;
-    if (typeof chooseWorkspace === 'function') {
-      await chooseWorkspace();
-    } else if (ft?.openFolder) {
-      await ft.openFolder();
-    }
-  }, 200);
+  await switchPage('files');
+  const chooseWorkspace = window.__chooseWorkspaceFolder;
+  const ft = window.__fileTree;
+  if (typeof chooseWorkspace === 'function') {
+    await chooseWorkspace();
+  } else if (ft?.openFolder) {
+    await ft.openFolder();
+  }
 }
 
 async function removeRecentProject(projectPath: string): Promise<void> {
@@ -434,11 +434,11 @@ async function removeRecentProject(projectPath: string): Promise<void> {
 function bindQuickActions(): void {
   if (quickActionsBound) return;
   quickActionsBound = true;
-  document.getElementById('btn-go-files')?.addEventListener('click', () => switchPage('files'));
-  document.getElementById('btn-go-ai')?.addEventListener('click', () => switchPage('ai'));
-  document.getElementById('btn-go-todo')?.addEventListener('click', () => switchPage('todo'));
-  document.getElementById('btn-home-view-todo')?.addEventListener('click', () => switchPage('todo'));
-  document.getElementById('btn-home-ai-settings')?.addEventListener('click', () => switchPage('settings'));
+  document.getElementById('btn-go-files')?.addEventListener('click', () => { void switchPage('files'); });
+  document.getElementById('btn-go-ai')?.addEventListener('click', () => { void switchPage('ai'); });
+  document.getElementById('btn-go-todo')?.addEventListener('click', () => { void switchPage('todo'); });
+  document.getElementById('btn-home-view-todo')?.addEventListener('click', () => { void switchPage('todo'); });
+  document.getElementById('btn-home-ai-settings')?.addEventListener('click', () => { void switchPage('settings'); });
   document.getElementById('btn-home-open-folder')?.addEventListener('click', () => openWorkspacePicker());
   document.getElementById('btn-new-project')?.addEventListener('click', () => openWorkspacePicker());
   document.getElementById('btn-home-create-sample')?.addEventListener('click', () => { void createSampleWorkspaceFromHome(); });

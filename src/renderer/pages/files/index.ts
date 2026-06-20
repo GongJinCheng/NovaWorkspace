@@ -318,24 +318,52 @@ function renderQuickOpenResults(query: string): void {
   if (!results) return;
 
   const q = query.trim().toLowerCase();
-  const matches = quickOpenFiles
-    .filter((path) => !q || path.toLowerCase().includes(q))
-    .slice(0, 80);
+
+  let matches: Array<{ path: string; score: number; highlightName: string; highlightPath: string }>;
+
+  if (!q) {
+    // No query: show recent files (first 40)
+    matches = quickOpenFiles.slice(0, 40).map(p => {
+      const name = p.split(/[/\\]/).pop() || p;
+      const root = store.getWorkspaceRoot();
+      const relative = root ? p.replace(root, '').replace(/^[/\\]/, '') : p;
+      return { path: p, score: 0, highlightName: escHTML(name), highlightPath: escHTML(relative) };
+    });
+  } else {
+    // Fuzzy match with scoring
+    matches = quickOpenFiles
+      .map(p => {
+        const name = (p.split(/[/\\]/).pop() || p).toLowerCase();
+        const score = fuzzyScorePath(q, name, p.toLowerCase());
+        return { path: p, score, name };
+      })
+      .filter(m => m.score > 0)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 80)
+      .map(m => {
+        const name = m.path.split(/[/\\]/).pop() || m.path;
+        const root = store.getWorkspaceRoot();
+        const relative = root ? m.path.replace(root, '').replace(/^[/\\]/, '') : m.path;
+        return {
+          path: m.path,
+          score: m.score,
+          highlightName: highlightMatch(name, q),
+          highlightPath: escHTML(relative),
+        };
+      });
+  }
 
   if (matches.length === 0) {
     results.innerHTML = '<div class="quick-open-empty">没有匹配的文件</div>';
     return;
   }
 
-  results.innerHTML = matches.map((path, index) => {
-    const name = path.split(/[/\\]/).pop() || path;
-    const root = store.getWorkspaceRoot();
-    const relative = root ? path.replace(root, '').replace(/^[/\\]/, '') : path;
-    return '<div class="quick-open-item' + (index === quickOpenSelectedIndex ? ' selected' : '') + '" data-path="' + escAttr(path) + '">' +
-      '<span class="quick-open-file-name">' + escHTML(name) + '</span>' +
-      '<span class="quick-open-file-path">' + escHTML(relative) + '</span>' +
-    '</div>';
-  }).join('');
+  results.innerHTML = matches.map((m, index) =>
+    '<div class="quick-open-item' + (index === quickOpenSelectedIndex ? ' selected' : '') + '" data-path="' + escAttr(m.path) + '">' +
+      '<span class="quick-open-file-name">' + m.highlightName + '</span>' +
+      '<span class="quick-open-file-path">' + m.highlightPath + '</span>' +
+    '</div>'
+  ).join('');
 
   results.querySelectorAll('.quick-open-item').forEach((item, index) => {
     item.addEventListener('mouseenter', () => {
@@ -347,6 +375,70 @@ function renderQuickOpenResults(query: string): void {
       if (path) openQuickOpenFile(path);
     });
   });
+}
+
+/** Fuzzy score: all query chars must appear in order. Rewards consecutive matches and start-of-word. */
+function fuzzyScorePath(query: string, nameLower: string, pathLower: string): number {
+  // Exact substring match gets highest score
+  if (nameLower.includes(query)) return 100 + query.length;
+  if (pathLower.includes(query)) return 50 + query.length;
+
+  // Fuzzy character-by-character match
+  let qi = 0;
+  let score = 0;
+  let consecutive = 0;
+  for (let ti = 0; ti < nameLower.length && qi < query.length; ti++) {
+    if (nameLower[ti] === query[qi]) {
+      qi++;
+      consecutive++;
+      score += consecutive * 3;
+      // Bonus for matching after separator (start of word)
+      if (ti === 0 || nameLower[ti - 1] === '/' || nameLower[ti - 1] === '\\' || nameLower[ti - 1] === '-' || nameLower[ti - 1] === '_' || nameLower[ti - 1] === '.') {
+        score += 10;
+      }
+    } else {
+      consecutive = 0;
+    }
+  }
+  if (qi < query.length) {
+    // Try matching against the full path
+    qi = 0;
+    score = 0;
+    consecutive = 0;
+    for (let ti = 0; ti < pathLower.length && qi < query.length; ti++) {
+      if (pathLower[ti] === query[qi]) {
+        qi++;
+        consecutive++;
+        score += consecutive * 2;
+        if (ti === 0 || pathLower[ti - 1] === '/' || pathLower[ti - 1] === '\\' || pathLower[ti - 1] === '-' || pathLower[ti - 1] === '_' || pathLower[ti - 1] === '.') {
+          score += 8;
+        }
+      } else {
+        consecutive = 0;
+      }
+    }
+    if (qi < query.length) return 0;
+  }
+  return Math.max(1, score);
+}
+
+/** Highlight matched characters in a string with <mark> tags. */
+function highlightMatch(text: string, query: string): string {
+  if (!query) return escHTML(text);
+  const q = query.toLowerCase();
+  const t = text.toLowerCase();
+  const result: string[] = [];
+  let qi = 0;
+
+  for (let i = 0; i < text.length; i++) {
+    if (qi < q.length && t[i] === q[qi]) {
+      result.push('<mark>' + escHTML(text[i]) + '</mark>');
+      qi++;
+    } else {
+      result.push(escHTML(text[i]));
+    }
+  }
+  return result.join('');
 }
 
 function updateQuickOpenSelection(): void {
