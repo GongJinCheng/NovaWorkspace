@@ -3,6 +3,7 @@ import { ipcClient } from './ipc-client';
 import { getCurrentWorkspaceRoot } from './workspace-context';
 import { aiService } from '../pages/ai/ai-service';
 import { escHtml } from '../utils/escape';
+import { novaIcon, iconForTemplate } from '../utils/icons';
 
 export type BuiltInTemplateId =
   | 'blank'
@@ -202,7 +203,7 @@ async function showTemplateCreateDialog(templateId: string | undefined, input: {
     const currentTemplate = () => findTemplate(selectedId) || templates[0];
     const cards = sortTemplatesByRecent(templates).map((template) =>
       '<button class="template-card' + (template.id === selectedId ? ' selected' : '') + '" data-template-id="' + escAttr(template.id) + '">' +
-        '<span class="template-card-icon">' + escHtml(template.icon) + '</span>' +
+        '<span class="template-card-icon template-card-icon-svg">' + novaIcon(iconForTemplate(template.id), 'nova-icon') + '</span>' +
         '<span class="template-card-main"><strong>' + escHtml(template.name) + '</strong><em>' + escHtml(template.description) + '</em></span>' +
       '</button>'
     ).join('');

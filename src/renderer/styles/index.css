@@ -1,4 +1,4 @@
-﻿/* ============================================================
+/* ============================================================
  * index.css — Entry Point
  * 
  * Imports all modular CSS files in dependency order.
@@ -17,3 +17,19 @@
 @import './pages/knowledge.css';
 @import './pages/settings.css';
 @import './inline-fixes.css';
+@import './nova-ui-refresh.css';
+@import './nova-scroll-hero-fix.css';
+@import './nova-all-pages-ui-upgrade.css';
+@import './nova-v296-design-system.css';
+@import './nova-v297-complete-ui-system.css';
+@import './nova-v298-product-experience-polish.css';
+@import './nova-v299-layout-rebalance.css';
+@import './nova-v2910-onboarding-light.css';
+
+@import './nova-v2911-ai-workflows.css';
+@import './nova-v2912-ai-deep-rebuild.css';
+@import './nova-v2913-ai-overlap-fix.css';
+@import './nova-v2914-ai-studio-compact.css';
+@import './nova-v2915-ai-result-modal-fix.css';
+
+@import './nova-v2916-ai-interaction-polish.css';

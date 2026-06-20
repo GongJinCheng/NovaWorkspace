@@ -1,6 +1,6 @@
 {
   "name": "nova",
-  "version": "2.9.3",
+  "version": "2.9.16",
   "description": "Nova - All-in-one productivity workspace",
   "main": "dist/main/index.js",
   "author": "GongJinCheng",

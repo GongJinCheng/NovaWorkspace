@@ -20,7 +20,7 @@ export function createRingChart(
     size = 80,
     strokeWidth = 6,
     bgColor = 'rgba(255,255,255,0.1)',
-    fgColor = '#6366f1',
+    fgColor = '#8B8BFF',
     animated = true,
   } = options;
 

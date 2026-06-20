@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Home Page - 今日工作台
  * 把首页从“导航页”升级为工作入口：今日待办、最近文档、AI 状态、最近项目。
  */
@@ -10,6 +10,7 @@ import type { TodoTask } from '@shared/types/todo';
 import type { RecentMarkdownFile } from '@shared/types/file';
 import { escHtml, escAttr } from '../../utils/escape';
 import { isOverdue, isDueToday } from '../../utils/date';
+import { novaIcon, novaIconTile } from '../../utils/icons';
 
 let quickActionsBound = false;
 let cachedAppVersion: string | null = null;
@@ -162,7 +163,7 @@ function renderTodayTaskList(tasks: TodoTask[]): void {
   if (!container) return;
   const visible = tasks.slice(0, 6);
   if (visible.length === 0) {
-    container.innerHTML = '<div class="home-empty-state"><strong>今天没有待办</strong><span>可以从 Markdown 文档里用 AI 生成任务，或手动创建一个待办。</span><button class="btn-ghost" id="btn-home-empty-todo">新建待办</button></div>';
+    container.innerHTML = '<div class="home-empty-state nova-state-card">' + novaIconTile('task', 'nova-state-icon') + '<strong>今天没有待办</strong><span>可以从 Markdown 文档里用 AI 生成任务，或手动创建一个待办。</span><button class="btn-ghost" id="btn-home-empty-todo">新建待办</button></div>'; 
     document.getElementById('btn-home-empty-todo')?.addEventListener('click', () => { void switchPage('todo'); });
     return;
   }
@@ -241,14 +242,14 @@ async function renderRecentDocs(): Promise<void> {
     const workspaces = await ipcClient.workspace.list();
     const docs = await ipcClient.fs.getRecentMarkdown(workspaces.map(w => w.rootPath));
     if (docs.length === 0) {
-      container.innerHTML = '<div class="home-empty-state"><strong>还没有 Markdown 文档</strong><span>打开工作区后，最近编辑的 .md 文档会显示在这里。</span><button class="btn-ghost" id="btn-home-doc-open">打开工作区</button></div>';
+      container.innerHTML = '<div class="home-empty-state nova-state-card">' + novaIconTile('markdown', 'nova-state-icon') + '<strong>还没有 Markdown 文档</strong><span>打开工作区后，最近编辑的 .md 文档会显示在这里。</span><button class="btn-ghost" id="btn-home-doc-open">打开工作区</button></div>'; 
       document.getElementById('btn-home-doc-open')?.addEventListener('click', () => openWorkspacePicker());
       return;
     }
 
     container.innerHTML = docs.slice(0, 6).map(doc =>
       '<div class="home-doc-item" data-path="' + escAttr(doc.path) + '">' +
-        '<div class="home-doc-icon">MD</div>' +
+        '<div class="home-doc-icon home-doc-icon-svg">' + novaIcon('markdown', 'nova-icon nova-icon-sm') + '</div>' +
         '<div class="home-doc-main"><div class="home-doc-name">' + escHtml(doc.name) + '</div>' +
         '<div class="home-doc-meta">' + escHtml(doc.workspaceName) + ' · ' + formatRelativeTime(doc.modifiedAt) + '</div></div>' +
       '</div>'
@@ -260,7 +261,7 @@ async function renderRecentDocs(): Promise<void> {
     };
   } catch (err) {
     console.error('[Home] renderRecentDocs failed:', err);
-    container.innerHTML = '<div class="home-empty-state"><strong>最近文档读取失败</strong><span>请重新打开工作区后再试。</span></div>';
+    container.innerHTML = '<div class="home-empty-state nova-state-card is-error">' + novaIconTile('error', 'nova-state-icon') + '<strong>最近文档读取失败</strong><span>请重新打开工作区后再试。</span></div>'; 
   }
 }
 
@@ -328,7 +329,7 @@ async function renderRecentProjects(): Promise<void> {
     if (projects.length === 0) {
       container.innerHTML =
         '<div class="home-recent-empty">' +
-        '<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.25"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/><line x1="12" y1="11" x2="12" y2="17"/><line x1="9" y1="14" x2="15" y2="14"/></svg>' +
+        novaIconTile('folder', 'nova-state-icon') +
         '<p>还没有打开过工作区</p>' +
         '<button class="btn-primary" id="btn-home-create-sample">创建示例工作区</button>' +
         '<button class="btn-ghost" id="btn-home-open-folder">打开文件夹</button>' +
@@ -340,7 +341,7 @@ async function renderRecentProjects(): Promise<void> {
 
     container.innerHTML = projects.slice(0, 6).map((p: Workspace) =>
       '<div class="home-recent-item" data-path="' + escAttr(p.rootPath) + '">' +
-      '<div class="home-recent-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg></div>' +
+      '<div class="home-recent-icon">' + novaIcon('folder', 'nova-icon nova-icon-sm') + '</div>' +
       '<div class="home-recent-info"><div class="home-recent-name">' + escHtml(p.name) + '</div><div class="home-recent-path">' + escHtml(p.rootPath) + '</div></div>' +
       '<div class="home-recent-meta"><span class="home-recent-time">' + formatRelativeTime(p.lastOpened) + '</span>' +
       '<button class="home-recent-remove" data-path="' + escAttr(p.rootPath) + '" title="移除记录"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>' +

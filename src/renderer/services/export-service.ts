@@ -124,7 +124,7 @@ export function buildExportHtml(input: { title: string; subtitle?: string; bodyH
   <style>
     :root {
       color-scheme: light;
-      --accent: #6366f1;
+      --accent: #8B8BFF;
       --text: #171725;
       --muted: #6b7280;
       --line: #e5e7eb;

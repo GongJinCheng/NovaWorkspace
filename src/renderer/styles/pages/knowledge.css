@@ -1,10 +1,40 @@
 /* ── Knowledge Base Page — v2.9.x ─────────────────────────────────── */
 
+/* Nova Background Glow */
+#page-knowledge::before {
+  content: '';
+  position: absolute;
+  bottom: -80px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 500px;
+  height: 500px;
+  background: radial-gradient(circle at center,
+    rgba(139, 139, 255, 0.12) 0%,
+    rgba(245, 166, 35, 0.04) 30%,
+    transparent 65%
+  );
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 0;
+  animation: novaPulse 8s ease-in-out infinite;
+}
+
+/* Light mode: visible bottom-center glow */
+[data-theme="light"] #page-knowledge::before {
+  background: radial-gradient(circle at center,
+    rgba(88, 88, 214, 0.25) 0%,
+    rgba(139, 139, 255, 0.16) 30%,
+    transparent 65%
+  );
+}
+
 #page-knowledge {
   display: none;
   flex-direction: column;
   height: 100%;
   overflow: hidden;
+  position: relative;
 }
 
 #page-knowledge.active {
@@ -31,8 +61,10 @@
 
 .kb-header-left h2 {
   margin: 0;
-  font-size: 18px;
-  font-weight: var(--font-weight-semibold);
+  font-family: var(--font-family-display);
+  font-size: 20px;
+  font-weight: var(--font-weight-bold);
+  letter-spacing: -0.3px;
   color: var(--text-primary);
 }
 
@@ -91,6 +123,7 @@
 .kb-search-wrap:focus-within {
   border-color: var(--accent);
   background: var(--bg-surface);
+  box-shadow: 0 0 0 3px var(--accent-soft), 0 2px 12px rgba(139,139,255,0.08);
 }
 
 .kb-search-wrap svg {
@@ -264,12 +297,18 @@
   border-radius: var(--radius-md);
   background: var(--bg-surface);
   margin-bottom: 8px;
-  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+  box-shadow: var(--shadow-sm);
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast), transform var(--transition-fast);
 }
 
 .kb-card:hover {
   border-color: var(--accent);
-  box-shadow: 0 1px 4px rgba(99, 102, 241, 0.08);
+  box-shadow: var(--shadow-md), 0 0 20px rgba(139,139,255,0.12);
+  transform: translateY(-2px);
+}
+
+[data-theme="light"] .kb-card:hover {
+  box-shadow: 0 6px 22px rgba(0,0,0,0.12), 0 0 24px rgba(88, 88, 214, 0.15);
 }
 
 .kb-card-main {
@@ -361,7 +400,7 @@
   flex-direction: column;
   width: 420px;
   border-left: 1px solid var(--border-subtle);
-  background: var(--bg-surface);
+  background: var(--bg-elevated);
   flex-shrink: 0;
 }
 

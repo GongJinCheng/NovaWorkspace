@@ -28,8 +28,9 @@
 .app-logo {
   width: 18px;
   height: 18px;
-  background: linear-gradient(135deg, var(--accent), #a78bfa);
+  background: linear-gradient(135deg, var(--accent) 0%, var(--nova-burst) 60%, #F5D76E 100%);
   border-radius: 5px;
+  box-shadow: 0 0 12px rgba(139, 139, 255, 0.25), 0 0 24px rgba(245, 166, 35, 0.15);
 }
 
 .app-title {
@@ -304,13 +305,14 @@
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  background: linear-gradient(135deg, var(--accent), #a78bfa);
+  background: linear-gradient(135deg, var(--accent) 0%, var(--nova-burst) 55%, #F5D76E 100%);
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 13px;
   font-weight: 700;
   color: #fff;
+  box-shadow: 0 0 16px rgba(245, 166, 35, 0.22);
 }
 
 .user-meta {
@@ -411,8 +413,8 @@
 .main-content {
   flex: 1;
   overflow: hidden;
-  background: var(--bg-base);
-  transition: background-color 0.3s ease;
+  background: var(--bg-deep);
+  transition: background-color 0.4s ease;
   position: relative;
   min-width: 0;
 }
@@ -583,9 +585,9 @@
 }
 .command-palette-item.selected,
 .search-item.selected {
-  background: rgba(99, 102, 241, 0.12);
+  background: var(--accent-soft);
   color: var(--text-primary);
-  outline: 1px solid rgba(99, 102, 241, 0.26);
+  outline: 1px solid color-mix(in srgb, var(--accent) 24%, transparent);
 }
 .search-item-main {
   min-width: 0;

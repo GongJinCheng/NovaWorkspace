@@ -1,0 +1,781 @@
+/* ============================================================
+ * Nova v2.9.8 — Product Experience Polish
+ * Scope: workspace layout收口 / 微交互 / 组件系统样式 / 首次引导 / 命令面板升级
+ * ============================================================ */
+
+:root {
+  --nova-page-max: 1540px;
+  --nova-page-pad: clamp(18px, 2.4vw, 32px);
+  --nova-card-radius: 24px;
+  --nova-card-radius-sm: 18px;
+  --nova-ease: cubic-bezier(.2, .8, .2, 1);
+  --nova-shadow-ambient: 0 26px 80px rgba(31, 34, 68, .12);
+  --nova-shadow-lift: 0 22px 64px rgba(64, 65, 120, .18);
+  --nova-border-soft: rgba(124, 114, 255, .18);
+  --nova-surface: rgba(255, 255, 255, .70);
+  --nova-surface-strong: rgba(255, 255, 255, .86);
+  --nova-surface-muted: rgba(244, 244, 252, .64);
+  --nova-text-strong: #17172c;
+  --nova-text-soft: #717491;
+  --nova-accent: #6966f6;
+  --nova-accent-2: #a07cff;
+  --nova-accent-3: #f2a25b;
+}
+
+html[data-theme='dark'] {
+  --nova-shadow-ambient: 0 28px 90px rgba(0, 0, 0, .34);
+  --nova-shadow-lift: 0 24px 68px rgba(0, 0, 0, .44);
+  --nova-border-soft: rgba(160, 147, 255, .18);
+  --nova-surface: rgba(18, 20, 34, .72);
+  --nova-surface-strong: rgba(25, 27, 44, .86);
+  --nova-surface-muted: rgba(38, 40, 60, .58);
+  --nova-text-strong: #f4f5ff;
+  --nova-text-soft: #a9acc5;
+  --nova-accent: #8d86ff;
+  --nova-accent-2: #ba9aff;
+  --nova-accent-3: #f4b36d;
+}
+
+/* ---------- 1. 专业工作台布局收口 ---------- */
+.main-content {
+  background:
+    radial-gradient(circle at 22% 8%, rgba(123, 116, 255, .14), transparent 30%),
+    radial-gradient(circle at 84% 2%, rgba(244, 163, 96, .13), transparent 34%),
+    linear-gradient(145deg, rgba(247, 247, 255, .88), rgba(237, 239, 249, .72));
+}
+
+html[data-theme='dark'] .main-content {
+  background:
+    radial-gradient(circle at 22% 8%, rgba(126, 118, 255, .16), transparent 32%),
+    radial-gradient(circle at 82% 2%, rgba(244, 163, 96, .10), transparent 34%),
+    linear-gradient(145deg, rgba(13, 15, 26, .94), rgba(22, 23, 36, .92));
+}
+
+.page.active {
+  padding: var(--nova-page-pad);
+}
+
+.home-page,
+.project-page,
+.kb-page,
+.settings-page,
+.ai-layout,
+.todo-workstation,
+.file-manager-full {
+  max-width: var(--nova-page-max);
+  margin: 0 auto;
+}
+
+.home-page,
+.project-page,
+.kb-page,
+.settings-page {
+  width: 100%;
+}
+
+.project-content,
+.home-page,
+.kb-page,
+.settings-page {
+  gap: 22px;
+}
+
+.home-hero,
+.project-hero,
+.kb-header,
+.settings-header,
+.ai-chat-header,
+.todo-workspace-header {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--nova-border-soft) !important;
+  background:
+    radial-gradient(circle at 12% 12%, rgba(117, 103, 255, .16), transparent 32%),
+    radial-gradient(circle at 86% 18%, rgba(245, 171, 104, .13), transparent 30%),
+    linear-gradient(135deg, rgba(255, 255, 255, .86), rgba(250, 250, 255, .58)) !important;
+  box-shadow: var(--nova-shadow-ambient);
+  backdrop-filter: blur(22px) saturate(1.12);
+}
+
+html[data-theme='dark'] .home-hero,
+html[data-theme='dark'] .project-hero,
+html[data-theme='dark'] .kb-header,
+html[data-theme='dark'] .settings-header,
+html[data-theme='dark'] .ai-chat-header,
+html[data-theme='dark'] .todo-workspace-header {
+  background:
+    radial-gradient(circle at 12% 12%, rgba(130, 119, 255, .18), transparent 34%),
+    radial-gradient(circle at 88% 10%, rgba(245, 171, 104, .10), transparent 30%),
+    linear-gradient(135deg, rgba(31, 33, 52, .92), rgba(24, 26, 42, .72)) !important;
+}
+
+.home-hero::after,
+.project-hero::after,
+.kb-header::after,
+.settings-header::after,
+.ai-chat-header::after,
+.todo-workspace-header::after {
+  content: '';
+  position: absolute;
+  right: 26px;
+  top: 18px;
+  width: 142px;
+  height: 142px;
+  border-radius: 36px;
+  border: 1px solid rgba(124, 114, 255, .12);
+  background-image:
+    linear-gradient(rgba(124,114,255,.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(124,114,255,.08) 1px, transparent 1px);
+  background-size: 18px 18px;
+  transform: rotate(-9deg);
+  opacity: .72;
+  pointer-events: none;
+}
+
+.home-hero > *,
+.project-hero > *,
+.kb-header > *,
+.settings-header > *,
+.ai-chat-header > *,
+.todo-workspace-header > * {
+  position: relative;
+  z-index: 1;
+}
+
+.home-hero h1,
+.project-hero h1,
+.settings-header h1,
+.kb-header h2 {
+  letter-spacing: -.045em;
+}
+
+.home-section,
+.project-section,
+.project-stat-card,
+.project-action-card,
+.home-stat-card,
+.home-quick-card,
+.kb-toolbar,
+.kb-list,
+.kb-detail-panel,
+.settings-section,
+.ai-sidebar-section,
+.todo-sidebar,
+.todo-capture-bar,
+.todo-toolbar,
+.todo-drawer,
+.file-sidebar,
+.file-editor-area {
+  border: 1px solid rgba(122, 116, 176, .14) !important;
+  background: var(--nova-surface-strong) !important;
+  box-shadow: 0 16px 48px rgba(44, 45, 84, .09);
+  backdrop-filter: blur(18px) saturate(1.08);
+}
+
+html[data-theme='dark'] .home-section,
+html[data-theme='dark'] .project-section,
+html[data-theme='dark'] .project-stat-card,
+html[data-theme='dark'] .project-action-card,
+html[data-theme='dark'] .home-stat-card,
+html[data-theme='dark'] .home-quick-card,
+html[data-theme='dark'] .kb-toolbar,
+html[data-theme='dark'] .kb-list,
+html[data-theme='dark'] .kb-detail-panel,
+html[data-theme='dark'] .settings-section,
+html[data-theme='dark'] .ai-sidebar-section,
+html[data-theme='dark'] .todo-sidebar,
+html[data-theme='dark'] .todo-capture-bar,
+html[data-theme='dark'] .todo-toolbar,
+html[data-theme='dark'] .todo-drawer,
+html[data-theme='dark'] .file-sidebar,
+html[data-theme='dark'] .file-editor-area {
+  box-shadow: 0 18px 56px rgba(0, 0, 0, .22);
+}
+
+.home-overview-grid,
+.project-stats-grid,
+.project-action-grid,
+.project-template-grid,
+.home-quick-grid {
+  gap: 16px !important;
+}
+
+.project-stats-grid {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)) !important;
+}
+
+.project-action-grid {
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)) !important;
+}
+
+.project-columns,
+.home-columns {
+  gap: 22px !important;
+}
+
+.file-manager-full,
+.ai-layout,
+.todo-workstation {
+  height: 100%;
+  min-height: 0;
+  border-radius: 28px;
+}
+
+.file-manager-full {
+  overflow: hidden;
+  box-shadow: var(--nova-shadow-ambient);
+}
+
+.ai-layout,
+.todo-workstation {
+  gap: 18px;
+}
+
+/* ---------- 2. 交互动效细节 ---------- */
+.page.page-enter {
+  animation: novaPageIn .34s var(--nova-ease) both;
+}
+
+@keyframes novaPageIn {
+  from { opacity: .001; transform: translateY(8px) scale(.996); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+button,
+.home-quick-card,
+.home-stat-card,
+.project-stat-card,
+.project-action-card,
+.project-template-card,
+.project-doc-item,
+.project-activity-item,
+.kb-item,
+.todo-task-card,
+.search-item,
+.settings-radio,
+.settings-shortcut,
+.tab,
+.file-tree-item {
+  transition:
+    transform .18s var(--nova-ease),
+    box-shadow .18s var(--nova-ease),
+    border-color .18s var(--nova-ease),
+    background .18s var(--nova-ease),
+    color .18s var(--nova-ease),
+    opacity .18s var(--nova-ease) !important;
+}
+
+.home-quick-card:hover,
+.home-stat-card:hover,
+.project-stat-card:hover,
+.project-action-card:hover,
+.project-template-card:hover,
+.project-doc-item:hover,
+.project-activity-item:hover,
+.kb-item:hover,
+.todo-task-card:hover,
+.settings-section:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--nova-shadow-lift) !important;
+  border-color: rgba(118, 105, 255, .28) !important;
+}
+
+button:active,
+.home-quick-card:active,
+.project-action-card:active,
+.kb-btn:active,
+.todo-view-btn:active,
+.search-item:active {
+  transform: translateY(1px) scale(.99);
+}
+
+.ai-message,
+.message,
+.markdown-ai-modal-card,
+.local-login-card,
+.kb-modal-dialog {
+  animation: novaPopIn .22s var(--nova-ease) both;
+}
+
+@keyframes novaPopIn {
+  from { opacity: 0; transform: translateY(8px) scale(.985); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* ---------- 3. 统一组件系统基础样式 ---------- */
+.nova-btn {
+  border: 1px solid rgba(120, 112, 255, .20);
+  border-radius: 14px;
+  padding: 10px 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  color: var(--nova-text-strong);
+  background: rgba(255, 255, 255, .72);
+  box-shadow: 0 12px 28px rgba(45, 47, 96, .08);
+}
+
+html[data-theme='dark'] .nova-btn {
+  background: rgba(255, 255, 255, .08);
+  color: #f7f7ff;
+}
+
+.nova-btn-primary,
+.btn-primary,
+.ai-chat-send,
+.ai-save,
+.kb-btn-primary {
+  border-color: rgba(105, 102, 246, .22) !important;
+  color: white !important;
+  background: linear-gradient(135deg, #615ef0, #8d72ff) !important;
+  box-shadow: 0 14px 38px rgba(94, 91, 236, .28) !important;
+}
+
+.nova-btn-ghost,
+.btn-ghost,
+.link-btn {
+  background: rgba(255, 255, 255, .62) !important;
+}
+
+html[data-theme='dark'] .nova-btn-ghost,
+html[data-theme='dark'] .btn-ghost,
+html[data-theme='dark'] .link-btn {
+  background: rgba(255, 255, 255, .07) !important;
+}
+
+.nova-btn-soft {
+  color: var(--nova-accent) !important;
+  background: rgba(118, 105, 255, .10) !important;
+}
+
+.nova-btn-icon,
+.command-svg-icon,
+.nova-icon {
+  width: 16px;
+  height: 16px;
+  display: inline-block;
+  flex: 0 0 auto;
+}
+
+.nova-icon-tile,
+.nova-empty-illustration {
+  width: 42px;
+  height: 42px;
+  border-radius: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--nova-accent);
+  background: linear-gradient(135deg, rgba(107, 102, 246, .15), rgba(244, 163, 96, .12));
+  border: 1px solid rgba(122, 116, 255, .14);
+}
+
+.nova-empty-illustration {
+  width: 66px;
+  height: 66px;
+  border-radius: 24px;
+}
+
+.nova-empty-illustration .nova-icon {
+  width: 30px;
+  height: 30px;
+}
+
+.nova-empty-state {
+  width: min(460px, 100%);
+  margin: auto;
+  padding: 32px;
+  border-radius: 26px;
+  border: 1px solid rgba(122, 116, 255, .14);
+  background: linear-gradient(145deg, rgba(255,255,255,.78), rgba(246,246,255,.52));
+  text-align: center;
+  box-shadow: 0 20px 58px rgba(51, 53, 92, .10);
+}
+
+html[data-theme='dark'] .nova-empty-state {
+  background: linear-gradient(145deg, rgba(28,30,48,.88), rgba(20,22,36,.62));
+}
+
+.nova-empty-state h3 {
+  margin: 16px 0 8px;
+  font-size: 20px;
+  letter-spacing: -.02em;
+}
+
+.nova-empty-state p {
+  margin: 0 0 18px;
+  color: var(--nova-text-soft);
+  line-height: 1.7;
+}
+
+.nova-skeleton-card {
+  padding: 18px;
+  border-radius: 18px;
+  background: var(--nova-surface-muted);
+}
+
+.nova-skeleton-line {
+  display: block;
+  height: 12px;
+  border-radius: 999px;
+  margin: 10px 0;
+  background: linear-gradient(90deg, rgba(130,130,160,.14), rgba(255,255,255,.52), rgba(130,130,160,.14));
+  background-size: 220% 100%;
+  animation: novaShimmer 1.5s linear infinite;
+}
+
+.nova-skeleton-line.line-2 { width: 72%; }
+.nova-skeleton-line.line-3 { width: 46%; }
+
+@keyframes novaShimmer {
+  from { background-position: 100% 0; }
+  to { background-position: -100% 0; }
+}
+
+/* ---------- 4. 首次使用引导 ---------- */
+.nova-onboarding-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 28px;
+}
+
+.nova-onboarding-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(14, 16, 32, .44);
+  backdrop-filter: blur(10px);
+}
+
+.nova-onboarding-card {
+  position: relative;
+  width: min(560px, calc(100vw - 44px));
+  border-radius: 30px;
+  padding: 28px;
+  border: 1px solid rgba(255, 255, 255, .48);
+  background:
+    radial-gradient(circle at 0% 0%, rgba(118, 105, 255, .23), transparent 36%),
+    radial-gradient(circle at 100% 0%, rgba(244, 163, 96, .18), transparent 34%),
+    rgba(255,255,255,.88);
+  box-shadow: 0 36px 120px rgba(20, 22, 46, .34);
+  backdrop-filter: blur(28px) saturate(1.12);
+  animation: novaPopIn .24s var(--nova-ease) both;
+}
+
+html[data-theme='dark'] .nova-onboarding-card {
+  border-color: rgba(255,255,255,.14);
+  background:
+    radial-gradient(circle at 0% 0%, rgba(118, 105, 255, .25), transparent 36%),
+    radial-gradient(circle at 100% 0%, rgba(244, 163, 96, .13), transparent 34%),
+    rgba(25,27,44,.92);
+}
+
+.nova-onboarding-top,
+.nova-onboarding-actions,
+.nova-onboarding-action-right {
+  display: flex;
+  align-items: center;
+}
+
+.nova-onboarding-top,
+.nova-onboarding-actions { justify-content: space-between; gap: 14px; }
+.nova-onboarding-action-right { gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
+
+.nova-kicker,
+.project-kicker {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  min-height: 24px;
+  padding: 0 10px;
+  border-radius: 999px;
+  color: var(--nova-accent);
+  background: rgba(105, 102, 246, .11);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.nova-onboarding-close {
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 12px;
+  background: rgba(255,255,255,.58);
+  font-size: 20px;
+  color: var(--nova-text-soft);
+}
+
+html[data-theme='dark'] .nova-onboarding-close { background: rgba(255,255,255,.08); }
+
+.nova-onboarding-progress {
+  height: 8px;
+  margin: 22px 0 14px;
+  border-radius: 999px;
+  background: rgba(105, 102, 246, .12);
+  overflow: hidden;
+}
+
+.nova-onboarding-progress span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #615ef0, #a178ff, #f0a35f);
+  transition: width .28s var(--nova-ease);
+}
+
+.nova-onboarding-step-count {
+  color: var(--nova-text-soft);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.nova-onboarding-card h2 {
+  margin: 12px 0 10px;
+  color: var(--nova-text-strong);
+  font-size: 26px;
+  letter-spacing: -.04em;
+}
+
+.nova-onboarding-card p {
+  margin: 0;
+  color: var(--nova-text-soft);
+  font-size: 14px;
+  line-height: 1.8;
+}
+
+.nova-onboarding-dots {
+  display: flex;
+  gap: 8px;
+  margin: 22px 0;
+}
+
+.nova-onboarding-dots button {
+  width: 8px;
+  height: 8px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(105, 102, 246, .22);
+}
+
+.nova-onboarding-dots button.active {
+  width: 28px;
+  background: linear-gradient(90deg, #615ef0, #a178ff);
+}
+
+/* ---------- 5. 命令面板升级 ---------- */
+.global-search-dialog {
+  width: min(760px, calc(100vw - 48px)) !important;
+  border-radius: 28px !important;
+  border: 1px solid rgba(255,255,255,.46) !important;
+  overflow: hidden;
+  box-shadow: 0 34px 120px rgba(18, 20, 44, .32) !important;
+  background:
+    radial-gradient(circle at 10% 0%, rgba(118, 105, 255, .18), transparent 34%),
+    radial-gradient(circle at 92% 0%, rgba(244, 163, 96, .12), transparent 32%),
+    rgba(255,255,255,.86) !important;
+  backdrop-filter: blur(28px) saturate(1.15);
+}
+
+html[data-theme='dark'] .global-search-dialog {
+  border-color: rgba(255,255,255,.13) !important;
+  background:
+    radial-gradient(circle at 10% 0%, rgba(118, 105, 255, .20), transparent 34%),
+    radial-gradient(circle at 92% 0%, rgba(244, 163, 96, .10), transparent 32%),
+    rgba(24,26,42,.93) !important;
+}
+
+.global-search-header {
+  padding: 16px !important;
+  border-bottom: 1px solid rgba(120, 112, 255, .14) !important;
+  background: rgba(255,255,255,.44) !important;
+}
+
+html[data-theme='dark'] .global-search-header { background: rgba(255,255,255,.05) !important; }
+
+#global-search-input {
+  font-size: 15px !important;
+  font-weight: 650;
+}
+
+.global-search-results {
+  padding: 12px !important;
+  max-height: min(66vh, 640px) !important;
+}
+
+.search-section {
+  padding: 7px 0 9px;
+}
+
+.search-section-title {
+  padding: 8px 10px 6px !important;
+  color: var(--nova-accent) !important;
+  font-size: 11px !important;
+  font-weight: 850 !important;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.search-item {
+  min-height: 58px;
+  padding: 10px 12px !important;
+  border: 1px solid transparent;
+  border-radius: 18px !important;
+  background: transparent !important;
+}
+
+.search-item:hover,
+.search-item.selected {
+  border-color: rgba(105, 102, 246, .23) !important;
+  background: linear-gradient(135deg, rgba(105, 102, 246, .12), rgba(255,255,255,.42)) !important;
+  box-shadow: 0 14px 34px rgba(60, 62, 114, .12);
+}
+
+html[data-theme='dark'] .search-item:hover,
+html[data-theme='dark'] .search-item.selected {
+  background: linear-gradient(135deg, rgba(139, 128, 255, .18), rgba(255,255,255,.05)) !important;
+}
+
+.search-item-icon {
+  width: 36px !important;
+  height: 36px !important;
+  border-radius: 14px !important;
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 36px;
+  color: var(--nova-accent);
+  background: linear-gradient(135deg, rgba(105, 102, 246, .14), rgba(244, 163, 96, .10)) !important;
+  border: 1px solid rgba(105, 102, 246, .13);
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.search-item-main {
+  min-width: 0;
+}
+
+.search-item-name {
+  color: var(--nova-text-strong) !important;
+  font-size: 13px !important;
+  font-weight: 800 !important;
+}
+
+.search-item-subtitle {
+  color: var(--nova-text-soft) !important;
+  font-size: 12px !important;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.search-item-hotkey {
+  flex: 0 0 auto;
+  margin-left: auto;
+  border-radius: 10px;
+  border: 1px solid rgba(120,112,255,.15);
+  padding: 4px 8px;
+  background: rgba(255,255,255,.55);
+  color: var(--nova-text-soft);
+  font-size: 11px;
+  font-weight: 750;
+}
+
+html[data-theme='dark'] .search-item-hotkey { background: rgba(255,255,255,.07); }
+
+.search-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 6px;
+  padding: 12px 10px 2px !important;
+  color: var(--nova-text-soft) !important;
+  font-size: 12px !important;
+}
+
+.search-empty {
+  border-radius: 18px;
+  padding: 28px !important;
+  color: var(--nova-text-soft) !important;
+  text-align: center;
+  background: rgba(105, 102, 246, .07);
+}
+
+/* Small quality-of-life layout details */
+.sidebar {
+  border-right: 1px solid rgba(120, 112, 255, .10) !important;
+}
+
+.nav-item.active::before {
+  box-shadow: 0 0 18px rgba(105, 102, 246, .50);
+}
+
+.status-bar,
+.tabs-bar,
+.file-sidebar-header,
+.todo-toolbar,
+.kb-toolbar {
+  backdrop-filter: blur(18px) saturate(1.08);
+}
+
+.settings-shortcuts {
+  grid-template-columns: repeat(auto-fit, minmax(128px, 1fr)) !important;
+}
+
+.settings-shortcut kbd,
+.search-box kbd,
+.global-search-header kbd {
+  box-shadow: inset 0 -1px 0 rgba(0,0,0,.08), 0 4px 12px rgba(46, 48, 92, .06);
+}
+
+/* responsive */
+@media (max-width: 1180px) {
+  .page.active { padding: 18px; }
+  .project-columns,
+  .home-columns,
+  .home-columns-wide { grid-template-columns: 1fr !important; }
+  .todo-workstation,
+  .ai-layout { grid-template-columns: 1fr !important; }
+  .ai-sidebar,
+  .todo-sidebar { display: none; }
+}
+
+@media (max-width: 760px) {
+  .project-hero,
+  .home-hero,
+  .kb-header,
+  .settings-header {
+    padding: 22px !important;
+  }
+  .project-hero-actions,
+  .home-hero-actions,
+  .kb-header-stats {
+    width: 100%;
+    justify-content: flex-start !important;
+    flex-wrap: wrap;
+  }
+  .search-footer { display: none; }
+  .nova-onboarding-actions { align-items: stretch; flex-direction: column; }
+  .nova-onboarding-action-right { justify-content: stretch; }
+  .nova-onboarding-action-right .nova-btn { flex: 1; justify-content: center; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .001ms !important;
+    scroll-behavior: auto !important;
+  }
+}

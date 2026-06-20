@@ -1,0 +1,997 @@
+/* ============================================================
+ * nova-all-pages-ui-upgrade.css — Nova v2.9.5
+ *
+ * Extends the approved Home/Project hero direction to every module.
+ * Keep this file last in index.css so it can polish existing pages
+ * without touching business logic.
+ * ============================================================ */
+
+:root,
+[data-theme="dark"] {
+  --nova-page-pad: 28px;
+  --nova-card-radius: 22px;
+  --nova-hero-radius: 28px;
+  --nova-panel-bg: color-mix(in srgb, var(--bg-surface) 78%, transparent);
+  --nova-panel-bg-strong: color-mix(in srgb, var(--bg-elevated) 86%, transparent);
+  --nova-line: color-mix(in srgb, var(--accent) 16%, var(--hairline, var(--border-subtle)));
+  --nova-muted-line: color-mix(in srgb, var(--border-subtle) 80%, transparent);
+  --nova-card-shadow: 0 18px 54px rgba(0,0,0,0.18), inset 0 1px rgba(255,255,255,0.05);
+  --nova-hero-shadow: 0 24px 70px rgba(0,0,0,0.22), inset 0 1px rgba(255,255,255,0.26);
+  --nova-page-gradient: radial-gradient(circle at 15% -10%, color-mix(in srgb, var(--accent) 14%, transparent), transparent 28%),
+                        radial-gradient(circle at 86% 6%, color-mix(in srgb, var(--nova-burst) 10%, transparent), transparent 24%);
+}
+
+[data-theme="light"] {
+  --nova-panel-bg: rgba(255,255,255,0.78);
+  --nova-panel-bg-strong: rgba(255,255,255,0.92);
+  --nova-line: rgba(88,88,214,0.16);
+  --nova-muted-line: rgba(49,49,82,0.09);
+  --nova-card-shadow: 0 18px 44px rgba(62,58,108,0.11), inset 0 1px rgba(255,255,255,0.82);
+  --nova-hero-shadow: 0 24px 68px rgba(62,58,108,0.15), inset 0 1px rgba(255,255,255,0.9);
+  --nova-page-gradient: radial-gradient(circle at 15% -10%, rgba(88,88,214,0.16), transparent 30%),
+                        radial-gradient(circle at 88% 8%, rgba(212,120,10,0.12), transparent 28%);
+}
+
+/* === Keep route scrolling stable after visual overrides === */
+.main-content { overflow: hidden; }
+.page {
+  position: absolute !important;
+  inset: 0 !important;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden !important;
+}
+.page.active { display: flex; flex-direction: column; }
+#page-home, #page-project, #page-files, #page-ai, #page-todo, #page-knowledge, #page-settings {
+  background: var(--nova-page-gradient);
+}
+
+/* === Shared premium surfaces === */
+.home-section,
+.home-stat-card,
+.project-stat-card,
+.project-section,
+.project-action-card,
+.project-empty-card-large,
+.todo-sidebar,
+.todo-capture-bar,
+.todo-toolbar,
+.todo-timeline,
+.todo-detail-drawer,
+.ai-chat-area,
+.ai-sidebar,
+.ai-sidebar-section,
+.kb-header,
+.kb-toolbar,
+.kb-list,
+.kb-detail-panel,
+.settings-header,
+.settings-section,
+.file-sidebar,
+.file-editor-area {
+  background: var(--nova-panel-bg);
+  border: 1px solid var(--nova-muted-line);
+  box-shadow: var(--nova-card-shadow);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+.home-section,
+.home-stat-card,
+.project-stat-card,
+.project-section,
+.project-action-card,
+.project-empty-card-large,
+.todo-capture-bar,
+.todo-toolbar,
+.todo-timeline,
+.todo-detail-drawer,
+.ai-sidebar-section,
+.kb-list,
+.kb-detail-panel,
+.settings-section {
+  border-radius: var(--nova-card-radius);
+}
+
+.home-section:hover,
+.home-stat-card:hover,
+.project-stat-card:hover,
+.project-action-card:hover,
+.project-section:hover,
+.settings-section:hover,
+.ai-sidebar-section:hover,
+.kb-list:hover,
+.kb-detail-panel:hover {
+  border-color: color-mix(in srgb, var(--accent) 26%, var(--nova-muted-line));
+  box-shadow: 0 22px 60px rgba(0,0,0,0.20), 0 0 0 1px color-mix(in srgb, var(--accent) 8%, transparent);
+}
+
+/* === Global control polish === */
+button,
+input,
+textarea,
+select,
+.icon-btn,
+.btn-primary,
+.btn-ghost,
+.btn-secondary,
+.ai-save,
+.ai-test,
+.ai-fetch,
+.kb-btn,
+.kb-btn-primary,
+.todo-view-btn,
+.todo-date-chip,
+.todo-completed-toggle {
+  transition: transform .18s cubic-bezier(.2,.8,.2,1), border-color .18s, background .18s, box-shadow .18s, color .18s;
+}
+
+button:hover,
+.icon-btn:hover,
+.btn-primary:hover,
+.btn-ghost:hover,
+.btn-secondary:hover,
+.ai-save:hover,
+.ai-test:hover,
+.ai-fetch:hover,
+.kb-btn:hover,
+.kb-btn-primary:hover,
+.todo-view-btn:hover,
+.todo-date-chip:hover,
+.todo-completed-toggle:hover {
+  transform: translateY(-1px);
+}
+
+input,
+textarea,
+select,
+.ai-input,
+.kb-search-wrap,
+.todo-input-wrap,
+.modal-input,
+.template-topic-input {
+  background: color-mix(in srgb, var(--bg-elevated) 76%, transparent) !important;
+  border-color: var(--nova-muted-line) !important;
+  box-shadow: inset 0 1px rgba(255,255,255,0.05);
+}
+
+input:focus,
+textarea:focus,
+select:focus,
+.ai-input:focus,
+.kb-search-wrap:focus-within,
+.todo-input-wrap:focus-within {
+  border-color: color-mix(in srgb, var(--accent) 48%, transparent) !important;
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 11%, transparent), inset 0 1px rgba(255,255,255,0.08) !important;
+}
+
+/* === Home: section/card consistency === */
+.home-page,
+.project-page,
+.settings-page {
+  padding: var(--nova-page-pad);
+}
+
+.home-hero,
+.project-hero,
+.kb-header,
+.settings-header,
+.ai-chat-header,
+.todo-command-bar {
+  border-radius: var(--nova-hero-radius);
+  background:
+    linear-gradient(135deg,
+      color-mix(in srgb, var(--bg-elevated) 92%, transparent) 0%,
+      color-mix(in srgb, var(--bg-surface) 72%, transparent) 48%,
+      color-mix(in srgb, var(--accent) 13%, var(--bg-surface)) 100%);
+  border: 1px solid color-mix(in srgb, var(--accent) 19%, var(--nova-muted-line));
+  box-shadow: var(--nova-hero-shadow);
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.home-hero::before,
+.project-hero::before,
+.kb-header::before,
+.settings-header::before,
+.ai-chat-header::before,
+.todo-command-bar::before {
+  content: '';
+  position: absolute;
+  inset: -120px -70px auto auto;
+  width: 430px;
+  height: 260px;
+  border-radius: 999px;
+  background:
+    radial-gradient(circle at 36% 38%, color-mix(in srgb, var(--accent) 40%, transparent), transparent 52%),
+    radial-gradient(circle at 72% 52%, color-mix(in srgb, var(--nova-burst) 22%, transparent), transparent 55%);
+  opacity: .62;
+  pointer-events: none;
+  z-index: -1;
+}
+
+.home-hero::after,
+.project-hero::after,
+.kb-header::after,
+.settings-header::after,
+.ai-chat-header::after,
+.todo-command-bar::after {
+  content: '';
+  position: absolute;
+  right: 28px;
+  bottom: 18px;
+  width: 146px;
+  height: 146px;
+  border-radius: 32px;
+  background:
+    linear-gradient(135deg, rgba(255,255,255,.2), rgba(255,255,255,.035)),
+    repeating-linear-gradient(90deg, color-mix(in srgb, var(--accent) 26%, transparent) 0 1px, transparent 1px 18px),
+    repeating-linear-gradient(0deg, color-mix(in srgb, var(--nova-burst) 16%, transparent) 0 1px, transparent 1px 18px);
+  border: 1px solid rgba(255,255,255,.16);
+  transform: rotate(-8deg);
+  opacity: .24;
+  z-index: -1;
+  pointer-events: none;
+}
+
+.home-section-header h2,
+.project-section-header h2,
+.settings-section-header h3,
+.kb-header-left h2,
+.ai-chat-title span:first-of-type,
+.todo-ring-title,
+.file-sidebar-title {
+  font-family: var(--font-family-display);
+  letter-spacing: -0.25px;
+}
+
+.home-stat-card {
+  min-height: 92px;
+  padding: 18px 20px;
+  position: relative;
+  overflow: hidden;
+}
+.home-stat-card::after,
+.project-stat-card::after {
+  content: '';
+  position: absolute;
+  inset: auto 14px 12px auto;
+  width: 46px;
+  height: 46px;
+  border-radius: 18px;
+  background: color-mix(in srgb, currentColor 12%, transparent);
+  opacity: .35;
+}
+.home-stat-value,
+.project-stat-card span {
+  font-family: var(--font-family-display);
+  letter-spacing: -1px;
+}
+.home-today-item,
+.home-doc-item,
+.home-recent-item,
+.project-doc-item,
+.project-activity-item,
+.project-template-card,
+.template-card,
+.search-item,
+.quick-open-item {
+  border-radius: 16px !important;
+  border: 1px solid transparent;
+  background: color-mix(in srgb, var(--bg-elevated) 50%, transparent);
+}
+.home-today-item:hover,
+.home-doc-item:hover,
+.home-recent-item:hover,
+.project-doc-item:hover,
+.project-activity-item:hover,
+.project-template-card:hover,
+.template-card:hover {
+  border-color: color-mix(in srgb, var(--accent) 26%, transparent);
+  background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 10%, transparent), color-mix(in srgb, var(--nova-burst) 4%, transparent));
+}
+
+/* === Project page === */
+.project-content { gap: 18px; }
+.project-stats-grid { gap: 14px; }
+.project-stat-card {
+  min-height: 112px;
+  position: relative;
+  overflow: hidden;
+}
+.project-action-card {
+  min-height: 96px;
+}
+.project-action-card.primary {
+  background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 16%, transparent), color-mix(in srgb, var(--nova-burst) 6%, transparent));
+  border-color: color-mix(in srgb, var(--accent) 32%, transparent);
+}
+
+/* === Files page: turn editor into premium split workspace === */
+.file-manager-full {
+  padding: 12px;
+  gap: 12px;
+  background: transparent !important;
+}
+.file-sidebar {
+  width: 300px;
+  border-radius: 22px !important;
+  overflow: hidden;
+}
+.file-sidebar-header {
+  min-height: 56px;
+  padding: 14px 14px 12px !important;
+  border-bottom: 1px solid var(--nova-muted-line);
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--accent) 12%, transparent), color-mix(in srgb, var(--nova-burst) 5%, transparent));
+}
+.file-sidebar-title,
+.file-sidebar-header > span:first-child {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--text-primary);
+}
+.file-sidebar-title::before,
+.file-sidebar-header > span:first-child::before {
+  content: '';
+  width: 9px;
+  height: 9px;
+  border-radius: 4px;
+  background: var(--accent-gradient, linear-gradient(135deg,var(--accent),var(--nova-burst)));
+  box-shadow: 0 0 16px color-mix(in srgb, var(--accent) 38%, transparent);
+}
+.file-sidebar-actions { gap: 6px; }
+.file-sidebar-actions .icon-btn {
+  width: 30px;
+  height: 30px;
+  background: color-mix(in srgb, var(--bg-surface) 82%, transparent);
+}
+.file-tree {
+  padding: 10px 0 12px;
+  scrollbar-gutter: stable;
+}
+.file-search-bar {
+  padding: 10px 12px !important;
+}
+.file-search-input {
+  height: 36px;
+  border-radius: 14px !important;
+}
+.tree-item {
+  min-height: 32px;
+  margin: 2px 10px !important;
+  border-radius: 12px !important;
+  border: 1px solid transparent;
+}
+.tree-item:hover {
+  border-color: color-mix(in srgb, var(--accent) 18%, transparent);
+  background: color-mix(in srgb, var(--accent) 8%, transparent) !important;
+}
+.tree-item.selected {
+  border-color: color-mix(in srgb, var(--accent) 32%, transparent);
+  background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 18%, transparent), color-mix(in srgb, var(--nova-burst) 6%, transparent)) !important;
+}
+.file-editor-area {
+  border-radius: 22px !important;
+  overflow: hidden;
+}
+.tabs-bar {
+  height: 48px !important;
+  padding: 8px 10px 0 !important;
+  border-bottom: 1px solid var(--nova-muted-line);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--bg-surface) 76%, transparent), color-mix(in srgb, var(--bg-base) 38%, transparent));
+}
+.tab {
+  border-radius: 14px 14px 0 0 !important;
+  min-width: 138px;
+}
+.tab.active {
+  background: color-mix(in srgb, var(--bg-base) 94%, transparent) !important;
+}
+.editor-container {
+  background:
+    radial-gradient(circle at 84% 10%, color-mix(in srgb, var(--accent) 7%, transparent), transparent 30%),
+    color-mix(in srgb, var(--bg-base) 92%, transparent) !important;
+}
+.status-bar {
+  border-top: 1px solid var(--nova-muted-line) !important;
+  background: color-mix(in srgb, var(--bg-surface) 72%, transparent) !important;
+}
+.empty-state {
+  color: var(--text-tertiary);
+}
+.empty-state svg {
+  opacity: .42;
+  filter: drop-shadow(0 8px 22px color-mix(in srgb, var(--accent) 16%, transparent));
+}
+
+/* === AI page: header becomes a compact hero, sidebar becomes control cards === */
+.ai-layout {
+  gap: 12px;
+  padding: 12px;
+  background: transparent !important;
+}
+.ai-chat-area,
+.ai-sidebar {
+  border-radius: 24px;
+  overflow: hidden;
+}
+.ai-chat-header {
+  margin: 0;
+  min-height: 84px;
+  padding: 18px 22px;
+  border: 0;
+  flex-shrink: 0;
+}
+.ai-chat-title {
+  position: relative;
+  z-index: 1;
+  gap: 10px;
+  font-size: 18px;
+}
+.ai-chat-title svg {
+  width: 36px;
+  height: 36px;
+  padding: 8px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 22%, transparent), color-mix(in srgb, var(--nova-burst) 8%, transparent));
+  color: var(--accent);
+}
+.ai-chat-title::after {
+  content: '代码解释 / 文档总结 / 多模态对话';
+  position: absolute;
+  left: 46px;
+  top: 28px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+.ai-chat-actions { position: relative; z-index: 1; }
+.ai-status-chip {
+  height: 34px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--bg-surface) 72%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 18%, transparent);
+}
+.ai-chat-messages {
+  padding: 24px;
+  background: radial-gradient(circle at 16% 0%, color-mix(in srgb, var(--accent) 7%, transparent), transparent 30%);
+}
+.ai-chat-welcome {
+  max-width: 760px;
+  align-self: center;
+}
+.ai-chat-welcome-icon {
+  width: 76px;
+  height: 76px;
+  border-radius: 26px;
+  box-shadow: 0 18px 46px color-mix(in srgb, var(--accent) 18%, transparent), inset 0 1px rgba(255,255,255,.18);
+}
+.ai-suggestion {
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--bg-elevated) 70%, transparent);
+  border-color: var(--nova-muted-line);
+}
+.ai-msg-bubble {
+  border-radius: 18px;
+  box-shadow: 0 12px 34px rgba(0,0,0,0.14);
+}
+.ai-msg-user {
+  background: var(--accent-gradient, linear-gradient(135deg,var(--accent),var(--nova-burst))) !important;
+}
+.ai-msg-assistant,
+.ai-msg-loading {
+  background: var(--nova-panel-bg-strong) !important;
+  border-color: var(--nova-muted-line) !important;
+}
+.ai-chat-input-area {
+  padding: 14px 18px 18px;
+  background: color-mix(in srgb, var(--bg-surface) 74%, transparent);
+  border-top: 1px solid var(--nova-muted-line);
+}
+.ai-chat-input-wrap {
+  border-radius: 18px;
+  padding: 10px 10px 10px 12px;
+}
+.ai-chat-attach,
+.ai-chat-send {
+  border-radius: 14px;
+}
+.ai-chat-send {
+  background: var(--accent-gradient, linear-gradient(135deg,var(--accent),var(--nova-burst))) !important;
+  box-shadow: 0 12px 28px color-mix(in srgb, var(--accent) 26%, transparent);
+}
+.ai-sidebar {
+  width: 324px;
+  padding: 12px;
+  gap: 12px;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+}
+.ai-sidebar-section {
+  padding: 16px;
+}
+.ai-sidebar-title {
+  font-family: var(--font-family-display);
+  font-weight: 800;
+  letter-spacing: .2px;
+}
+.ai-mini-stat {
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--bg-elevated) 66%, transparent);
+  border: 1px solid var(--nova-muted-line);
+}
+.ai-mini-val {
+  font-family: var(--font-family-display);
+  font-size: 18px;
+}
+.ai-save,
+.ai-test,
+.ai-fetch {
+  border-radius: 14px !important;
+}
+.ai-save {
+  background: var(--accent-gradient, linear-gradient(135deg,var(--accent),var(--nova-burst))) !important;
+}
+
+/* === Todo page: a dashboard-like cockpit === */
+.todo-workstation {
+  gap: 12px;
+  padding: 12px;
+  background: transparent !important;
+}
+.todo-sidebar {
+  width: 252px;
+  border-radius: 24px;
+  padding: 18px 14px;
+}
+.todo-sidebar-title,
+.todo-sidebar-title-row .todo-sidebar-title {
+  font-family: var(--font-family-display);
+  font-size: 10px;
+  letter-spacing: 1.2px;
+}
+.todo-filter-item,
+.todo-sidebar-cat-item {
+  border-radius: 14px;
+  border: 1px solid transparent;
+}
+.todo-filter-item:hover,
+.todo-sidebar-cat-item:hover {
+  border-color: color-mix(in srgb, var(--accent) 18%, transparent);
+  transform: translateX(2px);
+}
+.todo-filter-item.active {
+  background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 19%, transparent), color-mix(in srgb, var(--nova-burst) 6%, transparent));
+  border-color: color-mix(in srgb, var(--accent) 28%, transparent);
+  color: var(--text-primary);
+}
+.todo-workspace {
+  gap: 12px;
+}
+.todo-workspace-header { padding: 0; }
+.todo-command-bar {
+  padding: 16px;
+  min-height: 126px;
+  border: 1px solid color-mix(in srgb, var(--accent) 18%, var(--nova-muted-line));
+}
+.todo-command-ring-card,
+.todo-next-up-card,
+.todo-metric-chip {
+  position: relative;
+  z-index: 1;
+  border-radius: 20px;
+  background: rgba(255,255,255,0.10);
+  border: 1px solid rgba(255,255,255,0.14);
+  box-shadow: inset 0 1px rgba(255,255,255,0.15);
+}
+[data-theme="light"] .todo-command-ring-card,
+[data-theme="light"] .todo-next-up-card,
+[data-theme="light"] .todo-metric-chip {
+  background: rgba(255,255,255,0.62);
+  border-color: rgba(88,88,214,0.13);
+}
+.todo-ring-label,
+.todo-metric-num {
+  font-family: var(--font-family-display);
+  letter-spacing: -0.6px;
+}
+.todo-capture-bar {
+  padding: 14px;
+}
+.todo-inline-bar {
+  gap: 10px;
+}
+.todo-cat-pills,
+.todo-quick-dates {
+  gap: 8px;
+}
+.todo-date-chip,
+.todo-view-btn,
+.todo-completed-toggle {
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--bg-elevated) 62%, transparent);
+  border: 1px solid var(--nova-muted-line);
+}
+.todo-view-btn.active,
+.todo-date-chip.active {
+  background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 18%, transparent), color-mix(in srgb, var(--nova-burst) 7%, transparent));
+  border-color: color-mix(in srgb, var(--accent) 32%, transparent);
+  color: var(--text-primary);
+}
+.todo-task-area {
+  border-radius: 24px;
+  background: color-mix(in srgb, var(--bg-base) 32%, transparent);
+  padding: 8px;
+  scrollbar-gutter: stable;
+}
+.todo-task-card,
+.todo-board-column,
+.todo-timeline-section,
+.todo-list-row,
+.todo-empty-state,
+.todo-timeline-empty {
+  border-radius: 18px !important;
+  background: var(--nova-panel-bg-strong) !important;
+  border: 1px solid var(--nova-muted-line) !important;
+  box-shadow: 0 12px 30px rgba(0,0,0,0.10);
+}
+.todo-detail-drawer {
+  width: 320px;
+  overflow: hidden;
+}
+.todo-drawer-header {
+  background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 12%, transparent), color-mix(in srgb, var(--nova-burst) 5%, transparent));
+  border-bottom: 1px solid var(--nova-muted-line);
+}
+
+/* === Knowledge page: hero header + library split panel === */
+.kb-page {
+  gap: 12px;
+  padding: 12px;
+  background: transparent;
+}
+.kb-header {
+  min-height: 116px;
+  padding: 22px 26px;
+  border-bottom: 0;
+}
+.kb-header-left,
+.kb-header-stats {
+  position: relative;
+  z-index: 1;
+}
+.kb-header-left h2 {
+  font-size: clamp(28px, 2.7vw, 40px);
+  letter-spacing: -0.8px;
+  background: linear-gradient(135deg, var(--text-primary), color-mix(in srgb, var(--accent) 72%, var(--text-primary)) 56%, var(--nova-burst));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.kb-header-left::before {
+  content: 'KNOWLEDGE VAULT';
+  display: inline-flex;
+  margin-bottom: 8px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 22%, transparent);
+  color: color-mix(in srgb, var(--accent) 76%, var(--text-primary));
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .08em;
+}
+.kb-header-stats {
+  gap: 10px;
+}
+.kb-stat {
+  padding: 10px 12px;
+  border-radius: 16px;
+  background: rgba(255,255,255,0.12);
+  border: 1px solid rgba(255,255,255,0.14);
+}
+[data-theme="light"] .kb-stat { background: rgba(255,255,255,.66); border-color: rgba(88,88,214,.13); }
+.kb-toolbar {
+  padding: 12px;
+  border-radius: 22px;
+  border-bottom: 1px solid var(--nova-muted-line);
+}
+.kb-btn,
+.kb-btn-primary,
+.kb-modal-footer button {
+  border-radius: 14px !important;
+}
+.kb-btn-primary,
+.kb-btn:hover {
+  background: var(--accent-gradient, linear-gradient(135deg,var(--accent),var(--nova-burst))) !important;
+  color: #fff !important;
+}
+.kb-search-wrap {
+  border-radius: 16px;
+  min-height: 38px;
+}
+.kb-page > div[style*="display:flex"] {
+  gap: 12px;
+}
+.kb-list {
+  width: min(430px, 42vw);
+  padding: 12px;
+}
+.kb-card,
+.knowledge-item {
+  border-radius: 18px !important;
+  background: color-mix(in srgb, var(--bg-elevated) 58%, transparent) !important;
+  border: 1px solid var(--nova-muted-line) !important;
+}
+.kb-card:hover,
+.knowledge-item:hover {
+  border-color: color-mix(in srgb, var(--accent) 28%, transparent) !important;
+  box-shadow: 0 14px 38px rgba(0,0,0,0.15);
+}
+.kb-detail-panel {
+  overflow: hidden;
+}
+.kb-detail-header {
+  padding: 16px 18px;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 10%, transparent), transparent);
+  border-bottom: 1px solid var(--nova-muted-line);
+}
+.kb-detail-content { padding: 18px; }
+.kb-modal-dialog {
+  border-radius: 24px !important;
+  background: var(--nova-panel-bg-strong) !important;
+  border: 1px solid var(--nova-line) !important;
+  box-shadow: 0 28px 90px rgba(0,0,0,.32) !important;
+}
+
+/* === Settings page: hero + grouped preference cards === */
+.settings-page {
+  max-width: 1120px;
+  gap: 0;
+}
+.settings-header {
+  min-height: 140px;
+  padding: 26px 30px;
+  margin-bottom: 18px;
+}
+.settings-header h1,
+.settings-subtitle {
+  position: relative;
+  z-index: 1;
+}
+.settings-header::before {
+  opacity: .72;
+}
+.settings-header h1 {
+  font-size: clamp(32px, 3vw, 46px);
+  margin: 0 0 8px;
+}
+.settings-header h1::before {
+  content: 'SETTINGS CENTER';
+  display: block;
+  width: max-content;
+  margin-bottom: 10px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 22%, transparent);
+  color: color-mix(in srgb, var(--accent) 76%, var(--text-primary));
+  -webkit-text-fill-color: currentColor;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .08em;
+}
+.settings-section {
+  padding: 22px 24px;
+  margin-bottom: 14px;
+}
+.settings-section-header {
+  padding-bottom: 14px;
+  margin-bottom: 8px;
+  border-bottom: 1px solid var(--nova-muted-line);
+}
+.settings-section-header svg {
+  width: 34px;
+  height: 34px;
+  padding: 8px;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--accent) 13%, transparent);
+}
+.settings-row {
+  border-top-color: var(--nova-muted-line);
+  padding: 14px 8px;
+}
+.settings-row:hover {
+  background: color-mix(in srgb, var(--accent) 7%, transparent);
+}
+.settings-radio-group {
+  border-radius: 999px;
+  padding: 4px;
+  background: color-mix(in srgb, var(--bg-elevated) 70%, transparent);
+  border-color: var(--nova-muted-line);
+}
+.settings-radio-label {
+  border-radius: 999px;
+  padding: 7px 15px;
+}
+.settings-radio input[type="radio"]:checked + .settings-radio-label {
+  background: var(--accent-gradient, linear-gradient(135deg,var(--accent),var(--nova-burst))) !important;
+}
+.settings-shortcut {
+  justify-content: space-between;
+  min-width: 220px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--bg-elevated) 50%, transparent);
+  border: 1px solid var(--nova-muted-line);
+}
+.settings-shortcut kbd,
+kbd {
+  border-radius: 8px !important;
+  background: color-mix(in srgb, var(--bg-surface) 76%, transparent) !important;
+  border-color: color-mix(in srgb, var(--accent) 16%, var(--border-default)) !important;
+}
+.settings-ai-section .settings-row,
+.settings-provider-card,
+.settings-ai-provider-card {
+  border-radius: 18px !important;
+  background: color-mix(in srgb, var(--bg-elevated) 42%, transparent) !important;
+}
+
+/* === Dialogs, menus, overlays === */
+.global-search-dialog,
+.quick-open-dialog,
+.modal-content,
+.markdown-ai-modal,
+.version-history-modal,
+.version-preview-modal,
+.tab-context-menu,
+.tree-context-menu,
+.ai-kb-picker-dialog {
+  border-radius: 24px !important;
+  background: var(--nova-panel-bg-strong) !important;
+  border: 1px solid var(--nova-line) !important;
+  box-shadow: 0 28px 90px rgba(0,0,0,.34) !important;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+.global-search-header,
+.quick-open-header,
+.modal-header {
+  background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 10%, transparent), transparent) !important;
+  border-bottom-color: var(--nova-muted-line) !important;
+}
+.toast,
+.kb-toast,
+.todo-notification-toast {
+  border-radius: 16px !important;
+  background: var(--nova-panel-bg-strong) !important;
+  border: 1px solid var(--nova-line) !important;
+  box-shadow: 0 18px 48px rgba(0,0,0,.26) !important;
+}
+
+/* === Scrollbars: visible but premium === */
+.home-page,
+.project-page,
+.settings-page,
+.file-tree,
+.ai-chat-messages,
+.todo-sidebar,
+.todo-task-area,
+.todo-drawer-content,
+.kb-list,
+.kb-detail-content,
+.global-search-results,
+.quick-open-results {
+  scrollbar-gutter: stable;
+}
+.home-page::-webkit-scrollbar,
+.project-page::-webkit-scrollbar,
+.settings-page::-webkit-scrollbar,
+.file-tree::-webkit-scrollbar,
+.ai-chat-messages::-webkit-scrollbar,
+.todo-sidebar::-webkit-scrollbar,
+.todo-task-area::-webkit-scrollbar,
+.todo-drawer-content::-webkit-scrollbar,
+.kb-list::-webkit-scrollbar,
+.kb-detail-content::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+.home-page::-webkit-scrollbar-thumb,
+.project-page::-webkit-scrollbar-thumb,
+.settings-page::-webkit-scrollbar-thumb,
+.file-tree::-webkit-scrollbar-thumb,
+.ai-chat-messages::-webkit-scrollbar-thumb,
+.todo-sidebar::-webkit-scrollbar-thumb,
+.todo-task-area::-webkit-scrollbar-thumb,
+.todo-drawer-content::-webkit-scrollbar-thumb,
+.kb-list::-webkit-scrollbar-thumb,
+.kb-detail-content::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--accent) 22%, transparent);
+  border: 3px solid transparent;
+  border-radius: 999px;
+  background-clip: padding-box;
+}
+.home-page::-webkit-scrollbar-thumb:hover,
+.project-page::-webkit-scrollbar-thumb:hover,
+.settings-page::-webkit-scrollbar-thumb:hover,
+.file-tree::-webkit-scrollbar-thumb:hover,
+.ai-chat-messages::-webkit-scrollbar-thumb:hover,
+.todo-sidebar::-webkit-scrollbar-thumb:hover,
+.todo-task-area::-webkit-scrollbar-thumb:hover,
+.todo-drawer-content::-webkit-scrollbar-thumb:hover,
+.kb-list::-webkit-scrollbar-thumb:hover,
+.kb-detail-content::-webkit-scrollbar-thumb:hover {
+  background-color: color-mix(in srgb, var(--accent) 38%, transparent);
+}
+
+/* === Light mode final contrast tuning === */
+[data-theme="light"] .home-hero,
+[data-theme="light"] .project-hero,
+[data-theme="light"] .kb-header,
+[data-theme="light"] .settings-header,
+[data-theme="light"] .ai-chat-header,
+[data-theme="light"] .todo-command-bar {
+  background: linear-gradient(135deg, rgba(255,255,255,.97) 0%, rgba(248,248,255,.9) 45%, rgba(238,233,255,.92) 100%);
+}
+[data-theme="light"] .file-editor-area,
+[data-theme="light"] .editor-container,
+[data-theme="light"] .todo-task-area {
+  background-color: rgba(248,248,255,.72) !important;
+}
+[data-theme="light"] .ai-msg-assistant,
+[data-theme="light"] .todo-task-card,
+[data-theme="light"] .kb-card,
+[data-theme="light"] .knowledge-item {
+  background: rgba(255,255,255,.86) !important;
+}
+
+/* === Responsive / low-height density === */
+@media (max-width: 1180px) {
+  :root { --nova-page-pad: 22px; }
+  .ai-sidebar { width: 292px; }
+  .todo-sidebar { width: 224px; }
+  .todo-detail-drawer { display: none; }
+  .kb-list { width: 380px; }
+}
+
+@media (max-width: 980px) {
+  :root { --nova-page-pad: 18px; }
+  .file-manager-full,
+  .ai-layout,
+  .todo-workstation,
+  .kb-page { padding: 8px; gap: 8px; }
+  .file-sidebar { width: 248px; }
+  .ai-sidebar { display: none; }
+  .todo-sidebar { display: none; }
+  .kb-page > div[style*="display:flex"] { flex-direction: column; }
+  .kb-list { width: 100%; max-height: 42%; }
+  .kb-detail-panel { flex: 1; }
+  .settings-row { flex-direction: column; align-items: stretch; }
+}
+
+@media (max-height: 760px) {
+  :root { --nova-page-pad: 18px; }
+  .home-page,
+  .project-page,
+  .settings-page { padding-top: 18px; padding-bottom: 24px; }
+  .ai-chat-header { min-height: 70px; padding: 14px 18px; }
+  .ai-chat-title svg { width: 32px; height: 32px; }
+  .ai-chat-title::after { display: none; }
+  .todo-command-bar { min-height: 102px; padding: 12px; }
+  .kb-header,
+  .settings-header { min-height: 104px; padding: 20px 22px; }
+  .file-manager-full,
+  .ai-layout,
+  .todo-workstation,
+  .kb-page { padding: 8px; }
+}

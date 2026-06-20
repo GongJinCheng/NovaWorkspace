@@ -1,195 +1,265 @@
 /* ============================================================
- * variables.css — CSS Custom Properties & Theme Overrides
+ * variables.css — Deep Space Experimental Design Tokens
  * 
- * Contains all design tokens: colors, borders, text, shadows,
- * and light/dark theme variable definitions. Must be imported
- * first — all other files depend on these variables.
+ * Phase 1: Color palette rebuild, dual-font system, space tokens.
+ * Design direction: immersive dark base (Arc-level depth) +
+ * Aurora Violet accent + Nova Burst highlight moments.
+ * 
+ * Must be imported first — all other files depend on these vars.
  * ============================================================ */
 
-/* === Default Theme (follows system unless overridden) === */
+/* ================================================================
+ * DARK THEME (default) — Deep Space Experimental
+ * Deeper blacks with subtle blue-purple undertone.
+ * Key insight: the dark is the star — accent pops because base is deep.
+ * ================================================================ */
 :root,
 [data-theme="dark"] {
-  --bg-base: #0a0a0f;
-  --bg-surface: #111118;
-  --bg-elevated: #1a1a24;
-  --bg-hover: #222230;
-  --bg-active: #2a2a3a;
-  
-  --border-subtle: rgba(255,255,255,0.06);
-  --border-default: rgba(255,255,255,0.1);
-  
-  --text-primary: #f0f0f5;
-  --text-secondary: #8888a0;
-  --text-tertiary: #555570;
-  
-  --accent: #6366f1;
-  --accent-hover: #818cf8;
-  --accent-soft: rgba(99,102,241,0.12);
-  
-  --green: #34d399;
-  --green-soft: rgba(52,211,153,0.12);
-  --orange: #fb923c;
-  --orange-soft: rgba(251,146,60,0.12);
-  --blue: #60a5fa;
-  --blue-soft: rgba(96,165,250,0.12);
-  --red: #ef4444;
+  /* ── Background Layers (deepest → most elevated) ── */
+  --bg-deep:    #050508;  /* Void — used for body bg, deepest layer */
+  --bg-base:    #09090F;  /* Space — main content bg */
+  --bg-surface: #0F0F18;  /* Surface — sidebar, cards, panels */
+  --bg-elevated:#171723;  /* Elevated — inputs, dropdowns, modals */
+  --bg-hover:   #1F1F30;  /* Hover — interactive hover states */
+  --bg-active:  #282840;  /* Active — pressed/selected states */
 
-  /* === Deep Workspace Tokens === */
-  --glass-bg: rgba(17, 17, 24, 0.7);
-  --glass-border: rgba(255,255,255,0.08);
-  --glass-blur: 12px;
+  /* ── Borders (glass-like, barely there) ── */
+  --border-subtle:  rgba(255,255,255,0.06);
+  --border-default: rgba(255,255,255,0.09);
 
-  --shadow-elevation-1: 0 1px 2px rgba(0,0,0,0.12);
-  --shadow-elevation-2: 0 4px 12px rgba(0,0,0,0.16);
-  --shadow-elevation-3: 0 8px 32px rgba(0,0,0,0.24);
-  --shadow-glow: 0 0 20px rgba(99,102,241,0.15);
+  /* ── Text (slightly warm white for readability on deep dark) ── */
+  --text-primary:   #EDEDF5;
+  --text-secondary: #9090A8;
+  --text-tertiary:  #5C5C72;
 
+  /* ── Aurora Violet Accent (ethereal, not generic indigo) ── */
+  --accent:       #8B8BFF;
+  --accent-hover: #A5A5FF;
+  --accent-soft:  rgba(139, 139, 255, 0.15);
+
+  /* ── Semantic Colors ── */
+  --green:       #34D399;
+  --green-soft:  rgba(52, 211, 153, 0.10);
+  --orange:      #F59E0B;
+  --orange-soft: rgba(245, 158, 11, 0.10);
+  --blue:        #6EB5FF;
+  --blue-soft:   rgba(110, 181, 255, 0.10);
+  --red:         #FF6B6B;
+  --red-soft:    rgba(255, 107, 107, 0.10);
+
+  /* ── Nova Burst (cosmic highlight — warm gold flash) ── */
+  --nova-burst: #F5A623;
+  --nova-glow:  rgba(245, 166, 35, 0.12);
+
+  /* ── Glass Morphism ── */
+  --glass-bg:     rgba(15, 15, 24, 0.72);
+  --glass-border: rgba(255, 255, 255, 0.05);
+  --glass-blur:   16px;
+
+  /* ── Shadows (deeper, more atmospheric) ── */
+  --shadow-sm:   0 1px 2px rgba(0, 0, 0, 0.40);
+  --shadow-md:   0 4px 16px rgba(0, 0, 0, 0.50);
+  --shadow-lg:   0 8px 32px rgba(0, 0, 0, 0.55);
+  --shadow-glow: 0 0 32px rgba(139, 139, 255, 0.18);
+  --shadow-nova: 0 0 56px rgba(245, 166, 35, 0.18);
+
+  /* ── Radius (slightly rounder for cosmic softness) ── */
   --radius-xs: 4px;
-  --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 14px;
-  --radius-xl: 20px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
 
-  --transition-fast: 0.12s cubic-bezier(0.4, 0, 0.2, 1);
-  --transition-base: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  --transition-slow: 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  /* ── Space Tokens (foundation for Phase 2 refactoring) ── */
+  --space-xs:  4px;
+  --space-sm:  8px;
+  --space-md:  12px;
+  --space-lg:  16px;
+  --space-xl:  24px;
+  --space-2xl: 32px;
+  --space-3xl: 48px;
 
-  --font-weight-normal: 400;
-  --font-weight-medium: 500;
+  /* ── Transitions (smoother easing for cosmic feel) ── */
+  --transition-fast: 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-base: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-slow: 0.40s cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* ── Typography ── */
+  --font-family-display: 'Space Grotesk', 'Plus Jakarta Sans', system-ui, sans-serif;
+  --font-family-body:    'Plus Jakarta Sans', -apple-system, system-ui, sans-serif;
+  --font-family-mono:    'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+
+  --font-weight-normal:   400;
+  --font-weight-medium:   500;
   --font-weight-semibold: 600;
-  --font-weight-bold: 700;
-  --font-weight-extrabold: 800;
+  --font-weight-bold:     700;
+  --font-weight-extrabold:800;
 
-  --line-height-tight: 1.2;
-  --line-height-base: 1.5;
+  --line-height-tight:   1.2;
+  --line-height-base:    1.5;
   --line-height-relaxed: 1.7;
-
-  --red-soft: rgba(239,68,68,0.12);
 }
 
-/* === Light Theme === */
+
+/* ================================================================
+ * LIGHT THEME — High-Contrast Aurora
+ *
+ * ⚠️  Critical difference from dark theme:
+ *     Light mode needs 3-5× HIGHER opacity for the same perceived effect.
+ *     A 0.05 shadow on white = invisible. A 0.18 shadow = barely visible.
+ *     We target 0.12-0.25 for shadows, 0.10-0.15 for borders,
+ *     0.20-0.35 for glows, and saturated accent colors.
+ * ================================================================ */
 [data-theme="light"] {
-  --bg-base: #fafafa;
-  --bg-surface: #ffffff;
-  --bg-elevated: #f5f5f7;
-  --bg-hover: #eeeeef;
-  --bg-active: #e5e5e7;
-  
-  --border-subtle: rgba(0,0,0,0.06);
-  --border-default: rgba(0,0,0,0.1);
-  
-  --text-primary: #1a1a2e;
-  --text-secondary: #6b6b80;
-  --text-tertiary: #9999aa;
-  
-  --accent: #6366f1;
-  --accent-hover: #4f46e5;
-  --accent-soft: rgba(99,102,241,0.08);
-  
-  --green: #10b981;
-  --green-soft: rgba(16,185,129,0.08);
-  --orange: #f59e0b;
-  --orange-soft: rgba(245,158,11,0.08);
-  --blue: #3b82f6;
-  --blue-soft: rgba(59,130,246,0.08);
-  --red: #ef4444;
-  --red-soft: rgba(239,68,68,0.08);
-  
-  --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
-  --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
-  --shadow-lg: 0 8px 24px rgba(0,0,0,0.12);
+  /* ── Background Layers (soft gradient depth) ── */
+  --bg-deep:    #EEEEF4;  /* soft gray-lavender — body bg */
+  --bg-base:    #F5F5FA;  /* warm white — content */
+  --bg-surface: #FFFFFF;  /* pure white — cards */
+  --bg-elevated:#F0F0F7;  /* lavender tint — inputs/modals */
+  --bg-hover:   #E6E6F0;  /* visible hover tint */
+  --bg-active:  #DCDCEC;  /* pressed state */
+
+  /* ── Borders (visible, with slight lavender warmth) ── */
+  --border-subtle:  rgba(0, 0, 0, 0.08);
+  --border-default: rgba(0, 0, 0, 0.13);
+
+  /* ── Text (high contrast on white) ── */
+  --text-primary:   #17172B;
+  --text-secondary: #5A5A75;
+  --text-tertiary:  #8A8AA5;
+
+  /* ── Aurora Violet (saturated, visible on white) ── */
+  --accent:       #5858D6;
+  --accent-hover: #4747B8;
+  --accent-soft:  rgba(88, 88, 214, 0.12);
+
+  /* ── Semantic Colors (visible backgrounds) ── */
+  --green:       #0D9488;
+  --green-soft:  rgba(13, 148, 136, 0.12);
+  --orange:      #E07B00;
+  --orange-soft: rgba(224, 123, 0, 0.12);
+  --blue:        #3B6CEE;
+  --blue-soft:   rgba(59, 108, 238, 0.12);
+  --red:         #DC2626;
+  --red-soft:    rgba(220, 38, 38, 0.12);
+
+  /* ── Nova Burst (warm gold — visible glow) ── */
+  --nova-burst: #D4780A;
+  --nova-glow:  rgba(212, 120, 10, 0.22);
+
+  /* ── Glass Morphism ── */
+  --glass-bg:     rgba(255, 255, 255, 0.78);
+  --glass-border: rgba(0, 0, 0, 0.10);
+  --glass-blur:   12px;
+
+  /* ── Shadows (high contrast — actually visible on white) ── */
+  --shadow-sm:   0 1px 3px rgba(0, 0, 0, 0.10);
+  --shadow-md:   0 4px 18px rgba(0, 0, 0, 0.14);
+  --shadow-lg:   0 10px 36px rgba(0, 0, 0, 0.18);
+  --shadow-glow: 0 0 36px rgba(88, 88, 214, 0.22);
+  --shadow-nova: 0 0 48px rgba(212, 120, 10, 0.20);
 }
 
-/* === Light Theme Component Overrides === */
+
+/* ================================================================
+ * LIGHT THEME — Component Overrides
+ * ================================================================ */
 [data-theme="light"] body {
-  background: var(--bg-base);
+  background: var(--bg-deep);
 }
 
 [data-theme="light"] .titlebar {
   background: var(--bg-surface);
-  border-bottom: 1px solid var(--border-subtle);
-  box-shadow: var(--shadow-sm);
+  border-bottom: 1px solid var(--border-default);
+  box-shadow: 0 1px 6px rgba(0,0,0,0.08);
 }
 
 [data-theme="light"] .sidebar {
-  background: var(--bg-surface);
-  border-right: 1px solid var(--border-subtle);
-  box-shadow: var(--shadow-sm);
+  background: var(--bg-base);
+  border-right: 1px solid var(--border-default);
+  box-shadow: 1px 0 8px rgba(0,0,0,0.04);
 }
 
 [data-theme="light"] .stat-card {
   background: var(--bg-surface);
-  border: 1px solid var(--border-subtle);
+  border: 1px solid var(--border-default);
   box-shadow: var(--shadow-sm);
 }
 
 [data-theme="light"] .stat-card:hover {
   box-shadow: var(--shadow-md);
-  transform: translateY(-2px);
+  border-color: var(--accent);
+  transform: translateY(-3px);
 }
 
 [data-theme="light"] .card {
   background: var(--bg-surface);
-  border: 1px solid var(--border-subtle);
+  border: 1px solid var(--border-default);
   box-shadow: var(--shadow-sm);
 }
 
 [data-theme="light"] .card:hover {
   box-shadow: var(--shadow-lg);
-  transform: translateY(-3px);
+  border-color: rgba(88, 88, 214, 0.25);
+  transform: translateY(-4px);
 }
 
 [data-theme="light"] .search-box {
   background: var(--bg-elevated);
-  border: 1px solid var(--border-subtle);
+  border: 1px solid var(--border-default);
 }
 
 [data-theme="light"] .btn-primary {
   background: var(--accent);
-  box-shadow: 0 2px 8px rgba(99,102,241,0.3);
+  box-shadow: 0 3px 14px rgba(88, 88, 214, 0.35);
+  color: #fff;
 }
 
 [data-theme="light"] .btn-primary:hover {
-  box-shadow: 0 4px 16px rgba(99,102,241,0.4);
+  box-shadow: 0 6px 24px rgba(88, 88, 214, 0.45);
+  background: var(--accent-hover);
+  transform: translateY(-1px);
 }
 
 [data-theme="light"] .file-sidebar {
-  background: var(--bg-surface);
-  border-right: 1px solid var(--border-subtle);
-  box-shadow: var(--shadow-sm);
+  background: var(--bg-base);
+  border-right: 1px solid var(--border-default);
+  box-shadow: 1px 0 8px rgba(0,0,0,0.04);
 }
 
 [data-theme="light"] .tabs-bar {
-  background: var(--bg-surface);
-  border-bottom: 1px solid var(--border-subtle);
+  background: var(--bg-base);
+  border-bottom: 1px solid var(--border-default);
 }
 
 [data-theme="light"] .tab {
   background: var(--bg-elevated);
-  border: 1px solid var(--border-subtle);
+  border: 1px solid var(--border-default);
+  color: var(--text-secondary);
 }
 
 [data-theme="light"] .tab.active {
-  background: var(--bg-base);
-  border-bottom-color: var(--bg-base);
+  background: var(--bg-deep);
+  color: var(--text-primary);
+  border-bottom-color: var(--bg-deep);
 }
 
 [data-theme="light"] .status-bar {
-  background: var(--bg-surface);
-  border-top: 1px solid var(--border-subtle);
+  background: var(--bg-base);
+  border-top: 1px solid var(--border-default);
 }
 
-[data-theme="light"] .ai-stat-purple .ai-stat-icon { background: rgba(99,102,241,0.08); }
-[data-theme="light"] .ai-stat-cyan .ai-stat-icon   { background: rgba(6,182,212,0.08); }
-[data-theme="light"] .ai-stat-pink .ai-stat-icon   { background: rgba(236,72,153,0.08); }
+[data-theme="light"] .ai-stat-purple .ai-stat-icon { background: rgba(88, 88, 214, 0.12); box-shadow: 0 2px 12px rgba(88,88,214,0.15); }
+[data-theme="light"] .ai-stat-cyan .ai-stat-icon   { background: rgba(6, 182, 212, 0.12); box-shadow: 0 2px 12px rgba(6,182,212,0.15); }
+[data-theme="light"] .ai-stat-pink .ai-stat-icon   { background: rgba(236, 72, 153, 0.12); box-shadow: 0 2px 12px rgba(236,72,153,0.15); }
 
-[data-theme="light"] .ai-icon-blue   { background: rgba(59,130,246,0.1); color: #3b82f6; }
-[data-theme="light"] .ai-icon-green  { background: rgba(16,185,129,0.1); color: #10b981; }
-[data-theme="light"] .ai-icon-orange { background: rgba(245,158,11,0.1); color: #f59e0b; }
-[data-theme="light"] .ai-icon-pink   { background: rgba(236,72,153,0.1); color: #ec4899; }
+[data-theme="light"] .ai-icon-blue   { background: rgba(59, 108, 238, 0.14); color: #3B6CEE; }
+[data-theme="light"] .ai-icon-green  { background: rgba(13, 148, 136, 0.14); color: #0D9488; }
+[data-theme="light"] .ai-icon-orange { background: rgba(224, 123, 0, 0.14); color: #E07B00; }
+[data-theme="light"] .ai-icon-pink   { background: rgba(236, 72, 153, 0.14); color: #EC4899; }
 
 [data-theme="light"] .ai-hero-bg {
-  opacity: 0.08;
+  opacity: 0.12;
 }
 
 [data-theme="light"] .todo-input-dt { color-scheme: light; }

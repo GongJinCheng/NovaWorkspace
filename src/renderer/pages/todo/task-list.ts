@@ -6,7 +6,7 @@
 
 import { ipcClient } from '../../services/ipc-client';
 import { measure } from '../../utils/performance';
-import { escHtml } from '../../utils/escape';
+import { escHtml, escAttr } from '../../utils/escape';
 import { showUndoToast } from '../../widgets/toast';
 import {
   getStore,
@@ -239,42 +239,11 @@ function renderBoardView(area: HTMLElement): void {
   html += '</div>';
   area.innerHTML = html;
 
-  // Enforce column scrolling via JS — fix the flex-shrink issue
+  // CSS handles all board layout (position:absolute + inset:0 + !important).
+  // JS only needs to bind drag & drop after the DOM is live.
   requestAnimationFrame(() => {
-    area.style.position = 'relative';
-    area.style.overflow = 'hidden';
-
     const board = area.querySelector('.kanban-board') as HTMLElement | null;
     if (!board) return;
-    const areaHeight = area.clientHeight;
-    if (areaHeight <= 0) return;
-    board.style.position = 'absolute';
-    board.style.top = '0';
-    board.style.left = '0';
-    board.style.right = '0';
-    board.style.bottom = '0';
-    board.style.overflowX = 'auto';
-    board.style.overflowY = 'hidden';
-    board.style.display = 'flex';
-
-    const columns = board.querySelectorAll<HTMLElement>('.kanban-column');
-    columns.forEach(col => {
-      col.style.height = board.clientHeight + 'px';
-      col.style.display = 'flex';
-      col.style.flexDirection = 'column';
-      col.style.overflow = 'hidden';
-
-      const body = col.querySelector('.kanban-column-body') as HTMLElement | null;
-      if (body) {
-        body.style.flex = '1 1 0';
-        body.style.minHeight = '0';
-        body.style.overflowY = 'auto';
-        // CRITICAL: prevent task cards from flex-shrinking
-        body.style.display = 'block';
-      }
-    });
-
-    // Bind drag & drop for kanban
     bindKanbanDragDrop(board);
   });
 }

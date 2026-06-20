@@ -12,6 +12,9 @@ declare global {
     /** 打开全局命令面板 */
     __openCommandPalette: () => void;
 
+    /** 启动首次使用引导 */
+    __startOnboarding: () => void;
+
     /** 导出项目报告 */
     __exportProjectReport: (format: 'markdown' | 'pdf') => void;
 
@@ -49,7 +52,14 @@ declare global {
     /** 从模板新建文件 */
     __handleNewFileFromTemplate: (templateId: string) => void;
 
+    /** 运行文件管理器内置 AI 工作流 */
+    __runFileAIWorkflow: (workflowId: string) => void | Promise<void>;
+
     /** AI 服务实例 */
     aiService: import('./pages/ai/ai-service').AIService;
+
+    /** AI Studio draft/send helpers */
+    __novaAiSendMessage?: (text: string) => Promise<string>;
+    __novaAiSetDraft?: (text: string) => void;
   }
 }

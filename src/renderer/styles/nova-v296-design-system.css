@@ -1,0 +1,327 @@
+/* ============================================================
+ * nova-v296-design-system.css — Nova v2.9.6
+ * Icon completion + visual system polish across pages.
+ * ============================================================ */
+
+:root,
+[data-theme="dark"] {
+  --nova-icon-tile-bg: linear-gradient(135deg,
+    color-mix(in srgb, var(--accent) 20%, transparent),
+    color-mix(in srgb, var(--nova-burst) 10%, transparent));
+  --nova-icon-tile-border: color-mix(in srgb, var(--accent) 20%, rgba(255,255,255,.08));
+  --nova-soft-glow: 0 18px 48px color-mix(in srgb, var(--accent) 16%, transparent);
+}
+
+[data-theme="light"] {
+  --nova-icon-tile-bg: linear-gradient(135deg, rgba(88,88,214,.12), rgba(240,158,72,.10));
+  --nova-icon-tile-border: rgba(88,88,214,.14);
+  --nova-soft-glow: 0 18px 48px rgba(88,88,214,.12);
+}
+
+/* === App frame refinement === */
+.app-shell::before {
+  content: '';
+  position: fixed;
+  inset: 40px 16px 16px 264px;
+  pointer-events: none;
+  border-radius: 32px;
+  background:
+    radial-gradient(circle at 12% 18%, color-mix(in srgb, var(--accent) 10%, transparent), transparent 36%),
+    radial-gradient(circle at 92% 10%, color-mix(in srgb, var(--nova-burst) 8%, transparent), transparent 32%);
+  opacity: .8;
+  z-index: 0;
+}
+.sidebar,
+.main-content,
+.window-titlebar { position: relative; z-index: 1; }
+
+/* === Sidebar navigation: more product-like active state === */
+.nav-item {
+  position: relative;
+  overflow: hidden;
+}
+.nav-item::before {
+  content: '';
+  position: absolute;
+  inset: 6px auto 6px 7px;
+  width: 3px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, var(--accent), var(--nova-burst));
+  opacity: 0;
+  transform: scaleY(.55);
+  transition: opacity .18s ease, transform .18s ease;
+}
+.nav-item:hover::before,
+.nav-item.active::before {
+  opacity: 1;
+  transform: scaleY(1);
+}
+.nav-item.active svg,
+.nav-item:hover svg {
+  filter: drop-shadow(0 7px 12px color-mix(in srgb, var(--accent) 26%, transparent));
+}
+.sidebar-search {
+  box-shadow: inset 0 1px rgba(255,255,255,.55), 0 8px 24px rgba(52,48,95,.06);
+}
+
+/* === Metric cards: replace blank placeholders with real visual icons === */
+.home-stat-card::after,
+.project-stat-card::after {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  line-height: 1;
+  width: 48px;
+  height: 48px;
+  right: 14px;
+  top: 50%;
+  bottom: auto;
+  transform: translateY(-50%);
+  border-radius: 18px;
+  opacity: 1;
+  color: var(--text-primary);
+  background: var(--nova-icon-tile-bg);
+  border: 1px solid var(--nova-icon-tile-border);
+  box-shadow: inset 0 1px rgba(255,255,255,.42), 0 14px 32px color-mix(in srgb, var(--accent) 9%, transparent);
+}
+.home-stat-card,
+.project-stat-card {
+  padding-right: 76px !important;
+}
+.home-stat-card:nth-child(1)::after { content: '✓'; }
+.home-stat-card:nth-child(2)::after { content: '今'; }
+.home-stat-card:nth-child(3)::after { content: '!'; color: var(--red, #ef4444); }
+.home-stat-card:nth-child(4)::after { content: '完'; }
+.project-stat-card:nth-child(1)::after { content: 'MD'; font-size: 14px; font-weight: 900; letter-spacing: -.3px; }
+.project-stat-card:nth-child(2)::after { content: '⌘'; font-size: 24px; }
+.project-stat-card:nth-child(3)::after { content: '待'; font-size: 15px; font-weight: 900; }
+.project-stat-card:nth-child(4)::after { content: '!'; color: var(--red, #ef4444); font-weight: 900; }
+.project-stat-card:nth-child(5)::after { content: '↺'; font-size: 22px; }
+.project-stat-card:nth-child(6)::after { content: 'AI'; font-size: 14px; font-weight: 900; letter-spacing: -.3px; }
+
+.project-stat-card span,
+.home-stat-value {
+  text-shadow: 0 10px 28px color-mix(in srgb, currentColor 18%, transparent);
+}
+.project-stat-card small,
+.home-stat-label {
+  max-width: 150px;
+}
+.project-stat-card.warning::after {
+  background: linear-gradient(135deg, rgba(239,68,68,.14), rgba(249,115,22,.10));
+  border-color: rgba(239,68,68,.18);
+}
+
+/* === Action cards: add visible operation glyphs without changing JS === */
+.project-action-card {
+  padding: 18px 18px 18px 58px !important;
+}
+.project-action-card::after {
+  position: absolute;
+  top: 18px;
+  left: 18px;
+  width: 28px;
+  height: 28px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  font-weight: 900;
+  background: var(--nova-icon-tile-bg);
+  border: 1px solid var(--nova-icon-tile-border);
+  box-shadow: inset 0 1px rgba(255,255,255,.45);
+}
+.project-action-card:nth-child(1)::after { content: '+'; }
+.project-action-card:nth-child(2)::after { content: '✓'; }
+.project-action-card:nth-child(3)::after { content: '▣'; }
+.project-action-card:nth-child(4)::after { content: 'AI'; font-size: 11px; }
+.project-action-card:nth-child(5)::after { content: 'Σ'; }
+.project-action-card:nth-child(6)::after { content: '→'; }
+.project-action-card:nth-child(7)::after { content: 'MD'; font-size: 10px; }
+.project-action-card:nth-child(8)::after { content: 'PDF'; font-size: 9px; }
+.project-action-card strong { display: block; margin-bottom: 6px; }
+
+/* === Section headers: add consistent tiny leading icon chips === */
+.home-section-header h2,
+.project-section-header h2,
+.settings-section-header h3,
+.kb-header-left h2,
+.todo-command-title,
+.ai-chat-title span:first-of-type {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.home-section-header h2::before,
+.project-section-header h2::before,
+.settings-section-header h3::before,
+.kb-header-left h2::before,
+.todo-command-title::before,
+.ai-chat-title span:first-of-type::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 3px;
+  background: linear-gradient(135deg, var(--accent), var(--nova-burst));
+  box-shadow: 0 0 18px color-mix(in srgb, var(--accent) 35%, transparent);
+  flex: 0 0 auto;
+}
+
+/* === File manager: denser editor product feel === */
+.file-editor-area {
+  border-radius: 22px !important;
+  overflow: hidden;
+}
+.file-tabs {
+  min-height: 44px;
+  padding: 7px 10px 0 !important;
+  border-bottom: 1px solid var(--nova-muted-line);
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--bg-elevated) 84%, transparent), color-mix(in srgb, var(--bg-surface) 60%, transparent));
+}
+.file-tab {
+  border-radius: 13px 13px 0 0 !important;
+  border: 1px solid transparent;
+  border-bottom: none;
+}
+.file-tab.active {
+  background: color-mix(in srgb, var(--bg-elevated) 92%, transparent) !important;
+  border-color: var(--nova-muted-line);
+  box-shadow: 0 -8px 28px color-mix(in srgb, var(--accent) 7%, transparent);
+}
+.editor-toolbar {
+  border-bottom: 1px solid var(--nova-muted-line);
+  background: color-mix(in srgb, var(--bg-elevated) 72%, transparent) !important;
+}
+.file-tree-item,
+.file-tree-row,
+.file-item {
+  border-radius: 12px !important;
+}
+
+/* === AI assistant: more readable conversation stack === */
+.ai-messages {
+  padding: 18px !important;
+}
+.ai-message {
+  margin-bottom: 14px !important;
+}
+.ai-message-content,
+.message-content,
+.chat-message-content {
+  border-radius: 18px !important;
+  box-shadow: 0 12px 34px rgba(0,0,0,.08);
+}
+.ai-input-area {
+  border-top: 1px solid var(--nova-muted-line);
+  background: linear-gradient(180deg, transparent, color-mix(in srgb, var(--bg-elevated) 56%, transparent));
+}
+
+/* === Todo center: clearer Kanban / timeline surfaces === */
+.todo-priority-pill,
+.todo-filter-chip,
+.todo-category-chip,
+.todo-status-pill {
+  border-radius: 999px !important;
+}
+.todo-task-card,
+.todo-timeline-item,
+.task-item {
+  border-radius: 18px !important;
+  border: 1px solid var(--nova-muted-line) !important;
+  background: color-mix(in srgb, var(--bg-elevated) 64%, transparent) !important;
+  box-shadow: 0 12px 30px rgba(0,0,0,.07);
+}
+.todo-task-card:hover,
+.todo-timeline-item:hover,
+.task-item:hover {
+  transform: translateY(-1px);
+  border-color: color-mix(in srgb, var(--accent) 26%, transparent) !important;
+  box-shadow: 0 18px 46px rgba(0,0,0,.10), var(--nova-soft-glow);
+}
+
+/* === Knowledge and settings: improve dense forms === */
+.kb-toolbar,
+.settings-row {
+  border-radius: 18px;
+}
+.kb-item,
+.kb-source-item,
+.knowledge-item {
+  border-radius: 18px !important;
+  border: 1px solid var(--nova-muted-line) !important;
+}
+.settings-row {
+  padding: 18px !important;
+  background: color-mix(in srgb, var(--bg-elevated) 42%, transparent);
+  border: 1px solid transparent;
+}
+.settings-row:hover {
+  border-color: color-mix(in srgb, var(--accent) 18%, transparent);
+  background: color-mix(in srgb, var(--bg-elevated) 62%, transparent);
+}
+.settings-radio,
+.settings-shortcut {
+  border-radius: 14px !important;
+  box-shadow: inset 0 1px rgba(255,255,255,.38);
+}
+
+/* === Scrollbars: stable but less intrusive === */
+.home-page,
+.project-page,
+.kb-page,
+.settings-page,
+.todo-main,
+.ai-main,
+.file-tree,
+.ai-messages,
+.kb-list,
+.kb-detail-content {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--accent) 34%, transparent) transparent;
+}
+.home-page::-webkit-scrollbar,
+.project-page::-webkit-scrollbar,
+.kb-page::-webkit-scrollbar,
+.settings-page::-webkit-scrollbar,
+.todo-main::-webkit-scrollbar,
+.ai-main::-webkit-scrollbar,
+.file-tree::-webkit-scrollbar,
+.ai-messages::-webkit-scrollbar,
+.kb-list::-webkit-scrollbar,
+.kb-detail-content::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.home-page::-webkit-scrollbar-thumb,
+.project-page::-webkit-scrollbar-thumb,
+.kb-page::-webkit-scrollbar-thumb,
+.settings-page::-webkit-scrollbar-thumb,
+.todo-main::-webkit-scrollbar-thumb,
+.ai-main::-webkit-scrollbar-thumb,
+.file-tree::-webkit-scrollbar-thumb,
+.ai-messages::-webkit-scrollbar-thumb,
+.kb-list::-webkit-scrollbar-thumb,
+.kb-detail-content::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 28%, transparent);
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+
+@media (max-width: 1360px) {
+  .project-stats-grid { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; }
+  .project-action-grid { grid-template-columns: repeat(4, minmax(0, 1fr)) !important; }
+}
+
+@media (max-width: 980px) {
+  .home-page,
+  .project-page,
+  .settings-page { padding: 18px; }
+  .project-stats-grid,
+  .project-action-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+  .project-stat-card { min-height: 104px; }
+  .app-shell::before { left: 16px; }
+}

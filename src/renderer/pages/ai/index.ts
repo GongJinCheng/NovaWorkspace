@@ -1,4 +1,4 @@
-﻿/**
+/**
  * AI Page - AI assistant with conversational chat + quick tools
  * Now with streaming responses for typewriter effect.
  * Features: Markdown rendering, code highlighting, chat history persistence.
@@ -6,13 +6,14 @@
 import { aiService, type ChatMessage } from './ai-service';
 import type { AIImageAttachment, AIMessageContent, AIModelCapabilities, AIProviderConfig } from '../../../shared/types/ai';
 import { AI_CAPABILITY_LABELS, normalizeAIModelCapabilities, providerSupportsCapability, stripReasoningBlocks } from '../../../shared/utils/ai-capabilities';
-import { registerPageInit, registerPageCleanup } from '../../app/router';
+import { registerPageInit, registerPageCleanup, switchPage } from '../../app/router';
 import { aiStats } from '../../app/index';
 import { renderMarkdown } from '../../utils/markdown-renderer';
 import { renderMermaidBlocks } from '../files/markdown-preview';
 import type { Conversation, ChatHistoryMessage } from '../../../shared/types/chat-history';
 import { getCurrentWorkspaceRoot } from '../../services/workspace-context';
 import { escHtml, escAttr } from '../../utils/escape';
+import { installAIStudio, consumePendingAIDraft } from './studio';
 
 window.aiService = aiService;
 
@@ -159,7 +160,9 @@ async function sendMessage(text: string): Promise<string> {
 
     bubble.classList.remove('streaming');
     renderAssistantBubble(bubble, result);
-    chatHistory.push({ role: 'assistant', content: stripReasoningBlocks(result) });
+    const cleanedResult = stripReasoningBlocks(result);
+    window.dispatchEvent(new CustomEvent('nova:ai-result', { detail: { text: cleanedResult } }));
+    chatHistory.push({ role: 'assistant', content: cleanedResult });
     incrementAIStats(Math.ceil((estimateMessageLength(userContent) + result.length) / 4));
 
     // Save to conversation history
@@ -639,6 +642,142 @@ function initChatInput(): void {
   });
 }
 
+function setAIDraft(text: string, options: { focus?: boolean; select?: boolean } = { focus: true }): void {
+  const input = document.getElementById('ai-chat-input') as HTMLTextAreaElement | null;
+  if (!input) return;
+  input.value = text;
+  input.style.height = 'auto';
+  input.style.height = Math.min(input.scrollHeight, 140) + 'px';
+  if (options.focus !== false) input.focus();
+  if (options.select) input.select();
+}
+
+function appendSystemMessage(text: string): void {
+  appendMessage('system', text);
+}
+
+function attachActiveFileToAIContext(): void {
+  const snapshot = window.__getActiveFileSnapshot?.();
+  if (!snapshot) {
+    appendMessage('system', '当前没有活动文件。请先在文件管理器打开一个文件。');
+    showMsg('请先在文件管理器打开一个文件', 'warn');
+    return;
+  }
+  if (!pendingFiles.some(file => file.path === snapshot.filePath)) {
+    pendingFiles.push({ path: snapshot.filePath, name: snapshot.fileName });
+    renderPendingFiles();
+  }
+  if (!(document.getElementById('ai-chat-input') as HTMLTextAreaElement | null)?.value.trim()) {
+    setAIDraft('请基于我引用的当前文件，先总结重点，再给出下一步建议。', { focus: true });
+  }
+  showMsg('已引用当前文件：' + snapshot.fileName, 'success');
+}
+
+function installAIStudioBridge(): void {
+  installAIStudio({
+    sendMessage,
+    setDraft: setAIDraft,
+    appendSystem: appendSystemMessage,
+    attachActiveFile: attachActiveFileToAIContext,
+    pickProjectFiles: () => { void pickProjectFiles(); },
+    pickKnowledgeItems: () => { void pickKnowledgeItems(); },
+    runFileWorkflow: async (workflowId: string) => {
+      const runner = window.__runFileAIWorkflow;
+      if (typeof runner !== 'function') {
+        appendMessage('system', '文件管理器还没有准备好，请先打开文件管理页面。');
+        return;
+      }
+      await runner(workflowId);
+    },
+  });
+  consumePendingAIDraft({
+    sendMessage,
+    setDraft: setAIDraft,
+    appendSystem: appendSystemMessage,
+    attachActiveFile: attachActiveFileToAIContext,
+    pickProjectFiles: () => { void pickProjectFiles(); },
+    pickKnowledgeItems: () => { void pickKnowledgeItems(); },
+    runFileWorkflow: async (workflowId: string) => {
+      if (window.__runFileAIWorkflow) await window.__runFileAIWorkflow(workflowId);
+    },
+  });
+}
+
+
+function initAIWorkflowEntrypoints(): void {
+  const panel = document.getElementById('ai-workflow-panel');
+  if (!panel || panel.dataset.bound === 'true') return;
+  panel.dataset.bound = 'true';
+
+  panel.addEventListener('click', (event) => {
+    const target = event.target as HTMLElement | null;
+    const card = target?.closest('[data-ai-workflow]') as HTMLElement | null;
+    const workflowId = card?.dataset.aiWorkflow || '';
+    if (!workflowId) return;
+    void runAIWorkflow(workflowId);
+  });
+}
+
+async function runAIWorkflow(workflowId: string): Promise<void> {
+  const input = document.getElementById('ai-chat-input') as HTMLTextAreaElement | null;
+
+  if (workflowId === 'chat-focus') {
+    if (input && !input.value.trim()) input.value = '帮我梳理一下当前项目下一步应该怎么推进。';
+    input?.focus();
+    input?.select();
+    return;
+  }
+
+  if (workflowId === 'file-summary' || workflowId === 'file-todo') {
+    await switchPage('files');
+    const runner = window.__runFileAIWorkflow;
+    if (typeof runner !== 'function') {
+      appendMessage('system', '文件管理器还没有准备好，请先打开文件管理页面。');
+      return;
+    }
+    await runner(workflowId === 'file-summary' ? 'summary' : 'todo');
+    return;
+  }
+
+  const snapshot = window.__getActiveFileSnapshot?.();
+  if (!snapshot) {
+    appendMessage('system', '当前没有可用的活动文件。请先在文件管理器打开一个文档，再使用这个工作流。');
+    showMsg('请先在文件管理器打开一个文档', 'warn');
+    return;
+  }
+
+  if (workflowId === 'attach-current-file') {
+    if (!pendingFiles.some(file => file.path === snapshot.filePath)) {
+      pendingFiles.push({ path: snapshot.filePath, name: snapshot.fileName });
+      renderPendingFiles();
+    }
+    if (input && !input.value.trim()) input.value = '请基于我引用的当前文件，帮我分析重点和下一步建议。';
+    input?.focus();
+    return;
+  }
+
+  const content = truncateForAIWorkflow(snapshot.selection || snapshot.content);
+  const targetLabel = snapshot.selection ? '当前选中内容' : '当前文件';
+
+  if (workflowId === 'summarize-current-file') {
+    await sendMessage(`请总结${targetLabel}，输出：1）核心内容；2）关键结论；3）下一步建议。\n\n文件：${snapshot.fileName}\n\n${content}`);
+    return;
+  }
+
+  if (workflowId === 'review-current-file') {
+    await sendMessage(`请审查${targetLabel}，重点指出：结构问题、逻辑问题、表达问题、可执行的优化建议。\n\n文件：${snapshot.fileName}\n\n${content}`);
+    return;
+  }
+
+  appendMessage('system', '未知 AI 工作流：' + workflowId);
+}
+
+function truncateForAIWorkflow(content: string): string {
+  const limit = 12000;
+  if (content.length <= limit) return content;
+  return content.slice(0, limit) + `\n\n……内容过长，已截取前 ${limit} 字。`;
+}
+
 // Sidebar toggle
 function initSidebarToggle(): void {
   const toggleBtn = document.getElementById('btn-ai-toggle-panel');
@@ -824,6 +963,7 @@ async function updateAIStatus(): Promise<void> {
   if (modelDisplay) modelDisplay.textContent = isConfigured ? aiService.getModel() : '-';
 
   updateStatsDisplay();
+  installAIStudioBridge();
 }
 
 function updateStatsDisplay(): void {
@@ -1322,6 +1462,8 @@ function bindAIPageEventsOnce(): void {
   window.addEventListener('focus', refreshConfig);
 
   initChatInput();
+  initAIWorkflowEntrypoints();
+  installAIStudioBridge();
   initSidebarToggle();
 }
 

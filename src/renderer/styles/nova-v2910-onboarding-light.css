@@ -1,0 +1,152 @@
+/* ============================================================
+ * Nova v2.9.10 — Lightweight Onboarding Overlay
+ * ------------------------------------------------------------
+ * 将首次使用引导从强遮罩弹窗改为轻量浮层，降低遮盖感，
+ * 保留步骤引导和按钮操作，不再大面积压暗工作台内容。
+ * ============================================================ */
+
+.nova-onboarding-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: block;
+  padding: 0;
+  pointer-events: none;
+}
+
+.nova-onboarding-backdrop {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 85% 84%, rgba(105, 102, 246, .10), transparent 34%),
+    radial-gradient(circle at 20% 12%, rgba(244, 163, 96, .055), transparent 30%),
+    rgba(248, 249, 255, .055);
+  backdrop-filter: blur(1.5px) saturate(1.03);
+}
+
+html[data-theme='dark'] .nova-onboarding-backdrop {
+  background:
+    radial-gradient(circle at 85% 84%, rgba(139, 139, 255, .12), transparent 34%),
+    radial-gradient(circle at 18% 12%, rgba(245, 166, 35, .07), transparent 30%),
+    rgba(5, 5, 8, .16);
+  backdrop-filter: blur(2px) saturate(1.04);
+}
+
+.nova-onboarding-card {
+  position: fixed;
+  right: 28px;
+  bottom: 28px;
+  width: min(430px, calc(100vw - 40px));
+  max-height: min(78vh, 560px);
+  overflow: auto;
+  pointer-events: auto;
+  border-radius: 26px;
+  padding: 22px;
+  border: 1px solid rgba(255, 255, 255, .62);
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, .86), rgba(255, 255, 255, .72)),
+    radial-gradient(circle at 0% 0%, rgba(105, 102, 246, .16), transparent 42%),
+    radial-gradient(circle at 100% 0%, rgba(244, 163, 96, .12), transparent 38%);
+  box-shadow:
+    0 20px 58px rgba(24, 26, 52, .18),
+    0 0 0 1px rgba(105, 102, 246, .05) inset;
+  backdrop-filter: blur(20px) saturate(1.08);
+  animation: novaOnboardingFloatIn .22s var(--nova-ease) both;
+}
+
+html[data-theme='dark'] .nova-onboarding-card {
+  border-color: rgba(255, 255, 255, .14);
+  background:
+    linear-gradient(145deg, rgba(22, 23, 35, .90), rgba(14, 15, 24, .80)),
+    radial-gradient(circle at 0% 0%, rgba(139, 139, 255, .16), transparent 42%),
+    radial-gradient(circle at 100% 0%, rgba(245, 166, 35, .10), transparent 38%);
+  box-shadow:
+    0 22px 70px rgba(0, 0, 0, .34),
+    0 0 0 1px rgba(255, 255, 255, .04) inset;
+}
+
+.nova-onboarding-top,
+.nova-onboarding-actions,
+.nova-onboarding-action-right {
+  gap: 10px;
+}
+
+.nova-onboarding-progress {
+  height: 6px;
+  margin: 16px 0 12px;
+  background: rgba(105, 102, 246, .10);
+}
+
+.nova-onboarding-card h2 {
+  margin: 10px 0 8px;
+  font-size: 22px;
+  line-height: 1.25;
+  letter-spacing: -.035em;
+}
+
+.nova-onboarding-card p {
+  font-size: 13px;
+  line-height: 1.72;
+}
+
+.nova-onboarding-dots {
+  margin: 16px 0;
+}
+
+.nova-onboarding-actions {
+  padding-top: 2px;
+}
+
+.nova-onboarding-close {
+  transition: transform .16s var(--nova-ease), background-color .16s var(--nova-ease);
+}
+
+.nova-onboarding-close:hover {
+  transform: rotate(6deg) scale(1.04);
+}
+
+.nova-onboarding-card::after {
+  content: '轻量引导 · 页面仍可查看';
+  display: block;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(105, 102, 246, .10);
+  color: var(--nova-text-muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .02em;
+}
+
+@keyframes novaOnboardingFloatIn {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 14px, 0) scale(.985);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+@media (max-width: 720px) {
+  .nova-onboarding-card {
+    left: 16px;
+    right: 16px;
+    bottom: 16px;
+    width: auto;
+    max-height: calc(100vh - 32px);
+    padding: 20px;
+  }
+
+  .nova-onboarding-actions,
+  .nova-onboarding-action-right {
+    align-items: stretch;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nova-onboarding-card {
+    animation: none;
+  }
+}

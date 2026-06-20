@@ -1,4 +1,4 @@
-﻿/**
+/**
  * App Entry - Application initialization entry
  * Binds global events, initializes theme, registers page routing.
  * Features: global search overlay (Ctrl+K)
@@ -11,6 +11,8 @@ import { showInputPrompt } from '../components/modal';
 import { buildTemplateCommandResults } from '../services/template-service';
 import { escHtml } from '../utils/escape';
 import { initWorkspaceSwitcher } from './workspace-switcher';
+import { initOnboarding } from './onboarding';
+import { novaIcon, NovaIconName } from '../utils/icons';
 
 // Page modules - must be imported so esbuild includes them and their registerPageInit side effects run
 import '../pages/home/index';
@@ -39,6 +41,7 @@ async function initApp(): Promise<void> {
   initWorkspaceSwitcher();
   initLocalLogin();
   initAutoUpdateStatus();
+  initOnboarding();
   console.log('[App] \u521D\u59CB\u5316\u5B8C\u6210');
 }
 
@@ -98,26 +101,48 @@ function bindKeyboardShortcuts(): void {
   const handleGlobalShortcut = (e: KeyboardEvent) => {
     const key = e.key.toLowerCase();
     const isMod = e.ctrlKey || e.metaKey;
+
+    if (e.altKey && !e.ctrlKey && !e.metaKey) {
+      const pageByKey: Record<string, 'home' | 'project' | 'files' | 'ai' | 'todo'> = { '1': 'home', '2': 'project', '3': 'files', '4': 'ai', '5': 'todo' };
+      const targetPage = pageByKey[key];
+      if (targetPage) {
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+        void switchPage(targetPage);
+      }
+      return;
+    }
+
     if (!isMod) return;
+
+    const eventWithFlag = e as KeyboardEvent & { __novaShortcutHandled?: boolean };
+    if (eventWithFlag.__novaShortcutHandled) return;
+
+    const consumeShortcut = () => {
+      eventWithFlag.__novaShortcutHandled = true;
+      e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+    };
 
     // Ctrl+K is Nova's command palette. Bind it in capture phase so it works
     // immediately after startup and is not swallowed by focused inputs/editors.
     if (key === 'k') {
-      e.preventDefault();
-      e.stopPropagation();
+      consumeShortcut();
       openSearchOverlay();
       return;
     }
 
     if (key === 's') {
-      e.preventDefault();
+      consumeShortcut();
       const em = window.__editorManager;
       if (em) em.saveFile();
       return;
     }
 
     if (key === 'o') {
-      e.preventDefault();
+      consumeShortcut();
       void (async () => {
         await switchPage('files');
         const ft = window.__fileTree;
@@ -127,7 +152,7 @@ function bindKeyboardShortcuts(): void {
     }
 
     if (key === 'n') {
-      e.preventDefault();
+      consumeShortcut();
       void (async () => {
         await switchPage('files');
         window.__handleNewFile?.();
@@ -136,7 +161,7 @@ function bindKeyboardShortcuts(): void {
     }
 
     if (key === 'w') {
-      e.preventDefault();
+      consumeShortcut();
       const em = window.__editorManager;
       if (em?.activeEditor) em.closeTab(em.activeEditor);
     }
@@ -163,6 +188,9 @@ type PaletteResult = {
   title: string;
   subtitle?: string;
   icon: string;
+  iconHtml?: string;
+  keywords?: string[];
+  hotkey?: string;
   action: () => void | Promise<void>;
 };
 
@@ -170,6 +198,7 @@ let paletteResults: PaletteResult[] = [];
 let paletteSelectedIndex = 0;
 let paletteSearchTimer: ReturnType<typeof setTimeout> | null = null;
 let paletteLastQuery = '';
+const RECENT_COMMANDS_KEY = 'nova-recent-command-ids';
 
 function toggleSearchOverlay(): void {
   const overlay = document.getElementById('global-search-overlay');
@@ -209,7 +238,7 @@ async function renderSearchResults(query: string): Promise<void> {
 
   container.innerHTML = '<div class="search-empty">正在搜索文件、文档、待办和知识库...</div>';
   const lower = q.toLowerCase();
-  const actions = getCommandActions().filter((item) => (item.title + ' ' + (item.subtitle || '')).toLowerCase().includes(lower));
+  const actions = getCommandActions().filter((item) => paletteMatches(item, lower));
   const todos = await searchTodoResults(lower);
   const files = await searchWorkspaceResults(q).catch((error) => {
     console.warn('[Palette] workspace search failed:', error);
@@ -227,14 +256,15 @@ async function renderSearchResults(query: string): Promise<void> {
 
 function getDefaultPaletteActions(): PaletteResult[] {
   return [
-    ...getCommandActions().slice(0, 18),
-    { id: 'page-home', group: '页面', title: '首页', subtitle: '回到今日工作台', icon: '🏠', action: () => { void switchPage('home'); } },
-    { id: 'page-project', group: '页面', title: '项目概览', subtitle: '查看当前工作区状态、统计和项目 AI', icon: '📊', action: () => { void switchPage('project'); } },
-    { id: 'page-files', group: '页面', title: '文件管理', subtitle: '浏览和编辑工作区文件', icon: '📁', action: () => { void switchPage('files'); } },
-    { id: 'page-ai', group: '页面', title: 'AI 助手', subtitle: '打开 AI 对话与配置侧栏', icon: '🤖', action: () => { void switchPage('ai'); } },
-    { id: 'page-todo', group: '页面', title: '待办中心', subtitle: '查看和管理任务', icon: '✅', action: () => { void switchPage('todo'); } },
-    { id: 'page-knowledge', group: '页面', title: '知识库', subtitle: '导入和管理项目知识资料', icon: '📚', action: () => { void switchPage('knowledge'); } },
-    { id: 'page-settings', group: '页面', title: '设置', subtitle: '模型、主题和快捷键', icon: '⚙️', action: () => { void switchPage('settings'); } },
+    ...getRecentCommandActions(),
+    ...getCommandActions().slice(0, 22),
+    { id: 'page-home', group: '页面', title: '首页', subtitle: '回到今日工作台', icon: '首页', iconHtml: commandIcon('home'), hotkey: 'Alt+1', action: () => { void switchPage('home'); } },
+    { id: 'page-project', group: '页面', title: '项目概览', subtitle: '查看当前工作区状态、统计和项目 AI', icon: '项目', iconHtml: commandIcon('project'), hotkey: 'Alt+2', action: () => { void switchPage('project'); } },
+    { id: 'page-files', group: '页面', title: '文件管理', subtitle: '浏览和编辑工作区文件', icon: '文件', iconHtml: commandIcon('folder'), hotkey: 'Alt+3', action: () => { void switchPage('files'); } },
+    { id: 'page-ai', group: '页面', title: 'AI 助手', subtitle: '打开 AI 对话与配置侧栏', icon: 'AI', iconHtml: commandIcon('ai'), hotkey: 'Alt+4', action: () => { void switchPage('ai'); } },
+    { id: 'page-todo', group: '页面', title: '待办中心', subtitle: '查看和管理任务', icon: '待办', iconHtml: commandIcon('task'), hotkey: 'Alt+5', action: () => { void switchPage('todo'); } },
+    { id: 'page-knowledge', group: '页面', title: '知识库', subtitle: '导入和管理项目知识资料', icon: '知识', iconHtml: commandIcon('knowledge'), action: () => { void switchPage('knowledge'); } },
+    { id: 'page-settings', group: '页面', title: '设置', subtitle: '模型、主题和快捷键', icon: '设置', iconHtml: commandIcon('settings'), action: () => { void switchPage('settings'); } },
   ];
 }
 
@@ -247,28 +277,73 @@ function getCommandActions(): PaletteResult[] {
   });
 
   return [
-    { id: 'cmd-open-folder', group: '命令', title: '打开工作区', subtitle: '选择一个本地文件夹作为项目', icon: '📂', action: async () => { await switchPage('files'); void (window.__fileTree?.openFolder?.() || window.__chooseWorkspaceFolder?.()); } },
-    { id: 'cmd-project-overview', group: '命令', title: '打开项目概览', subtitle: '查看当前工作区统计和动态', icon: '📊', action: () => { void switchPage('project'); } },
-    { id: 'cmd-new-file', group: '命令', title: '新建文档', subtitle: '选择模板并创建 Markdown 文档', icon: '📝', action: async () => { await switchPage('files'); void window.__handleNewFile?.(); } },
-    { id: 'cmd-new-todo', group: '命令', title: '新建待办', subtitle: '快速创建一条任务', icon: '➕', action: createQuickTodo },
-    { id: 'cmd-settings', group: '命令', title: '打开设置', subtitle: '配置 AI Provider、主题和快捷键', icon: '⚙️', action: () => { void switchPage('settings'); } },
-    { id: 'cmd-ai', group: '命令', title: '打开 AI 助手', subtitle: '进入 AI 对话页', icon: '🤖', action: () => { void switchPage('ai'); } },
-    { id: 'cmd-edit-mode', group: '文档命令', title: '切换到编辑模式', subtitle: '仅显示 Markdown 编辑器', icon: '📝', action: () => runActiveMarkdownModeCommand('edit') },
-    { id: 'cmd-preview-mode', group: '文档命令', title: '切换到预览模式', subtitle: '仅显示 Markdown 渲染预览', icon: '👁️', action: () => runActiveMarkdownModeCommand('preview') },
-    { id: 'cmd-split-mode', group: '文档命令', title: '切换到分屏模式', subtitle: '左侧编辑右侧预览', icon: '↔️', action: () => runActiveMarkdownModeCommand('split') },
+    { id: 'cmd-open-folder', group: '常用命令', title: '打开工作区', subtitle: '选择一个本地文件夹作为项目', icon: '打开', iconHtml: commandIcon('folder'), hotkey: 'Ctrl+O', keywords: ['workspace', 'folder', '项目'], action: async () => { await switchPage('files'); void (window.__fileTree?.openFolder?.() || window.__chooseWorkspaceFolder?.()); } },
+    { id: 'cmd-project-overview', group: '常用命令', title: '打开项目概览', subtitle: '查看当前工作区统计和动态', icon: '项目', iconHtml: commandIcon('project'), hotkey: 'Alt+2', keywords: ['dashboard', 'overview'], action: () => { void switchPage('project'); } },
+    { id: 'cmd-new-file', group: '常用命令', title: '新建文档', subtitle: '选择模板并创建 Markdown 文档', icon: '文档', iconHtml: commandIcon('new-doc'), hotkey: 'Ctrl+N', keywords: ['markdown', 'template', 'md'], action: async () => { await switchPage('files'); void window.__handleNewFile?.(); } },
+    { id: 'cmd-new-todo', group: '常用命令', title: '新建待办', subtitle: '快速创建一条任务', icon: '待办', iconHtml: commandIcon('new-todo'), keywords: ['task', 'todo'], action: createQuickTodo },
+    { id: 'cmd-ai', group: '常用命令', title: '打开 AI 助手', subtitle: '进入 AI 对话页', icon: 'AI', iconHtml: commandIcon('ai'), hotkey: 'Alt+4', keywords: ['chat', 'model'], action: () => { void switchPage('ai'); } },
+    { id: 'cmd-settings', group: '常用命令', title: '打开设置', subtitle: '配置 AI Provider、主题和快捷键', icon: '设置', iconHtml: commandIcon('settings'), keywords: ['config', 'theme'], action: () => { void switchPage('settings'); } },
+    { id: 'cmd-theme-cycle', group: '常用命令', title: '切换深浅色主题', subtitle: '在浅色、深色和跟随系统之间切换', icon: '主题', iconHtml: commandIcon('sparkles'), keywords: ['theme', 'dark', 'light'], action: cycleTheme },
+    { id: 'cmd-onboarding', group: '常用命令', title: '重新查看首次使用引导', subtitle: '重新打开 Nova 工作台的五步引导', icon: '引导', iconHtml: commandIcon('learning'), keywords: ['guide', 'help', 'onboarding'], action: () => window.__startOnboarding?.() },
+    { id: 'cmd-edit-mode', group: '文档命令', title: '切换到编辑模式', subtitle: '仅显示 Markdown 编辑器', icon: '编辑', iconHtml: commandIcon('new-doc'), action: () => runActiveMarkdownModeCommand('edit') },
+    { id: 'cmd-preview-mode', group: '文档命令', title: '切换到预览模式', subtitle: '仅显示 Markdown 渲染预览', icon: '预览', iconHtml: commandIcon('file'), action: () => runActiveMarkdownModeCommand('preview') },
+    { id: 'cmd-split-mode', group: '文档命令', title: '切换到分屏模式', subtitle: '左侧编辑右侧预览', icon: '分屏', iconHtml: commandIcon('files'), action: () => runActiveMarkdownModeCommand('split') },
     ...templateActions,
-    { id: 'cmd-ai-summary', group: 'AI 命令', title: 'AI 总结当前文档', subtitle: '基于当前 Markdown 生成总结', icon: '✨', action: () => runActiveMarkdownCommand('summary') },
-    { id: 'cmd-ai-outline', group: 'AI 命令', title: 'AI 生成文档大纲', subtitle: '基于当前 Markdown 生成大纲', icon: '📋', action: () => runActiveMarkdownCommand('outline') },
-    { id: 'cmd-ai-rewrite', group: 'AI 命令', title: 'AI 改写选中文本', subtitle: '对当前选中的内容进行改写', icon: '✏️', action: () => runActiveMarkdownCommand('rewrite') },
-    { id: 'cmd-ai-todo', group: 'AI 命令', title: 'AI 根据当前文档生成待办', subtitle: '从当前 Markdown 提取任务', icon: '✅', action: () => runActiveMarkdownCommand('todo') },
-    { id: 'cmd-ask-doc', group: 'AI 命令', title: '问当前文档', subtitle: '基于当前 Markdown 向 AI 提问', icon: '💬', action: () => runActiveMarkdownCommand('askdoc') },
-    { id: 'cmd-export-current-html', group: '导出', title: '导出当前文档为 HTML', subtitle: '把当前 Markdown 导出为网页文件', icon: '🌐', action: () => runActiveMarkdownCommand('exporthtml') },
-    { id: 'cmd-export-current-pdf', group: '导出', title: '导出当前文档为 PDF', subtitle: '把当前 Markdown 导出为 PDF', icon: '📄', action: () => runActiveMarkdownCommand('exportpdf') },
-    { id: 'cmd-export-project-md', group: '导出', title: '导出项目报告 Markdown', subtitle: '基于当前项目概览生成报告', icon: '📋', action: () => runProjectExportCommand('markdown') },
-    { id: 'cmd-export-project-pdf', group: '导出', title: '导出项目报告 PDF', subtitle: '基于当前项目概览生成 PDF 报告', icon: '📕', action: () => runProjectExportCommand('pdf') },
-    { id: 'cmd-save-version', group: '文档命令', title: '保存当前版本', subtitle: '为当前文档创建历史版本', icon: '🕘', action: () => runActiveMarkdownCommand('saveversion') },
-    { id: 'cmd-history', group: '文档命令', title: '查看版本历史', subtitle: '预览、恢复或删除历史版本', icon: '📚', action: () => runActiveMarkdownCommand('history') },
+    { id: 'cmd-ai-summary', group: 'AI 工作流', title: 'AI 总结当前文档', subtitle: '基于当前 Markdown 生成总结', icon: '总结', iconHtml: commandIcon('summary'), action: () => runActiveMarkdownCommand('summary') },
+    { id: 'cmd-ai-outline', group: 'AI 工作流', title: 'AI 生成文档大纲', subtitle: '基于当前 Markdown 生成大纲', icon: '大纲', iconHtml: commandIcon('report'), action: () => runActiveMarkdownCommand('outline') },
+    { id: 'cmd-ai-rewrite', group: 'AI 工作流', title: 'AI 改写选中文本', subtitle: '对当前选中的内容进行改写', icon: '改写', iconHtml: commandIcon('sparkles'), action: () => runActiveMarkdownCommand('rewrite') },
+    { id: 'cmd-ai-todo', group: 'AI 工作流', title: 'AI 根据当前文档生成待办', subtitle: '从当前 Markdown 提取任务', icon: '待办', iconHtml: commandIcon('task'), action: () => runActiveMarkdownCommand('todo') },
+    { id: 'cmd-ask-doc', group: 'AI 工作流', title: '问当前文档', subtitle: '基于当前 Markdown 向 AI 提问', icon: '问答', iconHtml: commandIcon('ai'), action: () => runActiveMarkdownCommand('askdoc') },
+    { id: 'cmd-ai-format-current', group: 'AI 工作流', title: 'AI 格式化当前文件', subtitle: '复用文件管理器的 AI 格式化能力', icon: '格式化', iconHtml: commandIcon('sparkles'), action: () => runFileWorkflowCommand('format') },
+    { id: 'cmd-export-current-html', group: '导出', title: '导出当前文档为 HTML', subtitle: '把当前 Markdown 导出为网页文件', icon: 'HTML', iconHtml: commandIcon('report'), action: () => runActiveMarkdownCommand('exporthtml') },
+    { id: 'cmd-export-current-pdf', group: '导出', title: '导出当前文档为 PDF', subtitle: '把当前 Markdown 导出为 PDF', icon: 'PDF', iconHtml: commandIcon('pdf'), action: () => runActiveMarkdownCommand('exportpdf') },
+    { id: 'cmd-export-project-md', group: '导出', title: '导出项目报告 Markdown', subtitle: '基于当前项目概览生成报告', icon: '报告', iconHtml: commandIcon('report'), action: () => runProjectExportCommand('markdown') },
+    { id: 'cmd-export-project-pdf', group: '导出', title: '导出项目报告 PDF', subtitle: '基于当前项目概览生成 PDF 报告', icon: 'PDF', iconHtml: commandIcon('pdf'), action: () => runProjectExportCommand('pdf') },
+    { id: 'cmd-save-version', group: '文档命令', title: '保存当前版本', subtitle: '为当前文档创建历史版本', icon: '历史', iconHtml: commandIcon('history'), action: () => runActiveMarkdownCommand('saveversion') },
+    { id: 'cmd-history', group: '文档命令', title: '查看版本历史', subtitle: '预览、恢复或删除历史版本', icon: '历史', iconHtml: commandIcon('history'), action: () => runActiveMarkdownCommand('history') },
   ];
+}
+
+
+function commandIcon(name: NovaIconName | string): string {
+  return novaIcon(name, 'command-svg-icon');
+}
+
+function paletteMatches(item: PaletteResult, lowerQuery: string): boolean {
+  return [item.title, item.subtitle || '', item.group, ...(item.keywords || [])]
+    .join(' ')
+    .toLowerCase()
+    .includes(lowerQuery);
+}
+
+function getRecentCommandActions(): PaletteResult[] {
+  const all = getCommandActions();
+  const recentIds = getRecentCommandIds();
+  return recentIds
+    .map((id) => all.find((item) => item.id === id))
+    .filter((item): item is PaletteResult => Boolean(item))
+    .slice(0, 6)
+    .map((item) => ({ ...item, group: '最近使用' }));
+}
+
+function getRecentCommandIds(): string[] {
+  try {
+    const raw = localStorage.getItem(RECENT_COMMANDS_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed.filter((item) => typeof item === 'string') : [];
+  } catch {
+    return [];
+  }
+}
+
+function rememberRecentCommand(item: PaletteResult): void {
+  if (!item.id.startsWith('cmd-') && !item.id.startsWith('template-')) return;
+  try {
+    const next = [item.id, ...getRecentCommandIds().filter((id) => id !== item.id)].slice(0, 10);
+    localStorage.setItem(RECENT_COMMANDS_KEY, JSON.stringify(next));
+  } catch {
+    // ignore storage errors
+  }
 }
 
 async function searchTodoResults(lowerQuery: string): Promise<PaletteResult[]> {
@@ -453,6 +528,18 @@ function runActiveMarkdownModeCommand(mode: 'edit' | 'preview' | 'split'): void 
   })();
 }
 
+function runFileWorkflowCommand(workflowId: string): void {
+  void (async () => {
+    await switchPage('files');
+    const runner = window.__runFileAIWorkflow;
+    if (typeof runner !== 'function') {
+      alert('文件管理器还没有准备好');
+      return;
+    }
+    await runner(workflowId);
+  })();
+}
+
 function runProjectExportCommand(format: 'markdown' | 'pdf' | 'html'): void {
   void (async () => {
     await switchPage('project');
@@ -494,13 +581,14 @@ function renderPaletteSections(container: HTMLElement, results: PaletteResult[])
     const rows = items.map((item) => {
       const index = globalIndex++;
       return '<div class="search-item command-palette-item' + (index === paletteSelectedIndex ? ' selected' : '') + '" data-index="' + index + '">' +
-        '<span class="search-item-icon">' + escHtml(item.icon) + '</span>' +
+        '<span class="search-item-icon">' + (item.iconHtml || escHtml(item.icon)) + '</span>' +
         '<span class="search-item-main"><span class="search-item-name">' + escHtml(item.title) + '</span>' +
         (item.subtitle ? '<span class="search-item-subtitle">' + escHtml(item.subtitle) + '</span>' : '') + '</span>' +
+        (item.hotkey ? '<kbd class="search-item-hotkey">' + escHtml(item.hotkey) + '</kbd>' : '') +
       '</div>';
     }).join('');
     return '<div class="search-section"><div class="search-section-title">' + escHtml(group) + '</div>' + rows + '</div>';
-  }).join('') + '<div class="search-footer">↑↓ 选择 · Enter 执行 · Esc 关闭</div>';
+  }).join('') + '<div class="search-footer"><span>↑↓ 选择 · Enter 执行 · Esc 关闭</span><span>输入关键词可搜索文件、知识库和命令</span></div>';
 
   bindSearchResultClicks(container);
 }
@@ -518,6 +606,7 @@ function bindSearchResultClicks(container: HTMLElement): void {
 function executePaletteResult(index: number): void {
   const item = paletteResults[index];
   if (!item) return;
+  rememberRecentCommand(item);
   closeSearchOverlay();
   void item.action();
 }

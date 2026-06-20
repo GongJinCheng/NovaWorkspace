@@ -1,0 +1,479 @@
+/* ============================================================
+ * Nova v2.9.9 — Layout Rebalance Fix
+ * Scope: 文件管理全宽工作台 / AI 右侧面板占满 / 待办任务展示区域放大
+ * ============================================================ */
+
+:root {
+  --nova-workspace-pad: clamp(12px, 1.4vw, 20px);
+  --nova-panel-gap: clamp(10px, 1vw, 16px);
+}
+
+/* ---------- Global: these workspace pages should not be centered cards ---------- */
+#page-files.active,
+#page-ai.active,
+#page-todo.active {
+  padding: var(--nova-workspace-pad) !important;
+}
+
+#page-files .file-manager-full,
+#page-ai .ai-layout,
+#page-todo .todo-workstation {
+  width: 100% !important;
+  max-width: none !important;
+  margin: 0 !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  align-self: stretch !important;
+}
+
+/* ---------- 1. File manager: restore full-width split workspace ---------- */
+#page-files .file-manager-full {
+  display: grid !important;
+  grid-template-columns: minmax(280px, 340px) minmax(0, 1fr);
+  gap: var(--nova-panel-gap) !important;
+  padding: 0 !important;
+  border-radius: 28px;
+  background:
+    radial-gradient(circle at 10% 0%, color-mix(in srgb, var(--accent) 9%, transparent), transparent 30%),
+    radial-gradient(circle at 92% 8%, rgba(245, 166, 35, .08), transparent 32%),
+    color-mix(in srgb, var(--bg-base) 42%, transparent) !important;
+  box-shadow: none !important;
+  overflow: hidden;
+}
+
+#page-files .file-manager-full::before {
+  opacity: .35;
+  pointer-events: none;
+}
+
+#page-files .file-sidebar,
+#page-files .file-editor-area {
+  height: 100% !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  min-width: 0 !important;
+  margin: 0 !important;
+  border-radius: 26px !important;
+  border: 1px solid var(--nova-border-soft, rgba(124, 114, 255, .18)) !important;
+  background: var(--nova-surface-strong, rgba(255,255,255,.86)) !important;
+  box-shadow: 0 18px 54px rgba(43, 46, 92, .10) !important;
+  backdrop-filter: blur(20px) saturate(1.1);
+}
+
+html[data-theme='dark'] #page-files .file-sidebar,
+html[data-theme='dark'] #page-files .file-editor-area {
+  background: var(--nova-surface-strong, rgba(25,27,44,.86)) !important;
+  box-shadow: 0 18px 54px rgba(0, 0, 0, .25) !important;
+}
+
+#page-files .file-sidebar {
+  width: auto !important;
+  flex: none !important;
+}
+
+#page-files .file-editor-area {
+  width: auto !important;
+  flex: none !important;
+}
+
+#page-files .file-sidebar-header {
+  display: grid !important;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 12px;
+  min-height: 62px !important;
+}
+
+#page-files .file-sidebar-actions {
+  justify-content: flex-end !important;
+  flex-wrap: nowrap !important;
+}
+
+#page-files .file-tree {
+  padding: 10px 6px 14px !important;
+}
+
+#page-files .tree-item {
+  min-height: 31px !important;
+  margin: 2px 8px !important;
+}
+
+#page-files .tabs-bar {
+  height: 44px !important;
+  padding: 6px 10px 0 !important;
+}
+
+#page-files .editor-container {
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+}
+
+#page-files .status-bar {
+  min-height: 26px !important;
+  height: 26px !important;
+  flex-shrink: 0;
+}
+
+/* ---------- 2. AI assistant: make the right panel a full-height side rail ---------- */
+#page-ai .ai-layout {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) clamp(330px, 22vw, 410px);
+  gap: var(--nova-panel-gap) !important;
+  padding: 0 !important;
+  background: transparent !important;
+  overflow: hidden !important;
+}
+
+#page-ai .ai-chat-area,
+#page-ai .ai-sidebar {
+  height: 100% !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  margin: 0 !important;
+}
+
+#page-ai .ai-chat-area {
+  border-radius: 28px !important;
+  border: 1px solid var(--nova-border-soft, rgba(124, 114, 255, .18)) !important;
+  overflow: hidden !important;
+  background: var(--nova-surface-strong, rgba(255,255,255,.86)) !important;
+  box-shadow: 0 18px 58px rgba(43, 46, 92, .10) !important;
+}
+
+#page-ai .ai-sidebar {
+  width: auto !important;
+  min-width: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 14px !important;
+  padding: 16px !important;
+  border-radius: 28px !important;
+  border: 1px solid var(--nova-border-soft, rgba(124, 114, 255, .18)) !important;
+  background:
+    radial-gradient(circle at 90% 0%, rgba(245, 166, 35, .12), transparent 36%),
+    radial-gradient(circle at 16% 4%, color-mix(in srgb, var(--accent) 12%, transparent), transparent 32%),
+    var(--nova-surface-strong, rgba(255,255,255,.86)) !important;
+  box-shadow: 0 18px 58px rgba(43, 46, 92, .10) !important;
+  overflow: hidden auto !important;
+}
+
+html[data-theme='dark'] #page-ai .ai-chat-area,
+html[data-theme='dark'] #page-ai .ai-sidebar {
+  background: var(--nova-surface-strong, rgba(25,27,44,.86)) !important;
+  box-shadow: 0 18px 58px rgba(0, 0, 0, .25) !important;
+}
+
+#page-ai .ai-sidebar.hidden,
+#page-ai .ai-sidebar.collapsed {
+  width: 0 !important;
+  min-width: 0 !important;
+  padding: 0 !important;
+  border: none !important;
+  opacity: 0 !important;
+  overflow: hidden !important;
+}
+
+#page-ai .ai-sidebar-section {
+  width: 100% !important;
+  border-radius: 22px !important;
+  background: color-mix(in srgb, var(--bg-elevated) 68%, transparent) !important;
+  border: 1px solid var(--nova-muted-line, rgba(122, 116, 176, .14)) !important;
+  box-shadow: inset 0 1px rgba(255,255,255,.16), 0 12px 30px rgba(43, 46, 92, .08) !important;
+}
+
+#page-ai .ai-sidebar-section:first-child {
+  flex: 0 0 auto;
+}
+
+#page-ai .ai-sidebar-section:last-child {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+#page-ai .ai-mini-stats {
+  flex: 1 1 auto;
+  display: grid !important;
+  grid-template-columns: 1fr !important;
+  gap: 10px !important;
+  min-height: 0;
+}
+
+#page-ai .ai-mini-stat {
+  min-height: 72px;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 14px 16px !important;
+}
+
+#page-ai .ai-chat-messages {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+#page-ai .ai-chat-input-area {
+  flex-shrink: 0;
+}
+
+/* ---------- 3. Todo center: give more height to task display area ---------- */
+#page-todo .todo-workstation {
+  display: grid !important;
+  grid-template-columns: minmax(210px, 248px) minmax(0, 1fr) auto;
+  gap: var(--nova-panel-gap) !important;
+  padding: 0 !important;
+  background: transparent !important;
+}
+
+#page-todo .todo-sidebar,
+#page-todo .todo-workspace,
+#page-todo .todo-detail-drawer {
+  height: 100% !important;
+  min-height: 0 !important;
+}
+
+#page-todo .todo-sidebar {
+  width: auto !important;
+  padding: 16px 12px !important;
+  border-radius: 26px !important;
+}
+
+#page-todo .todo-workspace {
+  padding: 0 !important;
+  gap: 8px !important;
+  overflow: hidden !important;
+}
+
+#page-todo .todo-workspace-header {
+  flex-shrink: 0;
+}
+
+#page-todo .todo-command-bar {
+  grid-template-columns: 160px minmax(220px, 1fr) minmax(360px, .95fr) !important;
+  min-height: 84px !important;
+  padding: 10px 12px !important;
+  gap: 10px !important;
+  border-radius: 24px !important;
+}
+
+#page-todo .todo-command-ring-card {
+  gap: 8px !important;
+  padding: 8px 10px !important;
+}
+
+#page-todo .todo-ring-wrap,
+#page-todo .todo-ring {
+  width: 44px !important;
+  height: 44px !important;
+}
+
+#page-todo .todo-ring-title {
+  font-size: 10px !important;
+}
+
+#page-todo .todo-ring-sub,
+#page-todo .todo-next-up-title {
+  font-size: 13px !important;
+}
+
+#page-todo .todo-next-up-card {
+  padding: 10px 12px !important;
+  gap: 3px !important;
+}
+
+#page-todo .todo-next-up-label,
+#page-todo .todo-next-up-meta {
+  font-size: 11px !important;
+}
+
+#page-todo .todo-command-metrics {
+  gap: 6px !important;
+}
+
+#page-todo .todo-metric-chip {
+  min-width: 0 !important;
+  padding: 7px 8px !important;
+  border-radius: 16px !important;
+}
+
+#page-todo .todo-metric-num {
+  font-size: 15px !important;
+}
+
+#page-todo .todo-metric-label {
+  font-size: 9px !important;
+  letter-spacing: .2px !important;
+}
+
+#page-todo .todo-capture-bar {
+  flex-shrink: 0;
+  padding: 10px 12px !important;
+  border-radius: 22px !important;
+}
+
+#page-todo .todo-input-wrap {
+  min-height: 36px !important;
+}
+
+#page-todo #todo-quick-input {
+  min-height: 34px !important;
+}
+
+#page-todo .todo-inline-bar {
+  margin-top: 8px !important;
+  gap: 8px !important;
+}
+
+#page-todo .todo-date-chip,
+#page-todo .todo-view-btn,
+#page-todo .todo-completed-toggle {
+  padding: 5px 9px !important;
+  font-size: 11px !important;
+}
+
+#page-todo .todo-toolbar {
+  flex-shrink: 0;
+  padding: 8px 10px !important;
+  border-radius: 20px !important;
+}
+
+#page-todo .todo-active-filter-label {
+  font-size: 16px !important;
+}
+
+#page-todo .todo-task-area {
+  flex: 1 1 0 !important;
+  min-height: 0 !important;
+  height: auto !important;
+  padding: 10px !important;
+  border-radius: 24px !important;
+  overflow: auto !important;
+}
+
+#page-todo .timeline-container {
+  gap: 8px !important;
+}
+
+#page-todo .timeline-group {
+  margin-bottom: 10px !important;
+}
+
+#page-todo .group-cards {
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)) !important;
+  gap: 10px !important;
+  padding-bottom: 10px !important;
+}
+
+#page-todo .todo-task-card {
+  min-height: 54px !important;
+  margin-bottom: 0 !important;
+}
+
+#page-todo .todo-task-body {
+  padding: 10px 12px !important;
+}
+
+#page-todo .todo-task-title {
+  font-size: 13px !important;
+}
+
+#page-todo .todo-task-meta {
+  margin-top: 4px !important;
+}
+
+#page-todo .todo-timeline {
+  flex: 0 0 auto !important;
+  max-height: 76px !important;
+  padding: 7px 10px 8px !important;
+  border-radius: 22px !important;
+  border: 1px solid var(--nova-muted-line, rgba(122, 116, 176, .14)) !important;
+  background: color-mix(in srgb, var(--bg-elevated) 58%, transparent) !important;
+  overflow: hidden !important;
+}
+
+#page-todo .todo-timeline-header {
+  margin-bottom: 5px !important;
+}
+
+#page-todo .todo-timeline-list {
+  padding-bottom: 2px !important;
+}
+
+#page-todo .todo-timeline-item {
+  padding: 4px 10px !important;
+  min-height: 28px !important;
+}
+
+#page-todo .todo-detail-drawer {
+  width: clamp(280px, 18vw, 340px) !important;
+  border-radius: 26px !important;
+}
+
+/* ---------- Responsive fallbacks ---------- */
+@media (max-width: 1180px) {
+  #page-ai .ai-layout {
+    grid-template-columns: minmax(0, 1fr) 320px;
+  }
+
+  #page-todo .todo-workstation {
+    grid-template-columns: 220px minmax(0, 1fr) !important;
+  }
+
+  #page-todo .todo-detail-drawer {
+    display: none !important;
+  }
+
+  #page-todo .todo-command-bar {
+    grid-template-columns: 150px minmax(0, 1fr) !important;
+  }
+
+  #page-todo .todo-command-metrics {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 980px) {
+  #page-files .file-manager-full {
+    grid-template-columns: minmax(220px, 280px) minmax(0, 1fr);
+  }
+
+  #page-ai .ai-layout,
+  #page-todo .todo-workstation {
+    grid-template-columns: 1fr !important;
+  }
+
+  #page-ai .ai-sidebar,
+  #page-todo .todo-sidebar {
+    display: none !important;
+  }
+}
+
+@media (max-height: 760px) {
+  #page-files.active,
+  #page-ai.active,
+  #page-todo.active {
+    padding: 10px !important;
+  }
+
+  #page-todo .todo-command-bar {
+    min-height: 72px !important;
+    padding: 8px 10px !important;
+  }
+
+  #page-todo .todo-capture-bar {
+    padding: 8px 10px !important;
+  }
+
+  #page-todo .todo-inline-bar {
+    display: none !important;
+  }
+
+  #page-todo .todo-timeline {
+    max-height: 56px !important;
+  }
+}
+
+#page-ai .ai-layout:has(.ai-sidebar.hidden),
+#page-ai .ai-layout:has(.ai-sidebar.collapsed) {
+  grid-template-columns: minmax(0, 1fr) !important;
+}

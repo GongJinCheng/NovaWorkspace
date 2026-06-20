@@ -21,8 +21,8 @@ export const PRI_LABELS: Record<string, string> = {
 };
 
 export const CAT_COLORS = [
-  '#6366f1', '#34d399', '#fb923c', '#60a5fa',
-  '#f472b6', '#a78bfa', '#fbbf24',
+  '#8B8BFF', '#34D399', '#F59E0B', '#6EB5FF',
+  '#F472B6', '#A78BFA', '#FBBF24',
 ];
 
 const PRI_ORDER: Record<string, number> = {

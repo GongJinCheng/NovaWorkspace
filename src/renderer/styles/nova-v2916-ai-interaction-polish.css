@@ -1,0 +1,136 @@
+/* ============================================================
+ * Nova v2.9.16 — AI Interaction Polish
+ * - Make Document Copilot running/success/error states obvious.
+ * - Remove duplicated top-left AI format toolbar entry.
+ * - Keep AI format interactions routed through the right-side Copilot.
+ * ============================================================ */
+
+/* 右侧已经有 Document Copilot 的“格式化”，左上角工具栏不再展示重复入口。 */
+#btn-ai-format-toolbar {
+  display: none !important;
+}
+
+/* AI 文档助手：按钮运行态更加明确。 */
+.file-ai-copilot-tools button {
+  position: relative !important;
+  overflow: hidden !important;
+  padding-right: 78px !important;
+}
+
+.file-ai-copilot-tools button::after {
+  content: attr(data-state-label);
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  min-width: 44px;
+  height: 22px;
+  padding: 0 8px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: .02em;
+  opacity: 0;
+  transform: translateY(-2px) scale(.96);
+  transition: opacity .16s ease, transform .16s ease;
+  pointer-events: none;
+}
+
+.file-ai-copilot-tools button.is-running,
+.file-ai-copilot-tools button.is-success,
+.file-ai-copilot-tools button.is-error {
+  transform: translateY(-1px) !important;
+}
+
+.file-ai-copilot-tools button.is-running {
+  border-color: rgba(108, 92, 231, .52) !important;
+  background:
+    linear-gradient(90deg, rgba(108,92,231,.14), rgba(255,255,255,.72) 42%, rgba(255,177,96,.12)) !important;
+  box-shadow: 0 16px 34px rgba(108, 92, 231, .18), 0 0 0 3px rgba(108, 92, 231, .08) !important;
+  color: var(--text-primary) !important;
+  pointer-events: none !important;
+}
+
+.file-ai-copilot-tools button.is-running::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.46), transparent);
+  transform: translateX(-110%);
+  animation: novaCopilotButtonSweep 1.15s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.file-ai-copilot-tools button.is-running::after {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  color: #fff;
+  background: linear-gradient(135deg, #6c5ce7, #8b7cff);
+  box-shadow: 0 8px 18px rgba(108, 92, 231, .24);
+}
+
+.file-ai-copilot-tools button.is-success {
+  border-color: rgba(24, 178, 126, .46) !important;
+  background: linear-gradient(135deg, rgba(24,178,126,.13), rgba(255,255,255,.72)) !important;
+  box-shadow: 0 14px 30px rgba(24, 178, 126, .14) !important;
+}
+
+.file-ai-copilot-tools button.is-success::after {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  color: #067a54;
+  background: rgba(24, 178, 126, .14);
+  border: 1px solid rgba(24, 178, 126, .22);
+}
+
+.file-ai-copilot-tools button.is-error {
+  border-color: rgba(235, 72, 72, .44) !important;
+  background: linear-gradient(135deg, rgba(235,72,72,.12), rgba(255,255,255,.72)) !important;
+  box-shadow: 0 14px 30px rgba(235, 72, 72, .12) !important;
+}
+
+.file-ai-copilot-tools button.is-error::after {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  color: #b42323;
+  background: rgba(235, 72, 72, .12);
+  border: 1px solid rgba(235, 72, 72, .20);
+}
+
+/* 运行时给标题也加一点强调，用户能第一眼知道点中的就是这个动作。 */
+.file-ai-copilot-tools button.is-running strong {
+  color: var(--color-primary, #675cf6) !important;
+}
+
+/* AI 结果写回编辑器后，避免 visible think 块继续污染正文的辅助样式兜底。 */
+.file-ai-copilot-tools button[data-file-copilot-tool='format'] strong::after {
+  content: ' · 清理思考';
+  font-size: 10px;
+  font-weight: 800;
+  color: rgba(103, 92, 246, .72);
+}
+
+html[data-theme='dark'] .file-ai-copilot-tools button.is-running {
+  background: linear-gradient(90deg, rgba(108,92,231,.20), rgba(31,34,55,.80) 45%, rgba(255,177,96,.14)) !important;
+  box-shadow: 0 18px 42px rgba(0,0,0,.22), 0 0 0 3px rgba(108, 92, 231, .14) !important;
+}
+
+html[data-theme='dark'] .file-ai-copilot-tools button.is-success {
+  background: linear-gradient(135deg, rgba(24,178,126,.18), rgba(31,34,55,.80)) !important;
+}
+
+html[data-theme='dark'] .file-ai-copilot-tools button.is-error {
+  background: linear-gradient(135deg, rgba(235,72,72,.16), rgba(31,34,55,.80)) !important;
+}
+
+@keyframes novaCopilotButtonSweep {
+  to { transform: translateX(110%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .file-ai-copilot-tools button.is-running::before {
+    animation: none !important;
+  }
+}

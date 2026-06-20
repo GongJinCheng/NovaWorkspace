@@ -1,4 +1,4 @@
-﻿/** Project Dashboard Page - 项目概览页 */
+/** Project Dashboard Page - 项目概览页 */
 import { registerPageInit, switchPage } from '../app/router';
 import { ipcClient } from '../services/ipc-client';
 import { getCurrentWorkspaceRoot } from '../services/workspace-context';
@@ -6,6 +6,7 @@ import { showInputPrompt } from '../components/modal';
 import { getBuiltInTemplates } from '../services/template-service';
 import { exportProjectReport, type ExportFormat } from '../services/export-service';
 import { escHtml } from '../utils/escape';
+import { novaIcon, iconForTemplate, iconForActivity } from '../utils/icons';
 import type { ProjectOverview, ProjectActivityItem, ProjectRecentDocument } from '@shared/types/workspace';
 
 let currentOverview: ProjectOverview | null = null;
@@ -91,7 +92,7 @@ function renderRecentDocs(docs: ProjectRecentDocument[]): void {
   }
   el.innerHTML = docs.map(doc =>
     '<button class="project-doc-row" data-path="' + escAttr(doc.path) + '">' +
-      '<span class="project-doc-badge">MD</span>' +
+      '<span class="project-doc-badge project-doc-badge-svg">' + novaIcon('markdown', 'nova-icon nova-icon-sm') + '</span>' +
       '<span class="project-doc-main"><strong>' + escHtml(doc.name) + '</strong><em>' + escHtml(doc.relativePath) + '</em></span>' +
       '<span class="project-doc-time">' + formatRelativeTime(doc.modifiedAt) + '</span>' +
     '</button>'
@@ -115,7 +116,7 @@ function renderTemplateShortcuts(): void {
   const quickTemplates = getBuiltInTemplates().filter((template) => ['prd', 'meeting', 'tech-plan', 'weekly-report'].includes(template.id));
   host.innerHTML = quickTemplates.map((template) =>
     '<button class="project-template-card" data-template-id="' + escAttr(template.id) + '">' +
-      '<span class="project-template-icon">' + escHtml(template.icon) + '</span>' +
+      '<span class="project-template-icon project-template-icon-svg">' + novaIcon(iconForTemplate(template.id), 'nova-icon') + '</span>' +
       '<span><strong>' + escHtml(template.name) + '</strong><em>' + escHtml(template.description) + '</em></span>' +
     '</button>'
   ).join('');
@@ -138,7 +139,7 @@ function renderActivities(items: ProjectActivityItem[]): void {
   }
   el.innerHTML = items.map(item =>
     '<div class="project-activity-item" data-path="' + escAttr(item.targetPath || '') + '">' +
-      '<span class="project-activity-dot type-' + escAttr(item.type) + '"></span>' +
+      '<span class="project-activity-icon type-' + escAttr(item.type) + '">' + novaIcon(iconForActivity(item.type), 'nova-icon nova-icon-xs') + '</span>' +
       '<div class="project-activity-main"><strong>' + escHtml(item.title) + '</strong>' +
       (item.subtitle ? '<em>' + escHtml(item.subtitle) + '</em>' : '') + '</div>' +
       '<span class="project-activity-time">' + formatRelativeTime(item.createdAt) + '</span>' +

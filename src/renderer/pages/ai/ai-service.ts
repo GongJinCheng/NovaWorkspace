@@ -7,7 +7,7 @@
 
 import { Logger } from '../../../shared/utils/logger';
 import type { AIMessage, AIProviderConfig, AISettings } from '../../../shared/types/ai';
-import { normalizeAIModelCapabilities } from '../../../shared/utils/ai-capabilities';
+import { normalizeAIModelCapabilities, stripReasoningBlocks } from '../../../shared/utils/ai-capabilities';
 
 const aiLog = new Logger('AIService');
 
@@ -184,10 +184,11 @@ class AIService {
   }
 
   async formatMarkdown(content: string, signal?: AbortSignal): Promise<string> {
-    return this.chat([
-      { role: 'system', content: 'Format and clean up the following Markdown. Keep content, only fix formatting. Output the cleaned content only.' },
+    const result = await this.chat([
+      { role: 'system', content: 'Format and clean up the following Markdown. Keep content, only fix formatting. Output the cleaned content only. Do not include reasoning, analysis, explanations, or <think> blocks.' },
       { role: 'user', content },
     ], { temperature: 0.3, signal, timeout: 25000 });
+    return stripReasoningBlocks(result);
   }
 
   async formatDocument(content: string, fileName: string = ''): Promise<string> {
@@ -196,15 +197,16 @@ class AIService {
     const isCode = ['ts', 'tsx', 'js', 'jsx', 'json', 'css', 'html', 'vue', 'svelte', 'py', 'java', 'go', 'rs', 'c', 'cpp', 'cs', 'php', 'rb', 'sh', 'yml', 'yaml', 'xml'].includes(ext);
 
     const system = isMarkdown
-      ? 'Format and clean up the following Markdown. Keep the original meaning and content. Only fix spacing, headings, lists, tables and code fences. Output the cleaned Markdown only.'
+      ? 'Format and clean up the following Markdown. Keep the original meaning and content. Only fix spacing, headings, lists, tables and code fences. Output the cleaned Markdown only. Do not include reasoning, analysis, explanations, or <think> blocks.'
       : isCode
-        ? 'Format the following code. Preserve behavior exactly. Only improve indentation, whitespace, and formatting. Output code only, without explanations or Markdown fences.'
-        : 'Clean up and format the following document. Preserve meaning and content. Output the formatted content only.';
+        ? 'Format the following code. Preserve behavior exactly. Only improve indentation, whitespace, and formatting. Output code only, without explanations, Markdown fences, reasoning, or <think> blocks.'
+        : 'Clean up and format the following document. Preserve meaning and content. Output the formatted content only. Do not include reasoning, analysis, explanations, or <think> blocks.';
 
-    return this.chat([
+    const result = await this.chat([
       { role: 'system', content: system },
       { role: 'user', content },
     ], { temperature: 0.2, timeout: 25000 });
+    return stripReasoningBlocks(result);
   }
 
   async explainCode(code: string): Promise<string> {

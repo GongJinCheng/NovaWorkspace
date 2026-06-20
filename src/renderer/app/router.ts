@@ -31,13 +31,15 @@ export async function switchPage(pageId: PageId): Promise<void> {
 
   // Hide all pages
   document.querySelectorAll('.page').forEach(el => {
-    el.classList.remove('active');
+    el.classList.remove('active', 'page-enter');
   });
 
   // Show target page
   const target = document.getElementById('page-' + pageId);
   if (target) {
     target.classList.add('active');
+    target.classList.remove('page-enter');
+    requestAnimationFrame(() => target.classList.add('page-enter'));
   }
 
   // Call page init every time the user navigates to a page.

@@ -6,16 +6,88 @@
 /* === Home Page Container === */
 #page-home {
   padding: 0;
-  overflow-y: auto;
+  overflow: hidden; /* let .home-page handle its own scroll */
+  /* display:flex is set by .page.active in layout.css —
+     do NOT set it here or the ID selector (higher specificity)
+     will override .page display:none when navigating away */
+}
+
+/* ── Nova Background Glow (cosmic radiance — breathing aurora) ── */
+/* Layer 1: large soft radial pulse */
+#page-home::before {
+  content: '';
+  position: absolute;
+  top: -80px;
+  right: -60px;
+  width: 640px;
+  height: 640px;
+  background: radial-gradient(circle at 55% 40%,
+    rgba(160, 140, 255, 0.28) 0%,
+    rgba(139, 139, 255, 0.18) 18%,
+    rgba(180, 160, 245, 0.10) 35%,
+    rgba(245, 166, 35, 0.09) 54%,
+    transparent 72%
+  );
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 0;
+  animation: novaPulse 6s ease-in-out infinite;
+  filter: blur(3px);
+  mix-blend-mode: screen;
+}
+
+/* Layer 2: sharper accent spot for depth */
+#page-home::after {
+  content: '';
+  position: absolute;
+  top: 40px;
+  right: 80px;
+  width: 280px;
+  height: 280px;
+  background: radial-gradient(circle at 55% 45%,
+    rgba(200, 175, 255, 0.22) 0%,
+    rgba(139, 139, 255, 0.10) 40%,
+    transparent 68%
+  );
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 0;
+  animation: novaPulseInner 5s ease-in-out infinite;
+  filter: blur(6px);
+  mix-blend-mode: screen;
+}
+
+/* Light mode: softer aurora on white bg */
+[data-theme="light"] #page-home::before {
+  background: radial-gradient(circle at 55% 40%,
+    rgba(88, 88, 214, 0.28) 0%,
+    rgba(139, 139, 255, 0.18) 25%,
+    rgba(212, 120, 10, 0.12) 50%,
+    transparent 72%
+  );
+  filter: none;
+  mix-blend-mode: normal;
+  width: 560px;
+  height: 560px;
+  top: -60px;
+  right: -40px;
+}
+
+[data-theme="light"] #page-home::after {
+  display: none;
 }
 
 .home-page {
+  flex: 1;
   width: 100%;
   max-width: 1560px;
   margin: 0 auto;
   box-sizing: border-box;
   padding: 34px clamp(32px, 4vw, 64px) 44px;
-  animation: fadeInUp 0.4s ease;
+  overflow-y: auto;
+  animation: fadeInUp 0.5s ease;
+  position: relative;
+  z-index: 1;
 }
 
 /* === Hero Section === */
@@ -28,10 +100,37 @@
 }
 
 .home-greeting {
-  font-size: 28px;
-  font-weight: 800;
+  font-family: var(--font-family-display);
+  font-size: 30px;
+  font-weight: 700;
   letter-spacing: -0.5px;
   margin-bottom: 4px;
+  background: linear-gradient(
+    135deg,
+    var(--accent) 0%,
+    #B8A6FF 25%,
+    #E0D0FF 50%,
+    var(--nova-burst) 75%,
+    var(--text-primary) 100%
+  );
+  background-size: 200% 200%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: auroraShift 6s ease infinite;
+}
+
+[data-theme="light"] .home-greeting {
+  background: linear-gradient(
+    135deg,
+    var(--accent) 0%,
+    #C4B5FD 40%,
+    var(--text-primary) 100%
+  );
+  background-size: 200% 200%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .home-subtitle {
@@ -71,7 +170,11 @@
 .home-quick-card:hover {
   border-color: var(--border-default);
   transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+  box-shadow: var(--shadow-md), 0 8px 32px rgba(139, 139, 255, 0.18);
+}
+
+[data-theme="light"] .home-quick-card:hover {
+  box-shadow: 0 6px 22px rgba(0,0,0,0.12), 0 8px 28px rgba(88, 88, 214, 0.12);
 }
 
 .home-quick-card:hover .home-quick-arrow {
@@ -90,33 +193,43 @@
 }
 
 .home-quick-icon-blue {
-  background: rgba(59,130,246,0.12);
-  color: #60a5fa;
+  background: rgba(110, 181, 255, 0.12);
+  color: #6EB5FF;
 }
 
 .home-quick-icon-purple {
-  background: rgba(139,92,246,0.12);
-  color: #a78bfa;
+  background: rgba(139, 139, 255, 0.12);
+  color: #A5A5FF;
 }
 
 .home-quick-icon-green {
-  background: rgba(16,185,129,0.12);
-  color: #34d399;
+  background: rgba(52, 211, 153, 0.12);
+  color: #34D399;
+}
+
+.home-quick-icon-gold {
+  background: var(--nova-glow);
+  color: var(--nova-burst);
 }
 
 [data-theme="light"] .home-quick-icon-blue {
-  background: rgba(59,130,246,0.1);
-  color: #3b82f6;
+  background: rgba(75, 139, 238, 0.1);
+  color: #4B8BEE;
 }
 
 [data-theme="light"] .home-quick-icon-purple {
-  background: rgba(139,92,246,0.1);
-  color: #8b5cf6;
+  background: rgba(108, 108, 229, 0.1);
+  color: #6C6CE5;
 }
 
 [data-theme="light"] .home-quick-icon-green {
-  background: rgba(16,185,129,0.1);
-  color: #10b981;
+  background: rgba(16, 185, 129, 0.1);
+  color: #10B981;
+}
+
+[data-theme="light"] .home-quick-icon-gold {
+  background: var(--nova-glow);
+  color: var(--nova-burst);
 }
 
 .home-quick-info {
@@ -155,9 +268,23 @@
 .home-section {
   background: var(--bg-surface);
   border: 1px solid var(--border-subtle);
-  border-radius: 16px;
+  border-radius: var(--radius-lg);
   padding: 22px 24px;
   min-width: 0;
+  transition: border-color var(--transition-base), box-shadow 0.35s ease;
+}
+
+.home-section:hover {
+  border-color: var(--border-default);
+}
+
+/* Dark mode: section cards get a subtle glow on hover */
+[data-theme="dark"] .home-section:hover {
+  box-shadow: 0 4px 24px rgba(139, 139, 255, 0.08), inset 0 1px 0 rgba(255,255,255,0.02);
+}
+
+[data-theme="light"] .home-section:hover {
+  box-shadow: 0 4px 18px rgba(0,0,0,0.06);
 }
 
 .home-section-header {
@@ -168,9 +295,11 @@
 }
 
 .home-section-header h2 {
-  font-size: 16px;
-  font-weight: 700;
+  font-family: var(--font-family-display);
+  font-size: 15px;
+  font-weight: 600;
   color: var(--text-primary);
+  letter-spacing: -0.3px;
 }
 
 .link-btn {
@@ -203,11 +332,19 @@
   background: var(--bg-elevated);
   border-radius: 10px;
   border: 1px solid var(--border-subtle);
-  transition: all 0.2s ease;
+  transition: all 0.22s ease;
 }
 
 .home-stat-card:hover {
   border-color: var(--border-default);
+}
+
+[data-theme="dark"] .home-stat-card:hover {
+  box-shadow: 0 2px 16px rgba(139, 139, 255, 0.10);
+}
+
+[data-theme="light"] .home-stat-card:hover {
+  box-shadow: 0 2px 12px rgba(0,0,0,0.07);
 }
 
 .home-stat-value {
@@ -282,6 +419,10 @@
 .home-recent-item:hover {
   background: var(--bg-hover);
   border-color: var(--border-subtle);
+}
+
+[data-theme="dark"] .home-recent-item:hover {
+  box-shadow: 0 1px 10px rgba(139, 139, 255, 0.06);
 }
 
 .home-recent-icon {
@@ -401,6 +542,7 @@
 .home-columns-wide {
   grid-template-columns: minmax(520px, 1.55fr) minmax(360px, 0.95fr);
   margin-bottom: 22px;
+  gap: 22px;
 }
 
 .home-columns + .home-columns {
@@ -452,6 +594,14 @@
   background: var(--bg-hover);
 }
 
+[data-theme="dark"] .home-task-row:hover {
+  box-shadow: 0 2px 12px rgba(139, 139, 255, 0.08);
+}
+
+[data-theme="light"] .home-task-row:hover {
+  box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+}
+
 .home-task-done {
   width: 26px;
   height: 26px;
@@ -468,6 +618,10 @@
   background: var(--green-soft);
   color: var(--green);
   border-color: var(--green);
+}
+
+[data-theme="dark"] .home-task-done:hover {
+  box-shadow: 0 0 12px rgba(52, 211, 153, 0.25);
 }
 
 .home-task-main {
@@ -542,6 +696,10 @@
   border-color: var(--border-subtle);
 }
 
+[data-theme="dark"] .home-doc-item:hover {
+  box-shadow: 0 1px 10px rgba(139, 139, 255, 0.06);
+}
+
 .home-doc-icon {
   width: 34px;
   height: 34px;
@@ -604,6 +762,10 @@
 .home-ai-dot.enabled {
   background: var(--green);
   box-shadow: 0 0 0 4px var(--green-soft);
+}
+
+[data-theme="dark"] .home-ai-dot.enabled {
+  box-shadow: 0 0 0 4px var(--green-soft), 0 0 16px rgba(52, 211, 153, 0.30);
 }
 
 .home-ai-info,

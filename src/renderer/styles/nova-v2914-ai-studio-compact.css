@@ -1,0 +1,202 @@
+/* v2.9.14 · AI Studio compact bar -----------------------------------------
+ * 目标：保留 v2.9.12 的 AI 深度重造能力，但默认不再用大卡片遮挡对话。
+ * AI Workspace 默认收成一条工作栏，只有点击「工作流」时才展开当前模式动作。
+ */
+
+#page-ai .ai-studio-board {
+  flex: 0 0 auto !important;
+  margin: 0 0 8px !important;
+  padding: 10px 12px !important;
+  border-radius: 20px !important;
+  border: 1px solid rgba(124, 120, 255, .14) !important;
+  background:
+    linear-gradient(135deg, rgba(255,255,255,.78), rgba(255,255,255,.48)),
+    radial-gradient(circle at 18% 0%, rgba(108,92,255,.10), transparent 34%),
+    radial-gradient(circle at 92% 0%, rgba(255,177,96,.10), transparent 34%) !important;
+  box-shadow: 0 10px 28px rgba(50, 46, 98, .07), inset 0 1px 0 rgba(255,255,255,.7) !important;
+  backdrop-filter: blur(14px) !important;
+}
+
+#page-ai .ai-studio-compact-head {
+  display: grid !important;
+  grid-template-columns: minmax(112px, auto) minmax(120px, 1fr) auto !important;
+  align-items: center !important;
+  gap: 10px !important;
+}
+
+#page-ai .ai-studio-title-block {
+  min-width: 0 !important;
+}
+
+#page-ai .ai-studio-eyebrow {
+  font-size: 8px !important;
+  line-height: 1 !important;
+  letter-spacing: .16em !important;
+  color: rgba(103, 92, 246, .72) !important;
+}
+
+#page-ai .ai-studio-board h3 {
+  margin: 2px 0 0 !important;
+  font-size: 13px !important;
+  line-height: 1.2 !important;
+  white-space: nowrap !important;
+}
+
+#page-ai .ai-studio-context-pill {
+  justify-self: end !important;
+  max-width: min(240px, 32vw) !important;
+  height: 28px !important;
+  padding: 0 10px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 11px !important;
+  background: rgba(255,255,255,.58) !important;
+  border-color: rgba(124, 120, 255, .13) !important;
+}
+
+#page-ai .ai-studio-action-toggle {
+  height: 30px !important;
+  padding: 0 12px !important;
+  border-radius: 999px !important;
+  border: 1px solid rgba(124, 120, 255, .20) !important;
+  background: linear-gradient(135deg, rgba(108,92,255,.12), rgba(255,177,96,.10)) !important;
+  color: var(--color-primary, #675cf6) !important;
+  font-size: 11px !important;
+  font-weight: 800 !important;
+  cursor: pointer !important;
+  white-space: nowrap !important;
+}
+
+#page-ai .ai-studio-action-toggle:hover {
+  transform: translateY(-1px) !important;
+  border-color: rgba(124, 120, 255, .34) !important;
+  box-shadow: 0 10px 22px rgba(87, 80, 160, .10) !important;
+}
+
+#page-ai .ai-studio-mode-tabs {
+  display: flex !important;
+  gap: 6px !important;
+  margin-top: 8px !important;
+  overflow-x: auto !important;
+  padding: 1px 0 2px !important;
+  scrollbar-width: none !important;
+}
+
+#page-ai .ai-studio-mode-tabs::-webkit-scrollbar,
+#page-ai .ai-studio-actions::-webkit-scrollbar {
+  display: none !important;
+}
+
+#page-ai .ai-studio-mode {
+  flex: 1 1 0 !important;
+  min-width: 116px !important;
+  min-height: 36px !important;
+  padding: 6px 8px !important;
+  grid-template-columns: 22px minmax(0, 1fr) !important;
+  gap: 6px !important;
+  border-radius: 13px !important;
+  background: rgba(255,255,255,.46) !important;
+}
+
+#page-ai .ai-studio-mode-icon {
+  width: 22px !important;
+  height: 22px !important;
+  border-radius: 8px !important;
+}
+
+#page-ai .ai-studio-mode-icon svg {
+  width: 13px !important;
+  height: 13px !important;
+}
+
+#page-ai .ai-studio-mode strong {
+  font-size: 11px !important;
+  line-height: 1.1 !important;
+}
+
+#page-ai .ai-studio-mode small {
+  display: none !important;
+}
+
+#page-ai .ai-studio-mode.active {
+  background: rgba(255,255,255,.82) !important;
+  border-color: rgba(124, 120, 255, .34) !important;
+  box-shadow: 0 8px 18px rgba(87, 80, 160, .10) !important;
+}
+
+#page-ai .ai-studio-actions[hidden] {
+  display: none !important;
+}
+
+#page-ai .ai-studio-board.is-actions-open .ai-studio-actions {
+  display: flex !important;
+  gap: 8px !important;
+  margin-top: 8px !important;
+  overflow-x: auto !important;
+  padding: 2px 0 !important;
+}
+
+#page-ai .ai-studio-board.is-actions-open .ai-studio-action {
+  flex: 0 0 190px !important;
+  min-height: 48px !important;
+  padding: 8px 10px !important;
+  border-radius: 13px !important;
+}
+
+#page-ai .ai-studio-board.is-actions-open .ai-studio-action-badge {
+  margin-bottom: 3px !important;
+  padding: 1px 6px !important;
+  font-size: 8px !important;
+}
+
+#page-ai .ai-studio-board.is-actions-open .ai-studio-action strong {
+  font-size: 11px !important;
+}
+
+#page-ai .ai-studio-board.is-actions-open .ai-studio-action small {
+  font-size: 10px !important;
+  margin-top: 0 !important;
+}
+
+#page-ai .ai-chat-messages {
+  padding-top: 10px !important;
+}
+
+@media (max-height: 820px) {
+  #page-ai .ai-studio-board {
+    padding: 8px 10px !important;
+  }
+  #page-ai .ai-studio-mode-tabs {
+    margin-top: 6px !important;
+  }
+  #page-ai .ai-studio-mode {
+    min-height: 32px !important;
+  }
+  #page-ai .ai-studio-board.is-actions-open .ai-studio-actions {
+    display: none !important;
+  }
+  #page-ai .ai-studio-action-toggle {
+    display: none !important;
+  }
+}
+
+@media (max-width: 1280px) {
+  #page-ai .ai-studio-compact-head {
+    grid-template-columns: auto 1fr auto !important;
+  }
+  #page-ai .ai-studio-context-pill {
+    max-width: 170px !important;
+  }
+  #page-ai .ai-studio-mode {
+    min-width: 104px !important;
+  }
+}
+
+html[data-theme='dark'] #page-ai .ai-studio-board {
+  background:
+    linear-gradient(135deg, rgba(28,30,48,.82), rgba(24,26,43,.64)),
+    radial-gradient(circle at 18% 0%, rgba(108,92,255,.16), transparent 34%),
+    radial-gradient(circle at 92% 0%, rgba(255,177,96,.12), transparent 34%) !important;
+  box-shadow: 0 12px 30px rgba(0,0,0,.22), inset 0 1px 0 rgba(255,255,255,.08) !important;
+}

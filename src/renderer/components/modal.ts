@@ -68,16 +68,25 @@ export function showModal(options: ModalOptions): HTMLElement {
     });
   }
 
-  // Bind close
-  overlay.querySelector('.modal-close-btn')?.addEventListener('click', () => {
-    overlay.remove();
-    onClose?.();
-  });
-
+  // Unified close handling — single delegated handler catches ALL close triggers.
+  // Uses closest() rather than relying on the button's own click handler
+  // (which can be suppressed by Electron/Chromium quirks with SVG children).
+  let closed = false;
   overlay.addEventListener('click', (e) => {
-    if (e.target === overlay) {
+    if (closed) return;
+    // Close button (or any child of it — SVG path, etc.)
+    if (e.target.closest('.modal-close-btn')) {
+      closed = true;
       overlay.remove();
       onClose?.();
+      return;
+    }
+    // Overlay background
+    if (e.target === overlay) {
+      closed = true;
+      overlay.remove();
+      onClose?.();
+      return;
     }
   });
 

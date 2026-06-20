@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Files Page - orchestrates file tree, editor tabs, and file operations.
  * Features: drag-and-drop, state persistence restore.
  */
@@ -12,6 +12,8 @@ import { aiService } from '../ai/ai-service';
 import { createDocumentFromTemplate } from '../../services/template-service';
 import { escHtml } from '../../utils/escape';
 import { refreshCurrentName as refreshWorkspaceSwitcherName } from '../../app/workspace-switcher';
+import { installFileCopilot } from './ai-copilot';
+import { stripReasoningBlocks } from '@shared/utils/ai-capabilities';
 
 const store = new FilesStore();
 let fileTree: FileTree | null = null;
@@ -22,6 +24,8 @@ let isAiFormatRunning = false;
 let filesToolbarBound = false;
 let quickOpenFiles: string[] = [];
 let quickOpenSelectedIndex = 0;
+let newDocumentDialogOpen = false;
+let fileAIWorkflowBound = false;
 
 function scheduleWorkspaceSessionSave(): void {
   if (isRestoringWorkspace) return;
@@ -110,34 +114,46 @@ function getTargetDir(): string | null {
 
 async function handleNewFile(): Promise<void> {
   console.debug('[Files] new-file click');
+  if (newDocumentDialogOpen) return;
   const dir = getTargetDir();
   if (!dir) {
     alert('请先打开一个文件夹');
     return;
   }
 
-  await createDocumentFromTemplate(undefined, {
-    targetDir: dir,
-    afterCreate: async () => { await fileTree?.render(); },
-    openFile: async (filePath, fileName) => {
-      if (editorManager && filePath) await editorManager.openFile(filePath, fileName);
-    },
-  });
+  newDocumentDialogOpen = true;
+  try {
+    await createDocumentFromTemplate(undefined, {
+      targetDir: dir,
+      afterCreate: async () => { await fileTree?.render(); },
+      openFile: async (filePath, fileName) => {
+        if (editorManager && filePath) await editorManager.openFile(filePath, fileName);
+      },
+    });
+  } finally {
+    newDocumentDialogOpen = false;
+  }
 }
 
 async function handleNewFileFromTemplate(templateId: string): Promise<void> {
+  if (newDocumentDialogOpen) return;
   const dir = getTargetDir();
   if (!dir) {
     alert('请先打开一个文件夹');
     return;
   }
-  await createDocumentFromTemplate(templateId, {
-    targetDir: dir,
-    afterCreate: async () => { await fileTree?.render(); },
-    openFile: async (filePath, fileName) => {
-      if (editorManager && filePath) await editorManager.openFile(filePath, fileName);
-    },
-  });
+  newDocumentDialogOpen = true;
+  try {
+    await createDocumentFromTemplate(templateId, {
+      targetDir: dir,
+      afterCreate: async () => { await fileTree?.render(); },
+      openFile: async (filePath, fileName) => {
+        if (editorManager && filePath) await editorManager.openFile(filePath, fileName);
+      },
+    });
+  } finally {
+    newDocumentDialogOpen = false;
+  }
 }
 
 async function handleNewFolder(): Promise<void> {
@@ -448,7 +464,125 @@ function openQuickOpenFile(filePath: string): void {
   const fileName = filePath.split(/[/\\]/).pop() || filePath;
   closeQuickOpen();
   editorManager?.openFile(filePath, fileName);
+  window.dispatchEvent(new CustomEvent('nova:active-file-changed'));
   void fileTree?.revealPath(filePath);
+}
+
+
+function bindFileAIWorkflowBar(): void {
+  const bar = document.getElementById('file-ai-workflow-bar');
+  if (!bar || fileAIWorkflowBound) return;
+  fileAIWorkflowBound = true;
+
+  bar.addEventListener('click', (event) => {
+    const target = event.target as HTMLElement | null;
+    const button = target?.closest('[data-file-ai-workflow]') as HTMLElement | null;
+    const workflowId = button?.dataset.fileAiWorkflow || '';
+    if (!workflowId) return;
+    void runFileAIWorkflow(workflowId);
+  });
+}
+
+async function runFileAIWorkflow(workflowId: string): Promise<void> {
+  if (!editorManager?.activeEditor) {
+    showToast('请先打开一个文件，再运行 AI 工作流', 'info');
+    return;
+  }
+
+  const snapshot = window.__getActiveFileSnapshot?.();
+  const isMarkdown = Boolean(snapshot?.fileName && /\.(md|markdown|mdown|mkdn)$/i.test(snapshot.fileName));
+
+  if (workflowId === 'format') {
+    await runAiFormatCurrentFile();
+    return;
+  }
+
+  if (!isMarkdown) {
+    showToast('当前工作流主要面向 Markdown 文档。普通代码/文本文件可先使用“格式化”。', 'info');
+    return;
+  }
+
+  const commandMap: Record<string, string> = {
+    summary: 'summary',
+    outline: 'outline',
+    askdoc: 'askdoc',
+    rewrite: 'rewrite',
+    todo: 'todo',
+  };
+
+  const command = commandMap[workflowId];
+  if (!command) {
+    showToast('未知 AI 工作流：' + workflowId, 'error');
+    return;
+  }
+
+  await editorManager.runMarkdownCommand(command);
+}
+
+async function runAiFormatCurrentFile(btn?: HTMLButtonElement | null): Promise<void> {
+  console.debug('[Files] AI format current file');
+  if (isAiFormatRunning) return;
+
+  await aiService.reloadConfig().catch(() => undefined);
+  if (!aiService.isConfigured()) {
+    showToast('请先在设置页配置 AI 模型', 'warning');
+    return;
+  }
+
+  const activePath = store.getActiveFilePath();
+  if (!activePath || !editorManager) {
+    showToast('请先打开一个文件', 'info');
+    return;
+  }
+
+  const editorData = editorManager.getEditorByPath(activePath);
+  if (!editorData) return;
+
+  const content = editorData.model.getValue();
+  if (!content.trim()) {
+    showToast('文件内容为空', 'info');
+    return;
+  }
+
+  const originalHTML = btn?.innerHTML || '';
+  isAiFormatRunning = true;
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '格式化中...';
+    btn.classList.add('loading');
+    btn.classList.remove('success');
+  }
+
+  try {
+    const fileName = activePath.split(/[/\\]/).pop() || activePath;
+    const result = stripReasoningBlocks(await aiService.formatDocument(content, fileName));
+    editorData.model.setValue(result);
+    editorManager.pinTab(activePath);
+    store.markDirty(activePath);
+    showToast('AI 格式化完成，已自动剥离思考内容', 'success');
+    if (btn) {
+      btn.innerHTML = '已完成';
+      btn.classList.remove('loading');
+      btn.classList.add('success');
+    }
+  } catch (err) {
+    console.error('[Files] AI format failed:', err);
+    showToast('AI 格式化失败：' + (err instanceof Error ? err.message : String(err)), 'error');
+    if (btn) {
+      btn.innerHTML = '失败';
+      btn.classList.remove('loading');
+    }
+  } finally {
+    setTimeout(() => {
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = originalHTML;
+        btn.classList.remove('success', 'loading');
+        btn.title = 'AI Format';
+      }
+      isAiFormatRunning = false;
+    }, 700);
+  }
 }
 
 function bindFilesToolbar(): void {
@@ -456,6 +590,7 @@ function bindFilesToolbar(): void {
   if (!hasToolbar || filesToolbarBound) return;
   filesToolbarBound = true;
   ensureFileEditorActions();
+  bindFileAIWorkflowBar();
   document.getElementById('btn-open-folder')?.addEventListener('click', () => {
     console.debug('[Files] open-folder click');
     chooseAndOpenWorkspace();
@@ -468,68 +603,7 @@ function bindFilesToolbar(): void {
   document.getElementById('btn-new-folder')?.addEventListener('click', () => handleNewFolder());
   document.getElementById('btn-ai-format-toolbar')?.addEventListener('click', async () => {
     console.debug('[Files] AI format toolbar click');
-    if (isAiFormatRunning) return;
-
-    await aiService.reloadConfig().catch(() => undefined);
-    if (!aiService.isConfigured()) {
-      alert('请先在设置页配置 AI 模型');
-      return;
-    }
-
-    const activePath = store.getActiveFilePath();
-    if (!activePath || !editorManager) {
-      alert('请先打开一个文件');
-      return;
-    }
-
-    const editorData = editorManager.getEditorByPath(activePath);
-    if (!editorData) return;
-
-    const content = editorData.model.getValue();
-    if (!content.trim()) {
-      alert('文件内容为空');
-      return;
-    }
-
-    const btn = document.getElementById('btn-ai-format-toolbar') as HTMLButtonElement | null;
-    const originalHTML = btn?.innerHTML || '';
-    isAiFormatRunning = true;
-    if (btn) {
-      btn.disabled = true;
-      btn.innerHTML = '格式化中...';
-      btn.classList.add('loading');
-      btn.classList.remove('success');
-    }
-
-    try {
-      const fileName = activePath.split(/[/\\]/).pop() || activePath;
-      const result = await aiService.formatDocument(content, fileName);
-      editorData.model.setValue(result);
-      editorManager.pinTab(activePath);
-      store.markDirty(activePath);
-      if (btn) {
-        btn.innerHTML = '已完成';
-        btn.classList.remove('loading');
-        btn.classList.add('success');
-      }
-    } catch (err) {
-      console.error('[Files] AI format failed:', err);
-      alert('AI 格式化失败: ' + (err instanceof Error ? err.message : String(err)));
-      if (btn) {
-        btn.innerHTML = '失败';
-        btn.classList.remove('loading');
-      }
-    } finally {
-      setTimeout(() => {
-        if (btn) {
-          btn.disabled = false;
-          btn.innerHTML = originalHTML;
-          btn.classList.remove('success', 'loading');
-          btn.title = 'AI Format';
-        }
-        isAiFormatRunning = false;
-      }, 700);
-    }
+    await runAiFormatCurrentFile(document.getElementById('btn-ai-format-toolbar') as HTMLButtonElement | null);
   });
   document.getElementById('btn-refresh-tree')?.addEventListener('click', async () => {
     await fileTree?.refresh();
@@ -613,9 +687,14 @@ async function initFilesPage(): Promise<void> {
     await editorManager.openPath(filePath);
   };
   window.__getActiveFileSnapshot = () => editorManager?.getActiveFileSnapshot?.() || null;
+  installFileCopilot({
+    runWorkflow: runFileAIWorkflow,
+    getSnapshot: () => editorManager?.getActiveFileSnapshot?.() || null,
+  });
 
   fileTree.onFileSelect = (filePath, fileName) => {
     editorManager?.openFile(filePath, fileName);
+    window.dispatchEvent(new CustomEvent('nova:active-file-changed'));
   };
 
   fileTree.onFolderSelect = (folderPath) => {
@@ -772,6 +851,7 @@ if (searchInput) {
 bindFilesToolbar();
 window.__handleNewFile = handleNewFile;
 window.__handleNewFileFromTemplate = handleNewFileFromTemplate;
+window.__runFileAIWorkflow = runFileAIWorkflow;
 
 registerPageInit('files' as PageId, initFilesPage);
 

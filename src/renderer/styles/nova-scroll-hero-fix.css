@@ -1,0 +1,333 @@
+/* ============================================================
+ * nova-scroll-hero-fix.css — v2.9.4
+ *
+ * Fixes:
+ * - Restores routed page absolute layout so inner scroll containers work.
+ * - Redesigns Home / Project hero blocks with a richer, less empty product feel.
+ * ============================================================ */
+
+/* === Router page scroll recovery ===
+   nova-ui-refresh previously changed .page to position:relative, which made
+   several page-level flex/scroll containers lose their bounded height. */
+.main-content {
+  overflow: hidden;
+}
+
+.page {
+  position: absolute !important;
+  inset: 0 !important;
+  z-index: 1;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.page.active {
+  display: flex;
+  flex-direction: column;
+}
+
+.page > * {
+  min-width: 0;
+  min-height: 0;
+}
+
+#page-home,
+#page-project,
+#page-files,
+#page-ai,
+#page-todo,
+#page-knowledge,
+#page-settings {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.home-page,
+.project-page,
+.settings-page {
+  height: 100%;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+
+.file-manager-full,
+.ai-layout,
+.todo-workstation,
+.kb-page {
+  height: 100%;
+  min-height: 0;
+}
+
+.ai-chat-messages,
+.todo-task-area,
+.todo-sidebar,
+.kb-list,
+.kb-detail-content,
+.file-tree,
+.settings-page {
+  scrollbar-gutter: stable;
+}
+
+/* === Product hero redesign === */
+.home-hero,
+.project-hero {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  padding: 24px 28px;
+  min-height: 148px;
+  align-items: center;
+  border-radius: 26px;
+  background:
+    linear-gradient(135deg,
+      color-mix(in srgb, var(--bg-elevated) 92%, transparent) 0%,
+      color-mix(in srgb, var(--bg-surface) 72%, transparent) 46%,
+      color-mix(in srgb, var(--accent) 12%, var(--bg-surface)) 100%),
+    var(--bg-surface);
+  border: 1px solid color-mix(in srgb, var(--accent) 18%, var(--hairline));
+  box-shadow:
+    0 22px 62px rgba(0, 0, 0, 0.18),
+    inset 0 1px rgba(255,255,255,0.34);
+}
+
+.home-hero::before,
+.project-hero::before {
+  content: '';
+  position: absolute;
+  inset: -120px -70px auto auto;
+  width: 420px;
+  height: 260px;
+  border-radius: 999px;
+  background:
+    radial-gradient(circle at 35% 40%, color-mix(in srgb, var(--accent) 38%, transparent), transparent 50%),
+    radial-gradient(circle at 72% 50%, color-mix(in srgb, var(--nova-burst) 22%, transparent), transparent 52%);
+  filter: blur(4px);
+  opacity: 0.78;
+  pointer-events: none;
+  z-index: -1;
+}
+
+.home-hero::after,
+.project-hero::after {
+  content: '';
+  position: absolute;
+  right: 34px;
+  bottom: 20px;
+  width: 154px;
+  height: 154px;
+  border-radius: 32px;
+  background:
+    linear-gradient(135deg, rgba(255,255,255,0.22), rgba(255,255,255,0.035)),
+    repeating-linear-gradient(90deg,
+      color-mix(in srgb, var(--accent) 28%, transparent) 0 1px,
+      transparent 1px 18px),
+    repeating-linear-gradient(0deg,
+      color-mix(in srgb, var(--nova-burst) 18%, transparent) 0 1px,
+      transparent 1px 18px);
+  border: 1px solid rgba(255,255,255,0.18);
+  transform: rotate(-8deg);
+  opacity: 0.34;
+  pointer-events: none;
+  z-index: -1;
+}
+
+.home-hero-left,
+.project-hero-main {
+  position: relative;
+  z-index: 1;
+  max-width: min(760px, calc(100% - 220px));
+}
+
+.home-hero-left::before,
+.project-hero-main::before {
+  display: inline-flex;
+  align-items: center;
+  width: max-content;
+  margin-bottom: 10px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 22%, transparent);
+  color: color-mix(in srgb, var(--accent) 76%, var(--text-primary));
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.home-hero-left::before {
+  content: 'NOVA WORKBENCH';
+}
+
+.project-hero-main::before {
+  content: 'PROJECT COCKPIT';
+}
+
+.home-greeting,
+.project-hero h1 {
+  font-size: clamp(30px, 3vw, 46px);
+  line-height: 1.05;
+  letter-spacing: -0.9px;
+  margin-bottom: 10px;
+}
+
+.home-subtitle,
+.project-hero p {
+  max-width: 720px;
+  color: var(--text-secondary);
+  font-size: 14px;
+  line-height: 1.65;
+}
+
+.home-subtitle::after {
+  content: '  ·  Markdown / AI / Todo 全部就绪';
+  color: var(--text-tertiary);
+}
+
+.home-hero-actions,
+.project-hero-actions {
+  position: relative;
+  z-index: 1;
+  align-self: stretch;
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-end;
+  gap: 10px;
+  min-width: 170px;
+}
+
+.home-hero-actions::before,
+.project-hero-actions::before {
+  content: 'Ctrl + K 召唤指令面板';
+  position: absolute;
+  right: 0;
+  top: 4px;
+  padding: 8px 12px;
+  border-radius: 14px;
+  background: rgba(255,255,255,0.13);
+  border: 1px solid rgba(255,255,255,0.18);
+  color: var(--text-secondary);
+  font-size: 12px;
+  white-space: nowrap;
+  box-shadow: inset 0 1px rgba(255,255,255,0.22);
+}
+
+.project-hero-actions::before {
+  content: '状态 / 文档 / 待办一屏总览';
+}
+
+.home-hero-actions .btn-primary,
+.project-hero-actions .btn-ghost {
+  height: 40px;
+  border-radius: 14px;
+  padding-inline: 16px;
+}
+
+.project-hero-actions .btn-ghost {
+  background: color-mix(in srgb, var(--bg-elevated) 74%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 20%, var(--hairline));
+  box-shadow: 0 10px 28px rgba(0,0,0,0.12);
+}
+
+.project-kicker {
+  display: none;
+}
+
+.project-path-row {
+  margin-top: 12px;
+  gap: 8px;
+}
+
+.project-path-row span,
+.project-path-row em {
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.12);
+  border: 1px solid rgba(255,255,255,0.16);
+  color: var(--text-tertiary);
+  font-style: normal;
+}
+
+/* Light mode hero polish */
+[data-theme="light"] .home-hero,
+[data-theme="light"] .project-hero {
+  background:
+    linear-gradient(135deg,
+      rgba(255,255,255,0.96) 0%,
+      rgba(248,248,255,0.88) 42%,
+      rgba(238,233,255,0.92) 100%);
+  box-shadow: 0 20px 58px rgba(62, 58, 108, 0.14), inset 0 1px rgba(255,255,255,0.85);
+}
+
+[data-theme="light"] .home-hero::after,
+[data-theme="light"] .project-hero::after {
+  opacity: 0.28;
+  border-color: rgba(88, 88, 214, 0.16);
+}
+
+[data-theme="light"] .home-hero-actions::before,
+[data-theme="light"] .project-hero-actions::before,
+[data-theme="light"] .project-path-row span,
+[data-theme="light"] .project-path-row em {
+  background: rgba(255,255,255,0.68);
+  border-color: rgba(88, 88, 214, 0.13);
+}
+
+@media (max-width: 980px) {
+  .home-hero,
+  .project-hero {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 18px;
+    min-height: 0;
+    padding: 22px;
+  }
+
+  .home-hero-left,
+  .project-hero-main {
+    max-width: 100%;
+  }
+
+  .home-hero-actions,
+  .project-hero-actions {
+    align-self: stretch;
+    justify-content: flex-start;
+    min-height: 48px;
+  }
+
+  .home-hero-actions::before,
+  .project-hero-actions::before {
+    display: none;
+  }
+}
+
+@media (max-height: 760px) {
+  .home-page,
+  .project-page,
+  .settings-page {
+    padding-top: 22px;
+    padding-bottom: 28px;
+  }
+
+  .home-hero,
+  .project-hero {
+    padding: 20px 22px;
+    min-height: 122px;
+    margin-bottom: 16px;
+  }
+
+  .home-greeting,
+  .project-hero h1 {
+    font-size: clamp(26px, 2.6vw, 38px);
+    margin-bottom: 6px;
+  }
+}

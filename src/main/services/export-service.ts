@@ -27,7 +27,7 @@ function getExportHtml(input: { html?: string; markdown?: string; title?: string
     p, li { line-height: 1.75; }
     code { background: #f4f5fb; border-radius: 6px; padding: 2px 6px; }
     pre { background: #111827; color: #f9fafb; border-radius: 12px; padding: 18px; overflow: auto; }
-    blockquote { margin: 16px 0; padding: 12px 18px; border-left: 4px solid #6366f1; background: #f4f5ff; color: #4b5563; }
+    blockquote { margin: 16px 0; padding: 12px 18px; border-left: 4px solid #8B8BFF; background: #f4f5ff; color: #4b5563; }
     table { width: 100%; border-collapse: collapse; margin: 18px 0; }
     th, td { border: 1px solid #e5e7eb; padding: 10px 12px; text-align: left; }
     th { background: #f9fafb; }

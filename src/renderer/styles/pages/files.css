@@ -11,6 +11,35 @@
   flex: 1;
   min-height: 0;
   overflow: hidden;
+  position: relative;
+}
+
+/* ── Nova Background Glow ── */
+.file-manager-full::before {
+  content: '';
+  position: absolute;
+  top: -60px;
+  right: -40px;
+  width: 400px;
+  height: 400px;
+  background: radial-gradient(circle at center,
+    rgba(139, 139, 255, 0.15) 0%,
+    rgba(245, 166, 35, 0.05) 35%,
+    transparent 65%
+  );
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 0;
+  animation: novaPulse 8s ease-in-out infinite;
+}
+
+/* Light mode: visible glow behind sidebar */
+[data-theme="light"] .file-manager-full::before {
+  background: radial-gradient(circle at center,
+    rgba(88, 88, 214, 0.25) 0%,
+    rgba(139, 139, 255, 0.16) 35%,
+    transparent 65%
+  );
 }
 
 .file-sidebar {
@@ -21,6 +50,8 @@
   flex-direction: column;
   transition: background-color 0.3s ease;
   flex-shrink: 0;
+  position: relative;
+  z-index: 1;
 }
 
 .file-sidebar-header {
@@ -223,7 +254,20 @@
 .tab.active {
   background: var(--bg-base);
   color: var(--text-primary);
-  border-bottom-color: var(--bg-base);
+  border-bottom-color: transparent;
+  position: relative;
+}
+
+.tab.active::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 20%;
+  right: 20%;
+  height: 2px;
+  background: var(--accent);
+  border-radius: 2px 2px 0 0;
+  box-shadow: 0 0 8px var(--accent-soft);
 }
 
 /* === Tab Name - Truncate === */
@@ -332,7 +376,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(99, 102, 241, 0.08);
+  background: var(--accent-soft);
   font-size: 16px;
   color: var(--accent);
   z-index: 100;
@@ -357,6 +401,37 @@
   height: 100%;
   gap: 16px;
   animation: fadeIn 0.5s ease;
+  position: relative;
+}
+
+.welcome-screen::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 320px;
+  height: 320px;
+  background: radial-gradient(circle at center,
+    rgba(139, 139, 255, 0.18) 0%,
+    transparent 65%
+  );
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 0;
+  animation: novaPulse 6s ease-in-out infinite;
+}
+
+[data-theme="light"] .welcome-screen::before {
+  background: radial-gradient(circle at center,
+    rgba(88, 88, 214, 0.30) 0%,
+    transparent 65%
+  );
+}
+
+.welcome-screen > * {
+  position: relative;
+  z-index: 1;
 }
 
 .welcome-screen h2 {
@@ -398,6 +473,8 @@
   color: var(--text-tertiary);
   transition: background-color 0.3s ease;
   flex-shrink: 0;
+  position: relative;
+  z-index: 1;
 }
 
 .status-left,
@@ -1106,7 +1183,7 @@
 .version-history-preview:hover {
   color: var(--accent);
   border-color: var(--accent);
-  background: rgba(99, 102, 241, 0.08);
+  background: var(--accent-soft);
 }
 
 
@@ -1126,7 +1203,7 @@
   margin: 0 0 12px;
   padding: 10px 12px;
   border-radius: 10px;
-  background: rgba(99, 102, 241, 0.08);
+  background: var(--accent-soft);
   color: var(--text-secondary);
   font-size: 13px;
   line-height: 1.6;
@@ -1209,7 +1286,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(99, 102, 241, 0.08);
+  background: var(--accent-soft);
   border: 2px dashed var(--accent);
   border-radius: 8px;
   color: var(--accent);

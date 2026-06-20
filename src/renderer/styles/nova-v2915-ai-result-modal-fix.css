@@ -1,0 +1,258 @@
+/* ============================================================
+ * Nova v2.9.15 — AI Result Modal & Overlay Polish
+ * Fixes the heavy full-screen遮蔽层 caused by earlier global dialog styles.
+ * ============================================================ */
+
+/* ---------- AI 文档结果弹窗：轻遮罩，不再把整个应用刷成白屏 ---------- */
+.markdown-ai-modal {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 9000 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 24px !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  /* 关键：覆盖 nova-all-pages-ui-upgrade 里把 overlay 本身做成 panel 的规则 */
+  background:
+    radial-gradient(circle at 50% 38%, rgba(118, 105, 255, .14), transparent 34%),
+    rgba(14, 16, 28, .20) !important;
+  backdrop-filter: blur(3px) saturate(1.04) !important;
+  -webkit-backdrop-filter: blur(3px) saturate(1.04) !important;
+  animation: novaAiOverlayIn .14s ease-out both !important;
+}
+
+html[data-theme='light'] .markdown-ai-modal,
+:root:not([data-theme='dark']) .markdown-ai-modal {
+  background:
+    radial-gradient(circle at 50% 38%, rgba(118, 105, 255, .12), transparent 36%),
+    rgba(246, 247, 252, .34) !important;
+}
+
+.markdown-ai-modal-card {
+  width: min(760px, calc(100vw - 56px)) !important;
+  max-height: min(72vh, 680px) !important;
+  min-height: 0 !important;
+  display: grid !important;
+  grid-template-rows: auto minmax(120px, 1fr) auto !important;
+  overflow: hidden !important;
+  border-radius: 22px !important;
+  border: 1px solid rgba(129, 122, 255, .22) !important;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.88), rgba(247,248,255,.82)) !important;
+  box-shadow:
+    0 22px 70px rgba(29, 32, 70, .20),
+    0 2px 0 rgba(255,255,255,.70) inset !important;
+  backdrop-filter: blur(24px) saturate(1.15) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(1.15) !important;
+  animation: novaAiResultPop .18s cubic-bezier(.2,.85,.2,1) both !important;
+}
+
+html[data-theme='dark'] .markdown-ai-modal-card {
+  background:
+    linear-gradient(180deg, rgba(31, 34, 55, .94), rgba(20, 22, 38, .90)) !important;
+  border-color: rgba(161, 154, 255, .20) !important;
+  box-shadow:
+    0 28px 90px rgba(0,0,0,.38),
+    0 1px 0 rgba(255,255,255,.08) inset !important;
+}
+
+.markdown-ai-modal-header {
+  height: 54px !important;
+  padding: 0 18px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  border-bottom: 1px solid rgba(129, 122, 255, .12) !important;
+  background:
+    linear-gradient(135deg, rgba(118,105,255,.10), rgba(255,255,255,.16) 42%, transparent) !important;
+}
+
+.markdown-ai-modal-header h3 {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  margin: 0 !important;
+  font-size: 14px !important;
+  font-weight: 800 !important;
+  letter-spacing: .01em !important;
+  color: var(--text-primary) !important;
+}
+
+.markdown-ai-modal-header h3::before {
+  content: 'AI' !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 28px !important;
+  height: 28px !important;
+  border-radius: 10px !important;
+  font-size: 11px !important;
+  font-weight: 900 !important;
+  color: #fff !important;
+  background: linear-gradient(135deg, #6c5ce7, #8b7cff 55%, #ffb26b) !important;
+  box-shadow: 0 10px 22px rgba(108, 92, 231, .24) !important;
+}
+
+.markdown-ai-modal-close {
+  width: 32px !important;
+  height: 32px !important;
+  border-radius: 12px !important;
+  border: 1px solid transparent !important;
+  background: rgba(255,255,255,.38) !important;
+  color: var(--text-secondary) !important;
+  font-size: 20px !important;
+  line-height: 1 !important;
+  transition: all .15s ease !important;
+}
+
+.markdown-ai-modal-close:hover {
+  background: rgba(118, 105, 255, .10) !important;
+  border-color: rgba(118, 105, 255, .18) !important;
+  color: var(--text-primary) !important;
+  transform: translateY(-1px) !important;
+}
+
+.markdown-ai-modal-content {
+  min-height: 0 !important;
+  max-height: none !important;
+  margin: 0 !important;
+  padding: 18px 20px !important;
+  overflow: auto !important;
+  white-space: pre-wrap !important;
+  word-break: break-word !important;
+  color: var(--text-primary) !important;
+  background: rgba(255,255,255,.30) !important;
+  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
+  font-size: 14px !important;
+  line-height: 1.78 !important;
+}
+
+html[data-theme='dark'] .markdown-ai-modal-content {
+  background: rgba(255,255,255,.03) !important;
+}
+
+.markdown-ai-modal-content::-webkit-scrollbar {
+  width: 8px !important;
+}
+.markdown-ai-modal-content::-webkit-scrollbar-thumb {
+  border-radius: 999px !important;
+  background: rgba(118, 105, 255, .30) !important;
+}
+
+.markdown-ai-modal-actions {
+  height: 58px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+  gap: 8px !important;
+  padding: 0 16px !important;
+  border-top: 1px solid rgba(129, 122, 255, .12) !important;
+  background: rgba(247, 248, 255, .72) !important;
+}
+
+html[data-theme='dark'] .markdown-ai-modal-actions {
+  background: rgba(16, 18, 32, .76) !important;
+}
+
+.markdown-ai-copy-btn,
+.markdown-ai-insert-btn,
+.markdown-ai-todo-btn {
+  min-width: auto !important;
+  height: 34px !important;
+  padding: 0 14px !important;
+  border-radius: 12px !important;
+  font-size: 13px !important;
+  font-weight: 800 !important;
+  font-family: inherit !important;
+  cursor: pointer !important;
+  transition: transform .14s ease, box-shadow .14s ease, background .14s ease !important;
+}
+
+.markdown-ai-copy-btn {
+  border: 0 !important;
+  color: #fff !important;
+  background: linear-gradient(135deg, #6657f5, #7b6cff) !important;
+  box-shadow: 0 12px 24px rgba(102, 87, 245, .22) !important;
+}
+
+.markdown-ai-insert-btn,
+.markdown-ai-todo-btn {
+  border: 1px solid rgba(118, 105, 255, .18) !important;
+  color: var(--text-primary) !important;
+  background: rgba(255,255,255,.58) !important;
+}
+
+html[data-theme='dark'] .markdown-ai-insert-btn,
+html[data-theme='dark'] .markdown-ai-todo-btn {
+  background: rgba(255,255,255,.06) !important;
+}
+
+.markdown-ai-copy-btn:hover,
+.markdown-ai-insert-btn:hover,
+.markdown-ai-todo-btn:hover {
+  transform: translateY(-1px) !important;
+}
+
+.markdown-ai-copy-btn:active,
+.markdown-ai-insert-btn:active,
+.markdown-ai-todo-btn:active {
+  transform: translateY(1px) scale(.99) !important;
+}
+
+@media (max-width: 900px), (max-height: 720px) {
+  .markdown-ai-modal {
+    padding: 16px !important;
+    align-items: flex-end !important;
+  }
+  .markdown-ai-modal-card {
+    width: 100% !important;
+    max-height: 78vh !important;
+    border-radius: 20px !important;
+  }
+}
+
+@media (max-height: 620px) {
+  .markdown-ai-modal-card {
+    max-height: 84vh !important;
+  }
+  .markdown-ai-modal-header {
+    height: 48px !important;
+  }
+  .markdown-ai-modal-actions {
+    height: 52px !important;
+  }
+}
+
+@keyframes novaAiOverlayIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes novaAiResultPop {
+  from { opacity: 0; transform: translateY(8px) scale(.985); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* ---------- 通用确认/输入弹窗也同步修轻遮罩，避免再次出现白屏遮盖 ---------- */
+.modal-overlay:not(.template-create-modal) {
+  background:
+    radial-gradient(circle at 50% 38%, rgba(118, 105, 255, .10), transparent 34%),
+    rgba(14, 16, 28, .22) !important;
+  backdrop-filter: blur(3px) saturate(1.04) !important;
+  -webkit-backdrop-filter: blur(3px) saturate(1.04) !important;
+}
+
+.modal-overlay:not(.template-create-modal) .modal-content {
+  border-radius: 20px !important;
+  border: 1px solid rgba(129, 122, 255, .20) !important;
+  background: linear-gradient(180deg, rgba(255,255,255,.90), rgba(247,248,255,.84)) !important;
+  box-shadow: 0 22px 70px rgba(29, 32, 70, .20) !important;
+}
+
+html[data-theme='dark'] .modal-overlay:not(.template-create-modal) .modal-content {
+  background: linear-gradient(180deg, rgba(31, 34, 55, .94), rgba(20, 22, 38, .90)) !important;
+  box-shadow: 0 28px 90px rgba(0,0,0,.38) !important;
+}

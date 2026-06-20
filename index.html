@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN" data-theme="dark">
 
 <head>
@@ -6,7 +6,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Nova</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap"
     rel="stylesheet">
   <link rel="stylesheet" href="src/renderer/styles/index.css">
   
@@ -16,7 +17,7 @@
   <div class="titlebar">
     <div class="titlebar-drag">
       <span class="app-logo" src="assets/nova-icon.png"></span>
-      <span class="app-title">Nova</span>
+      <span class="app-title">Nova<span class="badge nova">v2</span></span>
       <button class="sidebar-collapse-btn" id="btn-collapse-sidebar" title="收起侧边栏">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="m11 17-5-5 5-5" />
@@ -182,7 +183,7 @@
           <div class="home-hero">
             <div class="home-hero-left">
               <h1 class="home-greeting" id="home-greeting">你好 👋</h1>
-              <p class="home-subtitle">准备好开始今天的工作了吗？</p>
+              <p class="home-subtitle">准备好开始今天的工作了吗？<span class="badge nova">Nova</span></p>
             </div>
             <div class="home-hero-actions">
               <button class="btn-primary" id="btn-new-project">
@@ -213,7 +214,7 @@
               </svg>
             </button>
             <button class="home-quick-card" id="btn-go-ai">
-              <div class="home-quick-icon home-quick-icon-purple">
+              <div class="home-quick-icon home-quick-icon-gold">
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M12 2a4 4 0 0 1 4 4c0 1.95-1.4 3.58-3.25 3.93L12 22" />
                   <path d="M12 2a4 4 0 0 0-4 4c0 1.95 1.4 3.58 3.25 3.93" />
@@ -417,12 +418,6 @@
                 <button class="icon-btn" id="btn-open-folder-files" title="打开文件夹">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
-                  </svg>
-                </button>
-                <button class="icon-btn" id="btn-ai-format-toolbar" title="AI 格式化">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M12 2a4 4 0 0 1 4 4c0 1.95-1.4 3.58-3.25 3.93L12 22" />
-                    <path d="M12 2a4 4 0 0 0-4 4c0 1.95 1.4 3.58 3.25 3.93" />
                   </svg>
                 </button>
                 <button class="icon-btn" id="btn-new-file" title="新建文件">
@@ -1026,7 +1021,7 @@
             <div class="settings-row">
               <div class="settings-row-info">
                 <span class="settings-row-label">版本</span>
-                <span class="settings-row-desc">Nova v<span id="settings-version">2.0.0</span></span>
+                <span class="settings-row-desc">Nova v<span id="settings-version">2.9.16</span></span>
               </div>
             </div>
             <div class="settings-row">
