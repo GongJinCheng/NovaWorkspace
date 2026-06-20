@@ -6,14 +6,38 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.7-3178c6?logo=typescript)](https://www.typescriptlang.org/)
 [![esbuild](https://img.shields.io/badge/esbuild-0.24-ffcf00?logo=esbuild)](https://esbuild.github.io/)
 [![Version](https://img.shields.io/badge/version-2.9.3-0066FF)](https://github.com/GongJinCheng/NovaWorkspace/releases)
+[![License](https://img.shields.io/badge/License-MIT-blue)](LICENSE)
+
+**🌟 Stars**: [![GitHub stars](https://img.shields.io/github/stars/GongJinCheng/NovaWorkspace?style=flat)](https://github.com/GongJinCheng/NovaWorkspace/stargazers)
+**📦 Platform**: macOS · Windows · Linux
+
+**[English](README.md) | 中文**
 
 ---
 
-## Demo
+## 目录
+
+- [Demo 演示](#demo-演示)
+- [核心理念](#核心理念)
+- [功能模块](#功能模块)
+- [主要能力](#主要能力)
+- [技术栈](#技术栈)
+- [快速开始](#快速开始)
+- [项目结构](#项目结构)
+- [AI 配置](#ai-配置说明)
+- [数据存储](#数据存储说明)
+- [快捷键](#快捷键)
+- [Roadmap](#roadmap)
+- [贡献](#贡献)
+- [License](#license)
+
+---
+
+## Demo 演示
 
 https://github.com/user-attachments/assets/27173837-4057-4099-97b0-f92940fdeb9b
 
-A product showcase built with [HyperFrames](https://hyperframes.heygen.com/), featuring project workspace, Markdown editing, AI document assistant, AI-generated todos, project dashboard, templates, export workflow, and document version safety.
+A product showcase built with [HyperFrames](https://hyperframes.heygen.com/), featuring project workspace, Markdown editing, AI document assistant, AI-generated todos, project dashboard, templates[...]
 
 > Run `cd NovaShowcase && npm run dev` to preview, or `npm run render` to regenerate the MP4.
 
@@ -78,43 +102,43 @@ Nova 的核心使用方式是：
 
 ### 本地优先工作区
 
-- 打开本地文件夹作为项目工作区
-- Markdown 文件保持普通文件格式
-- 项目数据保存在当前工作区 `.nova` 目录中
-- 支持 Git / 云盘 / 手动复制迁移
-- 不强制账号体系，不锁死用户数据
+- ✅ 打开本地文件夹作为项目工作区
+- ✅ Markdown 文件保持普通文件格式
+- ✅ 项目数据保存在当前工作区 `.nova` 目录中
+- ✅ 支持 Git / 云盘 / 手动复制迁移
+- ✅ 不强制账号体系，不锁死用户数据
 
 ### 知识库
 
-- 四种导入方式：PDF 文件、网页摘录、剪贴板文本、TXT/MD 文件
-- AI 一键生成摘要，自动保存到资料卡片
-- 每个工作区独立存储，不跨项目混淆
-- 资料存放在 `.nova/knowledge/` 目录，随项目迁移
+- ✅ 四种导入方式：PDF 文件、网页摘录、剪贴板文本、TXT/MD 文件
+- ✅ AI 一键生成摘要，自动保存到资料卡片
+- ✅ 每个工作区独立存储，不跨项目混淆
+- ✅ 资料存放在 `.nova/knowledge/` 目录，随项目迁移
 
 ### Markdown + AI 工作流
 
-- 总结当前文档
-- 生成文档大纲
-- 改写选中文本
-- 问当前文档
-- 根据当前文档生成待办
-- 将 AI 输出插入当前文档
-- AI 修改前自动创建历史备份
+- ✅ 总结当前文档
+- ✅ 生成文档大纲
+- ✅ 改写选中文本
+- ✅ 问当前文档
+- ✅ 根据当前文档生成待办
+- ✅ 将 AI 输出插入当前文档
+- ✅ AI 修改前自动创建历史备份
 
 ### 项目级 Todo
 
-- 每个工作区拥有独立 `.nova/todos.json`
-- 项目 A 的任务不会出现在项目 B
-- AI 生成的任务自动写入当前项目
-- Todo 支持来源文档记录，可返回上下文
+- ✅ 每个工作区拥有独立 `.nova/todos.json`
+- ✅ 项目 A 的任务不会出现在项目 B
+- ✅ AI 生成的任务自动写入当前项目
+- ✅ Todo 支持来源文档记录，可返回上下文
 
 ### 文档安全
 
-- 自动保存
-- 保存状态提示
-- 手动保存版本
-- AI 改写 / 插入前自动备份
-- 历史版本预览、恢复、删除
+- ✅ 自动保存
+- ✅ 保存状态提示
+- ✅ 手动保存版本
+- ✅ AI 改写 / 插入前自动备份
+- ✅ 历史版本预览、恢复、删除
 
 ### 模板与 AI 生成
 
@@ -162,6 +186,69 @@ PDF 导出使用 Electron 原生 `printToPDF`，不额外引入重型浏览器�
 
 ---
 
+## 快速开始
+
+### 系统要求
+
+- Node.js 16+ 
+- npm 或 yarn
+- 支持的操作系统：macOS、Windows、Linux
+
+### 开发环境
+
+```bash
+# 克隆项目
+git clone https://github.com/GongJinCheng/NovaWorkspace.git
+cd NovaWorkspace
+
+# 安装依赖
+npm install
+
+# 开发运行
+npm run dev
+
+# 类型检查
+npm run typecheck
+
+# 构建
+npm run build
+```
+
+### 打包构建
+
+```bash
+# 打包 Windows 安装包
+npm run package
+
+# 打包 macOS .dmg
+npm run package:mac
+
+# 打包 Linux .AppImage
+npm run package:linux
+```
+
+如果 Electron 下载较慢，可以设置镜像：
+
+```bash
+npm config set electron_mirror https://npmmirror.com/mirrors/electron/
+npm run package
+```
+
+打包产物会生成在：
+
+```
+release/
+```
+
+### Docker 开发（可选）
+
+```bash
+docker build -t nova-workspace .
+docker run -it nova-workspace npm run dev
+```
+
+---
+
 ## 项目结构
 
 ```
@@ -188,41 +275,8 @@ NovaWorkspace/
 │   └── releases/             # 各版本 Release Notes
 ├── esbuild.*.mjs             # 构建脚本
 ├── index.html                # 入口 HTML
-└── package.json
-```
-
----
-
-## 快速开始
-
-```bash
-# 安装依赖
-npm install
-
-# 开发运行
-npm run dev
-
-# 类型检查
-npm run typecheck
-
-# 构建
-npm run build
-
-# 打包 Windows 安装包
-npm run package
-```
-
-如果 Electron 下载较慢，可以设置镜像：
-
-```bash
-npm config set electron_mirror https://npmmirror.com/mirrors/electron/
-npm run package
-```
-
-打包产物会生成在：
-
-```
-release/
+├── package.json
+└── LICENSE
 ```
 
 ---
@@ -237,39 +291,48 @@ Nova 默认不内置模型服务，需要用户自行配置 API。
 设置 → AI Provider
 ```
 
-填写：
+填写以下信息：
 
-```
-Provider 名称
-Base URL
-API Key
-模型名称
-```
+| 字段 | 说明 | 示例 |
+|---|---|---|
+| Provider 名称 | 标识符，自由命名 | DeepSeek、OpenAI、Kimi |
+| Base URL | API 的基础 URL | `https://api.deepseek.com/v1` |
+| API Key | 认证密钥 | sk-xxxxxxx |
+| 模型名称 | 使用的模型 ID | `deepseek-chat`、`gpt-4` |
 
-示例：
+**示例配置**：
 
 ```
 Provider: DeepSeek
 Base URL: https://api.deepseek.com/v1
+API Key: sk-your-api-key
 Model: deepseek-chat
 ```
 
 Nova 会调用 OpenAI Compatible Chat Completions 接口。Base URL 可以填写 `/v1`，也可以填写完整 `/v1/chat/completions`，应用会自动兼容处理。
 
+**推荐模型服务**：
+
+- [DeepSeek](https://www.deepseek.com/) - 国产优质大模型
+- [OpenAI](https://openai.com/) - ChatGPT 官方 API
+- [Kimi](https://kimi.moonshot.cn/) - 长文本理解能力强
+- [Qwen](https://dashscope.aliyun.com/) - 阿里云通义千问
+- [Ollama](https://ollama.ai/) - 本地开源模型
+
 ---
 
 ## 数据存储说明
 
-| 数据 | 位置 |
-|---|---|
-| Markdown 文档 | 当前工作区文件夹 |
-| 项目信息 | `.nova/project.json` |
-| 项目待办 | `.nova/todos.json` |
-| 项目活动 | `.nova/activity.json` |
-| 知识库资料 | `.nova/knowledge/` |
-| 对话历史 | `.nova/conversations.json` |
-| 文档历史版本 | `.nova/history/` |
-| 应用配置 / AI Provider | Electron userData 目录 |
+| 数据 | 位置 | 说明 |
+|---|---|---|
+| Markdown 文档 | 当前工作区文件夹 | 普通 .md 文件，可用 Git 管理 |
+| 项目信息 | `.nova/project.json` | 项目级元数据 |
+| 项目待办 | `.nova/todos.json` | 任务清单 |
+| 项目活动 | `.nova/activity.json` | 操作记录 |
+| 知识库资料 | `.nova/knowledge/` | 导入的资料与摘要 |
+| 对话历史 | `.nova/conversations.json` | AI 聊天记录 |
+| 文档历史版本 | `.nova/history/` | 版本快照 |
+| 应用配置 | Electron userData | AI Provider、主题等系统设置 |
 
 ---
 
@@ -284,7 +347,7 @@ Nova 会调用 OpenAI Compatible Chat Completions 接口。Base URL 可以填写
 | `Ctrl + N` | 新建文档 |
 | `Ctrl + W` | 关闭当前标签页 |
 
-简单理解：
+**简单理解**：
 
 ```
 Ctrl+P = 找文件
@@ -297,43 +360,113 @@ Ctrl+K = 找功能 / 做事情
 
 ### v2.9.3 — 知识库
 
-- PDF 导入（pdf-parse 解析文本）
-- 网页摘录导入（Electron net.fetch 抓取）
-- 剪贴板文本导入
-- TXT / Markdown 文件导入
-- 知识库资料 CRUD 管理
-- AI 一键总结资料，摘要自动保存
-- 知识库按工作区隔离，数据存储在 `.nova/knowledge/`
+- ✅ PDF 导入（pdf-parse 解析文本）
+- ✅ 网页摘录导入（Electron net.fetch 抓取）
+- ✅ 剪贴板文本导入
+- ✅ TXT / Markdown 文件导入
+- ✅ 知识库资料 CRUD 管理
+- ✅ AI 一键总结资料，摘要自动保存
+- ✅ 知识库按工作区隔离，数据存储在 `.nova/knowledge/`
 
 ### v2.8.x — 编辑器体验优化
 
-- Mermaid 图表渲染支持
-- 图片拖拽粘贴到 Markdown
-- 大纲侧栏导航，支持分屏模式与预览联动
-- Todo 分类看板，支持拖拽缩进和列内滚动
-- 编辑器模式切换（编辑 / 预览 / 分屏）
+- ✅ Mermaid 图表渲染支持
+- ✅ 图片拖拽粘贴到 Markdown
+- ✅ 大纲侧栏导航，支持分屏模式与预览联动
+- ✅ Todo 分类看板，支持拖拽缩进和列内滚动
+- ✅ 编辑器模式切换（编辑 / 预览 / 分屏）
 
 ### v2.7.x — AI 助手增强
 
-- AI 聊天 Markdown 渲染
-- 对话历史持久化（按工作区隔离）
-- 支持引用项目文件作为 AI 上下文
-- 流式对话 typewriter 效果
+- ✅ AI 聊天 Markdown 渲染
+- ✅ 对话历史持久化（按工作区隔离）
+- ✅ 支持引用项目文件作为 AI 上下文
+- ✅ 流式对话 typewriter 效果
 
 ---
 
 ## Roadmap
 
-### v3.0.0 — AI Agent 工作流
+### v3.0.0 — AI Agent 工作流 🚀
 
-- 自动分析项目
-- 自动生成下一步计划
-- 自动整理文档与 Todo
-- 自动维护项目上下文
-- 自动生成项目报告
+- 🔄 自动分析项目
+- 🔄 自动生成下一步计划
+- 🔄 自动整理文档与 Todo
+- 🔄 自动维护项目上下文
+- 🔄 自动生成项目报告
 
 ---
 
-## License
+## 贡献
 
-MIT © GongJinCheng
+我们欢迎所有形式的贡献！
+
+### 开发流程
+
+1. Fork 本仓库
+2. 创建特性分支 (`git checkout -b feature/AmazingFeature`)
+3. 提交更改 (`git commit -m 'Add some AmazingFeature'`)
+4. 推送到分支 (`git push origin feature/AmazingFeature`)
+5. 开启 Pull Request
+
+### 报告问题
+
+发现 Bug 或有建议？请 [创建 Issue](https://github.com/GongJinCheng/NovaWorkspace/issues)
+
+### 代码风格
+
+- 使用 TypeScript 开发
+- 遵循现有代码风格
+- 运行 `npm run typecheck` 确保类型检查通过
+- 添加必要的注释和文档
+
+---
+
+## 常见问题 (FAQ)
+
+**Q: Nova 是否需要网络连接？**  
+A: 基础功能不需要网络。仅当使用 AI 功能时需要连接到配置的 API 服务器。
+
+**Q: 我的数据安全吗？**  
+A: 是的，所有数据都存储在本地。只有 AI 请求会发送到配置的 API 服务器。
+
+**Q: 支持哪些操作系统？**  
+A: 支持 macOS、Windows 和 Linux。
+
+**Q: 可以离线使用吗？**  
+A: 可以，除了 AI 功能。支持本地 Ollama 部署。
+
+---
+
+## 相关资源
+
+- 📖 [官方文档](./docs/)
+- 🐛 [Issue 跟踪](https://github.com/GongJinCheng/NovaWorkspace/issues)
+- 💬 [讨论区](https://github.com/GongJinCheng/NovaWorkspace/discussions)
+- 📝 [Release Notes](./docs/releases/)
+
+---
+
+## 致谢
+
+- [Electron](https://www.electronjs.org/) - 跨平台桌面应用框架
+- [Monaco Editor](https://microsoft.github.io/monaco-editor/) - 强大的代码编辑器
+- [TypeScript](https://www.typescriptlang.org/) - 类型安全的 JavaScript
+
+---
+
+## 许可证
+
+MIT © [GongJinCheng](https://github.com/GongJinCheng)
+
+详见 [LICENSE](LICENSE) 文件。
+
+---
+
+<div align="center">
+
+**[⬆ 回到顶部](#nova-workspace)**
+
+Made with ❤️ by [GongJinCheng](https://github.com/GongJinCheng)
+
+</div>
