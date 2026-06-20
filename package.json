@@ -79,6 +79,7 @@
     "marked": "^18.0.5",
     "mermaid": "^11.6.0",
     "monaco-editor": "^0.52.0",
+    "pdf-parse": "^2.4.5",
     "sharp": "^0.34.5"
   }
 }

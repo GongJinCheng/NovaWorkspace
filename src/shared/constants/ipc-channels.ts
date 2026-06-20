@@ -87,6 +87,17 @@ export const IPC_CHANNELS = {
     SAVE: 'chat-history:save',
     DELETE: 'chat-history:delete',
   },
+  KNOWLEDGE: {
+    LIST: 'knowledge:list',
+    GET: 'knowledge:get',
+    CREATE: 'knowledge:create',
+    DELETE: 'knowledge:delete',
+    GET_TEXT: 'knowledge:get-text',
+    UPDATE_SUMMARY: 'knowledge:update-summary',
+    IMPORT_PDF: 'knowledge:import-pdf',
+    IMPORT_WEB: 'knowledge:import-web',
+    GET_STATS: 'knowledge:get-stats',
+  },
 } as const;
 
 export type IpcChannel = typeof IPC_CHANNELS;

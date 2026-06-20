@@ -1,7 +1,7 @@
 /**
  * Router - Page routing and navigation
  */
-export type PageId = 'home' | 'project' | 'files' | 'ai' | 'todo' | 'settings';
+export type PageId = 'home' | 'project' | 'files' | 'ai' | 'todo' | 'knowledge' | 'settings';
 
 const pageInits = new Map<PageId, () => void | Promise<void>>();
 let currentPage: PageId | null = null;

@@ -64,16 +64,16 @@ function appendMessage(
   return bubble;
 }
 
-async function sendMessage(text: string): Promise<void> {
+async function sendMessage(text: string): Promise<string> {
   const inputText = text.trim();
-  if (isGenerating) return;
+  if (isGenerating) return '';
 
   const hasImageInput = pendingImages.length > 0 || extractLocalImagePaths(inputText).length > 0;
 
   await aiService.reloadConfig().catch(() => undefined);
   if (!aiService.isConfigured()) {
     appendMessage('system', '请先在右侧或设置页配置 AI 模型，并点击“保存配置”。配置完成后回到这里会自动刷新。');
-    return;
+    return '';
   }
 
   const activeProvider = aiService.getActiveProvider();
@@ -82,12 +82,12 @@ async function sendMessage(text: string): Promise<void> {
     const label = activeProvider ? `${activeProvider.name} / ${activeProvider.defaultModel}` : aiService.getModel();
     appendMessage('system', '当前模型「' + label + '」不支持图片输入，我不能直接识别这张图片。请切换到支持视觉/多模态的模型，或者移除图片后只发送文字内容。');
     showMsg('当前模型不支持图片输入，请切换多模态模型或移除图片', 'warn');
-    return;
+    return '';
   }
 
   const images = [...pendingImages];
   await attachImagesFromLocalPaths(inputText, images);
-  if (!inputText && images.length === 0) return;
+  if (!inputText && images.length === 0) return '';
 
   const input = document.getElementById('ai-chat-input') as HTMLTextAreaElement;
   if (input) {
@@ -158,11 +158,13 @@ async function sendMessage(text: string): Promise<void> {
       currentConversationTitle = inputText.slice(0, 40) || 'New Conversation';
     }
     void saveCurrentConversation();
+    return stripReasoningBlocks(result);
   } catch (err) {
     bubble.classList.remove('streaming');
     bubble.textContent = '';
     const errMsg = err instanceof Error ? err.message : String(err);
     appendMessage('system', '请求失败：' + formatFriendlyAiError(errMsg));
+    return '';
   } finally {
     isGenerating = false;
     updateSendButton();
@@ -1225,7 +1227,32 @@ function initAIPage(): void {
     }
   }, 1000);
 
+  // Handle knowledge base summarize requests
+  void handleKnowledgeSummarize();
+
   console.log('[AI] 页面初始化完成');
+}
+
+async function handleKnowledgeSummarize(): Promise<void> {
+  const itemId = sessionStorage.getItem('kb-summarize-id');
+  const text = sessionStorage.getItem('kb-summarize-text');
+  if (!itemId || !text) return;
+
+  sessionStorage.removeItem('kb-summarize-id');
+  sessionStorage.removeItem('kb-summarize-text');
+
+  const prompt = `请总结以下资料的内容，用一段简洁的中文概括（200字以内）：\n\n${text}`;
+  const summary = await sendMessage(prompt);
+
+  if (summary) {
+    try {
+      const workspaceRoot = getCurrentWorkspaceRoot();
+      await window.electronAPI.knowledge.updateSummary(itemId, summary, workspaceRoot);
+      appendMessage('system', '✅ 摘要已自动保存到知识库。');
+    } catch (err) {
+      console.error('Failed to save knowledge summary:', err);
+    }
+  }
 }
 
 registerPageInit('ai', initAIPage);

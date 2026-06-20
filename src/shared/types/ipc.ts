@@ -8,6 +8,7 @@ import type { AISettings, AIProviderConfig, AIChatRequest, AIChatResponse, AICon
 import type { Workspace, WorkspaceSession, OpenWorkspaceInput, SaveWorkspaceSessionInput, ProjectMeta, ProjectOverview, UpdateProjectMetaInput } from './workspace';
 import type { UpdateState } from './update';
 import type { Conversation } from './chat-history';
+import type { KnowledgeItem, KnowledgeIndex, CreateKnowledgeInput, KnowledgeStats } from './knowledge';
 
 export interface ElectronAPI {
   window: {
@@ -96,5 +97,16 @@ export interface ElectronAPI {
     get(conversationId: string, workspaceRoot?: string | null): Promise<Conversation | null>;
     save(conversation: Conversation, workspaceRoot?: string | null): Promise<Conversation>;
     delete(conversationId: string, workspaceRoot?: string | null): Promise<boolean>;
+  };
+  knowledge: {
+    list(workspaceRoot?: string | null): Promise<KnowledgeIndex>;
+    get(itemId: string, workspaceRoot?: string | null): Promise<KnowledgeItem | null>;
+    create(input: CreateKnowledgeInput, workspaceRoot?: string | null): Promise<KnowledgeItem>;
+    delete(itemId: string, workspaceRoot?: string | null): Promise<boolean>;
+    getText(itemId: string, workspaceRoot?: string | null): Promise<string>;
+    updateSummary(itemId: string, summary: string, workspaceRoot?: string | null): Promise<KnowledgeItem>;
+    importPdf(filePath: string, workspaceRoot?: string | null): Promise<KnowledgeItem>;
+    importWeb(url: string, workspaceRoot?: string | null): Promise<KnowledgeItem>;
+    getStats(workspaceRoot?: string | null): Promise<KnowledgeStats>;
   };
 }

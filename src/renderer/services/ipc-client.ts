@@ -6,6 +6,7 @@ import type { FileEntry, DialogResult, RecentProject, RecentMarkdownFile, FileBa
 import type { TodoData, TodoTask, TodoCategory, CreateTaskInput, UpdateTaskInput } from '../../shared/types/todo';
 import type { Workspace, WorkspaceSession, OpenWorkspaceInput, SaveWorkspaceSessionInput, UpdateProjectMetaInput, ProjectMeta, ProjectOverview } from '../../shared/types/workspace';
 import type { AIChatRequest, AIProviderConfig, AIImageAttachment } from '../../shared/types/ai';
+import type { KnowledgeItem, KnowledgeIndex, CreateKnowledgeInput, KnowledgeStats } from '../../shared/types/knowledge';
 import { getCurrentWorkspaceRoot } from './workspace-context';
 
 const api = (): ElectronAPI => window.electronAPI;
@@ -84,5 +85,16 @@ export const ipcClient = {
     fetchModels: (providerId?: string) => api().ai.fetchModels(providerId),
     testConnection: (providerId?: string) => api().ai.testConnection(providerId),
     chatStream: (request: AIChatRequest, callbacks: Parameters<ElectronAPI['ai']['chatStream']>[1]) => api().ai.chatStream(request, callbacks),
+  },
+  knowledge: {
+    list: (workspaceRoot = getCurrentWorkspaceRoot()): Promise<KnowledgeIndex> => api().knowledge.list(workspaceRoot),
+    get: (itemId: string, workspaceRoot = getCurrentWorkspaceRoot()): Promise<KnowledgeItem | null> => api().knowledge.get(itemId, workspaceRoot),
+    create: (input: CreateKnowledgeInput, workspaceRoot = getCurrentWorkspaceRoot()): Promise<KnowledgeItem> => api().knowledge.create(input, workspaceRoot),
+    delete: (itemId: string, workspaceRoot = getCurrentWorkspaceRoot()): Promise<boolean> => api().knowledge.delete(itemId, workspaceRoot),
+    getText: (itemId: string, workspaceRoot = getCurrentWorkspaceRoot()): Promise<string> => api().knowledge.getText(itemId, workspaceRoot),
+    updateSummary: (itemId: string, summary: string, workspaceRoot = getCurrentWorkspaceRoot()): Promise<KnowledgeItem> => api().knowledge.updateSummary(itemId, summary, workspaceRoot),
+    importPdf: (filePath: string, workspaceRoot = getCurrentWorkspaceRoot()): Promise<KnowledgeItem> => api().knowledge.importPdf(filePath, workspaceRoot),
+    importWeb: (url: string, workspaceRoot = getCurrentWorkspaceRoot()): Promise<KnowledgeItem> => api().knowledge.importWeb(url, workspaceRoot),
+    getStats: (workspaceRoot = getCurrentWorkspaceRoot()): Promise<KnowledgeStats> => api().knowledge.getStats(workspaceRoot),
   },
 };

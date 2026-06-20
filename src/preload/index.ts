@@ -127,6 +127,17 @@ contextBridge.exposeInMainWorld('electronAPI', {
     save: (conversation: Conversation, workspaceRoot?: string | null) => ipcRenderer.invoke(IPC_CHANNELS.CHAT_HISTORY.SAVE, conversation, workspaceRoot),
     delete: (conversationId: string, workspaceRoot?: string | null) => ipcRenderer.invoke(IPC_CHANNELS.CHAT_HISTORY.DELETE, conversationId, workspaceRoot),
   },
+  knowledge: {
+    list: (workspaceRoot?: string | null) => ipcRenderer.invoke(IPC_CHANNELS.KNOWLEDGE.LIST, workspaceRoot),
+    get: (itemId: string, workspaceRoot?: string | null) => ipcRenderer.invoke(IPC_CHANNELS.KNOWLEDGE.GET, itemId, workspaceRoot),
+    create: (input, workspaceRoot?: string | null) => ipcRenderer.invoke(IPC_CHANNELS.KNOWLEDGE.CREATE, input, workspaceRoot),
+    delete: (itemId: string, workspaceRoot?: string | null) => ipcRenderer.invoke(IPC_CHANNELS.KNOWLEDGE.DELETE, itemId, workspaceRoot),
+    getText: (itemId: string, workspaceRoot?: string | null) => ipcRenderer.invoke(IPC_CHANNELS.KNOWLEDGE.GET_TEXT, itemId, workspaceRoot),
+    updateSummary: (itemId: string, summary: string, workspaceRoot?: string | null) => ipcRenderer.invoke(IPC_CHANNELS.KNOWLEDGE.UPDATE_SUMMARY, itemId, summary, workspaceRoot),
+    importPdf: (filePath: string, workspaceRoot?: string | null) => ipcRenderer.invoke(IPC_CHANNELS.KNOWLEDGE.IMPORT_PDF, filePath, workspaceRoot),
+    importWeb: (url: string, workspaceRoot?: string | null) => ipcRenderer.invoke(IPC_CHANNELS.KNOWLEDGE.IMPORT_WEB, url, workspaceRoot),
+    getStats: (workspaceRoot?: string | null) => ipcRenderer.invoke(IPC_CHANNELS.KNOWLEDGE.GET_STATS, workspaceRoot),
+  },
 } satisfies ElectronAPI);
 
 declare global {

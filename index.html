@@ -128,6 +128,21 @@
         </div>
         <div class="nav-group">
           <div class="nav-label">工具</div>
+          <a href="#" class="nav-item" data-page="knowledge" data-tooltip="知识库">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+              <line x1="16" y1="10" x2="19" y2="10"/>
+              <line x1="16" y1="14" x2="19" y2="14"/>
+              <line x1="16" y1="18" x2="19" y2="18"/>
+              <line x1="9" y1="10" x2="9.01" y2="10"/>
+              <line x1="13" y1="10" x2="13.01" y2="10"/>
+              <line x1="9" y1="14" x2="9.01" y2="14"/>
+              <line x1="13" y1="14" x2="13.01" y2="14"/>
+              <line x1="9" y1="18" x2="9.01" y2="18"/>
+              <line x1="13" y1="18" x2="13.01" y2="18"/>
+            </svg>
+            <span>知识库</span>
+          </a>
           <a href="#" class="nav-item" data-page="settings" data-tooltip="设置">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path
@@ -795,6 +810,99 @@
                 </svg>
                 <p>选择待办任务以查看或编辑其详细信息</p>
               </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="page" id="page-knowledge">
+        <div class="kb-page">
+          <div class="kb-header">
+            <div class="kb-header-left">
+              <h2>知识库</h2>
+              <p>导入 PDF、网页、文本，构建项目知识体系</p>
+            </div>
+            <div class="kb-header-stats" id="kb-stats">
+              <span class="kb-stat"><strong>0</strong> 项资料</span>
+              <span class="kb-stat"><strong>0</strong> 字数</span>
+            </div>
+          </div>
+
+          <div class="kb-toolbar">
+            <button class="kb-btn" id="kb-btn-import-pdf">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+              导入 PDF
+            </button>
+            <button class="kb-btn" id="kb-btn-import-url">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+              网页摘录
+            </button>
+            <button class="kb-btn" id="kb-btn-import-clipboard">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/></svg>
+              剪贴板
+            </button>
+            <button class="kb-btn" id="kb-btn-import-file">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
+              TXT/MD 文件
+            </button>
+          </div>
+
+          <div style="display:flex; flex:1; min-height:0; overflow:hidden">
+            <div class="kb-list" id="kb-list">
+              <div class="kb-empty">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.4">
+                  <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+                </svg>
+                <p>知识库为空</p>
+                <span>导入 PDF、网页、剪贴板或 Markdown 文件开始积累知识</span>
+              </div>
+            </div>
+
+            <div class="kb-detail-panel" id="kb-detail-panel">
+              <div class="kb-detail-header">
+                <h3 id="kb-detail-title">选择资料</h3>
+                <button class="kb-detail-close" id="kb-detail-close" title="关闭详情">✕</button>
+              </div>
+              <div class="kb-detail-meta" id="kb-detail-source"></div>
+              <div class="kb-detail-content">
+                <div class="kb-detail-text" id="kb-detail-text"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- URL Import Modal -->
+        <div class="kb-modal" id="kb-url-modal">
+          <div class="kb-modal-dialog">
+            <div class="kb-modal-header">
+              <h3>网页摘录</h3>
+            </div>
+            <div class="kb-modal-body">
+              <label>输入网页 URL</label>
+              <input type="url" id="kb-url-input" placeholder="https://example.com/article" autocomplete="off">
+            </div>
+            <div class="kb-modal-footer">
+              <button id="kb-url-cancel">取消</button>
+              <button class="kb-btn-primary" id="kb-url-confirm">开始抓取</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Clipboard Import Modal -->
+        <div class="kb-modal" id="kb-clip-modal">
+          <div class="kb-modal-dialog">
+            <div class="kb-modal-header">
+              <h3>剪贴板导入</h3>
+            </div>
+            <div class="kb-modal-body">
+              <label>标题</label>
+              <input type="text" id="kb-clip-title" placeholder="为这段内容起个名字" autocomplete="off">
+              <label>内容（已自动读取剪贴板）</label>
+              <textarea id="kb-clip-textarea" placeholder="粘贴或编辑文本内容..."></textarea>
+            </div>
+            <div class="kb-modal-footer">
+              <button id="kb-clip-cancel">取消</button>
+              <button class="kb-btn-primary" id="kb-clip-confirm">导入知识库</button>
             </div>
           </div>
         </div>

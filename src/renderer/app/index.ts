@@ -16,6 +16,7 @@ import '../pages/project';
 import '../pages/files/index';
 import '../pages/ai/index';
 import '../pages/todo/index';
+import '../pages/knowledge/index';
 import '../pages/settings/index';
 
 /** Global AI stats */
@@ -225,6 +226,7 @@ function getDefaultPaletteActions(): PaletteResult[] {
     { id: 'page-files', group: '页面', title: '文件管理', subtitle: '浏览和编辑工作区文件', icon: '📁', action: () => { void switchPage('files'); } },
     { id: 'page-ai', group: '页面', title: 'AI 助手', subtitle: '打开 AI 对话与配置侧栏', icon: '🤖', action: () => { void switchPage('ai'); } },
     { id: 'page-todo', group: '页面', title: '待办中心', subtitle: '查看和管理任务', icon: '✅', action: () => { void switchPage('todo'); } },
+    { id: 'page-knowledge', group: '页面', title: '知识库', subtitle: '导入和管理项目知识资料', icon: '📚', action: () => { void switchPage('knowledge'); } },
     { id: 'page-settings', group: '页面', title: '设置', subtitle: '模型、主题和快捷键', icon: '⚙️', action: () => { void switchPage('settings'); } },
   ];
 }

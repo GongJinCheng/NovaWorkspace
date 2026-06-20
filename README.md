@@ -1,20 +1,21 @@
-# Nova Workspace   # Nova工作区   新工作空间
+# Nova Workspace
 
-> 一个本地优先的 AI 深度工作台，集成 Markdown 文档、AI 助手、项目待办、版本历史、项目概览、模板系统、导出系统和全局命令面板。
+> 一个本地优先的 AI 深度工作台，集成 Markdown 文档、AI 助手、知识库、项目待办、版本历史、项目概览、模板系统、导出系统和全局命令面板。
 
-[![Electron   电子](https://img.shields.io/badge/Electron-35-47848f?logo=electron)](https://www.electronjs.org/)(!(电子)(https://img.shields.io/badge/electron - 35 - 47848 - f?logo=electron)) (https://www.electronjs.org/)
-[![TypeScript   打印稿](https://img.shields.io/badge/TypeScript-5.7-3178c6?logo=typescript)](https://www.typescriptlang.org/)(!(打印稿)(https://img.shields.io/badge/typescript - 5.7 - 3178 - c6?logo=typescript)) (https://www.typescriptlang.org/)
+[![Electron](https://img.shields.io/badge/Electron-35-47848f?logo=electron)](https://www.electronjs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.7-3178c6?logo=typescript)](https://www.typescriptlang.org/)
 [![esbuild](https://img.shields.io/badge/esbuild-0.24-ffcf00?logo=esbuild)](https://esbuild.github.io/)
-[![Version   版本](https://img.shields.io/badge/version-2.8.3-0066FF)](https://github.com/GongJinCheng/NovaWorkspace/releases)(!(版本)(https://img.shields.io/badge/version 2.8.3 - 0066 ff)] (https://github.com/GongJinCheng/NovaWorkspace/releases)
+[![Version](https://img.shields.io/badge/version-2.9.3-0066FF)](https://github.com/GongJinCheng/NovaWorkspace/releases)
 
 ---
 
-## 🎬 Demo
+## Demo
+
 https://github.com/user-attachments/assets/27173837-4057-4099-97b0-f92940fdeb9b
 
-A product showcase built with [HyperFrames](https://hyperframes.heygen.com/), featuring project workspace, Markdown editing, AI document assistant, AI-generated todos, project dashboard, templates, export workflow, and document version safety.一个用[HyperFrames]（https://hyperframes.heygen.com/）构建的产品展示，具有项目工作空间、Markdown编辑、AI文档助手、AI生成的待办事项、项目仪表板、模板、导出工作流和文档版本安全。
+A product showcase built with [HyperFrames](https://hyperframes.heygen.com/), featuring project workspace, Markdown editing, AI document assistant, AI-generated todos, project dashboard, templates, export workflow, and document version safety.
 
-> Run `cd NovaShowcase && npm run dev` to preview, or `npm run render` to regenerate the MP4.运行`cd NovaShowcase &；&； npm Run devcd NovaShowcase &； npm运行dev`预览，或`npm Run render`重新生成MP4。
+> Run `cd NovaShowcase && npm run dev` to preview, or `npm run render` to regenerate the MP4.
 
 ---
 
@@ -22,10 +23,11 @@ A product showcase built with [HyperFrames](https://hyperframes.heygen.com/), fe
 
 Nova 的核心使用方式是：
 
-```text   ' ' '文本
+```
 打开一个本地文件夹
 → 作为一个项目工作区
 → 编写 Markdown 文档
+→ 导入资料到知识库，AI 自动总结
 → 使用 AI 分析和生成内容
 → 一键提取待办
 → 在首页和项目概览中持续推进
@@ -33,9 +35,9 @@ Nova 的核心使用方式是：
 → 导出文档或项目报告
 ```
 
-每个工作区都是一个独立项目。Nova 会在项目目录下创建 `.nova` 目录，用于保存项目元信息、待办数据、版本历史和活动记录。
+每个工作区都是一个独立项目。Nova 会在项目目录下创建 `.nova` 目录，用于保存项目元信息、待办数据、知识库、版本历史和活动记录。
 
-```text   ' ' '文本
+```
 你的项目/
 ├── README.md
 ├── 产品方案.md
@@ -45,6 +47,10 @@ Nova 的核心使用方式是：
     ├── project.json
     ├── todos.json
     ├── activity.json
+    ├── conversations.json
+    ├── knowledge/
+    │   ├── index.json
+    │   └── *.txt
     └── history/
 ```
 
@@ -58,7 +64,8 @@ Nova 的核心使用方式是：
 | **项目概览** | 项目信息、文档统计、Todo 统计、最近活动、项目级 AI、项目报告导出 |
 | **文件管理** | 文件树、Monaco 编辑器、多标签、Markdown 预览、自动保存、版本历史、文档导出 |
 | **AI 助手** | OpenAI Compatible API、多 Provider、流式对话、国产模型兼容、连接测试 |
-| **待办中心** | 项目级 Todo、分类、优先级、截止时间、子任务、来源文档跳转 |
+| **知识库** | PDF 导入、网页摘录、剪贴板文本导入、TXT/MD 导入、AI 总结、资料管理 |
+| **待办中心** | 项目级 Todo、分类、优先级、截止时间、子任务、时间轴看板、分类看板 |
 | **模板系统** | PRD、会议纪要、技术方案、周报、复盘等内置模板，支持 AI 填充 |
 | **导出系统** | 当前文档导出 HTML / PDF，项目报告导出 Markdown / PDF |
 | **命令面板** | `Ctrl+K` 搜索命令、AI 操作、模板、Todo、文件和文档内容 |
@@ -76,6 +83,13 @@ Nova 的核心使用方式是：
 - 项目数据保存在当前工作区 `.nova` 目录中
 - 支持 Git / 云盘 / 手动复制迁移
 - 不强制账号体系，不锁死用户数据
+
+### 知识库
+
+- 四种导入方式：PDF 文件、网页摘录、剪贴板文本、TXT/MD 文件
+- AI 一键生成摘要，自动保存到资料卡片
+- 每个工作区独立存储，不跨项目混淆
+- 资料存放在 `.nova/knowledge/` 目录，随项目迁移
 
 ### Markdown + AI 工作流
 
@@ -144,25 +158,26 @@ PDF 导出使用 Electron 原生 `printToPDF`，不额外引入重型浏览器�
 - **样式**：纯 CSS + CSS Variables
 - **IPC**：Electron contextBridge + ipcRenderer / ipcMain
 - **AI 接入**：OpenAI Compatible Chat Completions API
+- **PDF 解析**：pdf-parse
 
 ---
 
 ## 项目结构
 
-```text
+```
 NovaWorkspace/
 ├── src/
 │   ├── main/                 # Electron 主进程
 │   │   ├── bootstrap/        # 应用生命周期
 │   │   ├── ipc/              # IPC handlers
-│   │   ├── services/         # 主进程服务：AI、设置、Todo、导出、工作区
+│   │   ├── services/         # 主进程服务：AI、设置、Todo、知识库、导出、工作区
 │   │   ├── utils/            # 主进程工具
 │   │   └── windows/          # 窗口管理
 │   ├── preload/              # contextBridge API
 │   ├── renderer/             # 渲染层
 │   │   ├── app/              # 入口、路由、主题
 │   │   ├── components/       # 通用 UI 组件
-│   │   ├── pages/            # home / files / ai / todo / settings / project
+│   │   ├── pages/            # home / files / ai / todo / knowledge / settings / project
 │   │   ├── services/         # IPC client、模板、导出、工作区上下文
 │   │   ├── styles/           # CSS 设计系统
 │   │   ├── utils/            # 渲染层工具
@@ -206,7 +221,7 @@ npm run package
 
 打包产物会生成在：
 
-```text
+```
 release/
 ```
 
@@ -218,13 +233,13 @@ Nova 默认不内置模型服务，需要用户自行配置 API。
 
 进入：
 
-```text
+```
 设置 → AI Provider
 ```
 
 填写：
 
-```text
+```
 Provider 名称
 Base URL
 API Key
@@ -233,7 +248,7 @@ API Key
 
 示例：
 
-```text
+```
 Provider: DeepSeek
 Base URL: https://api.deepseek.com/v1
 Model: deepseek-chat
@@ -251,6 +266,8 @@ Nova 会调用 OpenAI Compatible Chat Completions 接口。Base URL 可以填写
 | 项目信息 | `.nova/project.json` |
 | 项目待办 | `.nova/todos.json` |
 | 项目活动 | `.nova/activity.json` |
+| 知识库资料 | `.nova/knowledge/` |
+| 对话历史 | `.nova/conversations.json` |
 | 文档历史版本 | `.nova/history/` |
 | 应用配置 / AI Provider | Electron userData 目录 |
 
@@ -269,7 +286,7 @@ Nova 会调用 OpenAI Compatible Chat Completions 接口。Base URL 可以填写
 
 简单理解：
 
-```text
+```
 Ctrl+P = 找文件
 Ctrl+K = 找功能 / 做事情
 ```
@@ -278,29 +295,36 @@ Ctrl+K = 找功能 / 做事情
 
 ## 当前版本
 
-### v2.8.3 - 发布整理与代码结构优化
+### v2.9.3 — 知识库
 
-- 整理 README，补充当前产品能力与模块说明
-- 将 Release Notes 统一收纳到 `docs/releases/`
-- 抽离主进程导出逻辑到 `src/main/services/export-service.ts`
-- 保持 `fs.handlers.ts` 更聚焦于文件系统 IPC 注册
-- 补充 v2.8.x 发布说明
-- 验证 `typecheck` 与 `build`
+- PDF 导入（pdf-parse 解析文本）
+- 网页摘录导入（Electron net.fetch 抓取）
+- 剪贴板文本导入
+- TXT / Markdown 文件导入
+- 知识库资料 CRUD 管理
+- AI 一键总结资料，摘要自动保存
+- 知识库按工作区隔离，数据存储在 `.nova/knowledge/`
+
+### v2.8.x — 编辑器体验优化
+
+- Mermaid 图表渲染支持
+- 图片拖拽粘贴到 Markdown
+- 大纲侧栏导航，支持分屏模式与预览联动
+- Todo 分类看板，支持拖拽缩进和列内滚动
+- 编辑器模式切换（编辑 / 预览 / 分屏）
+
+### v2.7.x — AI 助手增强
+
+- AI 聊天 Markdown 渲染
+- 对话历史持久化（按工作区隔离）
+- 支持引用项目文件作为 AI 上下文
+- 流式对话 typewriter 效果
 
 ---
 
 ## Roadmap
 
-### v2.9.0 - 知识库导入
-
-- PDF 导入
-- TXT / Markdown 导入
-- 剪贴板文本导入
-- 网页摘录导入
-- 资料库目录管理
-- AI 总结资料
-
-### v3.0.0 - AI Agent 工作流
+### v3.0.0 — AI Agent 工作流
 
 - 自动分析项目
 - 自动生成下一步计划
