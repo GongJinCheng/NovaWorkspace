@@ -7,6 +7,7 @@ import type { TodoData, TodoTask, TodoCategory, CreateTaskInput, UpdateTaskInput
 import type { AISettings, AIProviderConfig, AIChatRequest, AIChatResponse, AIConnectionTestResult, AIImageAttachment } from './ai';
 import type { Workspace, WorkspaceSession, OpenWorkspaceInput, SaveWorkspaceSessionInput, ProjectMeta, ProjectOverview, UpdateProjectMetaInput } from './workspace';
 import type { UpdateState } from './update';
+import type { Conversation } from './chat-history';
 
 export interface ElectronAPI {
   window: {
@@ -84,5 +85,11 @@ export interface ElectronAPI {
         onError?(message: string): void;
       }
     ): { requestId: string; cancel(): void };
+  };
+  chatHistory: {
+    list(workspaceRoot?: string | null): Promise<Array<{ id: string; title: string; createdAt: string; updatedAt: string; messageCount: number }>>;
+    get(conversationId: string, workspaceRoot?: string | null): Promise<Conversation | null>;
+    save(conversation: Conversation, workspaceRoot?: string | null): Promise<Conversation>;
+    delete(conversationId: string, workspaceRoot?: string | null): Promise<boolean>;
   };
 }

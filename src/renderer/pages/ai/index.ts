@@ -1,12 +1,16 @@
 ﻿/**
  * AI Page - AI assistant with conversational chat + quick tools
  * Now with streaming responses for typewriter effect.
+ * Features: Markdown rendering, code highlighting, chat history persistence.
  */
 import { aiService, type ChatMessage } from './ai-service';
 import type { AIImageAttachment, AIMessageContent, AIModelCapabilities, AIProviderConfig } from '../../../shared/types/ai';
 import { AI_CAPABILITY_LABELS, normalizeAIModelCapabilities, providerSupportsCapability, stripReasoningBlocks } from '../../../shared/utils/ai-capabilities';
 import { registerPageInit } from '../../app/router';
 import { aiStats } from '../../app/index';
+import { renderMarkdown } from '../../utils/markdown-renderer';
+import type { Conversation, ChatHistoryMessage } from '../../../shared/types/chat-history';
+import { getCurrentWorkspaceRoot } from '../../services/workspace-context';
 
 window.aiService = aiService;
 
@@ -16,6 +20,15 @@ let isGenerating = false;
 let aiPageBound = false;
 let pendingImages: AIImageAttachment[] = [];
 let pendingFiles: Array<{ path: string; name: string }> = [];
+
+// Chat history / conversation state
+let currentConversationId: string | null = null;
+let currentConversationTitle: string = '';
+let currentConversationCreatedAt: string = '';
+let conversationMessages: ChatHistoryMessage[] = [];
+let historyPanelOpen = false;
+let historyLoaded = false;
+let loadedWorkspaceRoot: string | null = null;
 
 
 function persistStats(): void {
@@ -134,6 +147,16 @@ async function sendMessage(text: string): Promise<void> {
     renderAssistantBubble(bubble, result);
     chatHistory.push({ role: 'assistant', content: stripReasoningBlocks(result) });
     incrementAIStats(Math.ceil((estimateMessageLength(userContent) + result.length) / 4));
+
+    // Save to conversation history
+    conversationMessages.push(
+      { role: 'user', content: displayText, timestamp: new Date().toISOString() },
+      { role: 'assistant', content: stripReasoningBlocks(result), timestamp: new Date().toISOString() }
+    );
+    if (!currentConversationTitle) {
+      currentConversationTitle = inputText.slice(0, 40) || 'New Conversation';
+    }
+    void saveCurrentConversation();
   } catch (err) {
     bubble.classList.remove('streaming');
     bubble.textContent = '';
@@ -190,6 +213,7 @@ function renderUserBubble(bubble: HTMLElement, text: string, images: AIImageAtta
 
 function renderAssistantBubble(bubble: HTMLElement, content: string): void {
   bubble.innerHTML = renderReasoningAwareText(content);
+  bindCodeCopyButtons(bubble);
 }
 
 function renderReasoningAwareText(content: string): string {
@@ -201,7 +225,7 @@ function renderReasoningAwareText(content: string): string {
 
   while ((match = regex.exec(source))) {
     if (match.index > cursor) {
-      blocks.push('<div class="ai-msg-text">' + textToHtml(source.slice(cursor, match.index)) + '</div>');
+      blocks.push('<div class="md-content">' + renderMarkdown(source.slice(cursor, match.index)) + '</div>');
     }
     const thinking = match[1] || '';
     if (thinking.trim()) {
@@ -211,10 +235,26 @@ function renderReasoningAwareText(content: string): string {
   }
 
   if (cursor < source.length) {
-    blocks.push('<div class="ai-msg-text">' + textToHtml(source.slice(cursor)) + '</div>');
+    blocks.push('<div class="md-content">' + renderMarkdown(source.slice(cursor)) + '</div>');
   }
 
   return blocks.join('') || '<span class="ai-stream-placeholder">正在生成...</span>';
+}
+
+function bindCodeCopyButtons(container: HTMLElement): void {
+  container.querySelectorAll('.md-code-copy').forEach(btn => {
+    if ((btn as HTMLElement).dataset.bound) return;
+    (btn as HTMLElement).dataset.bound = '1';
+    btn.addEventListener('click', () => {
+      const code = (btn as HTMLElement).dataset.code || '';
+      if (code) {
+        navigator.clipboard.writeText(code).then(() => {
+          btn.classList.add('copied');
+          setTimeout(() => btn.classList.remove('copied'), 1500);
+        }).catch(() => { /* ignore */ });
+      }
+    });
+  });
 }
 
 function textToHtml(text: string): string {
@@ -363,6 +403,10 @@ function updateSendButton(): void {
 
 function clearChat(): void {
   chatHistory.length = 0;
+  conversationMessages = [];
+  currentConversationId = null;
+  currentConversationTitle = '';
+  currentConversationCreatedAt = '';
   const container = document.getElementById('ai-chat-messages');
   if (!container) return;
   container.innerHTML =
@@ -831,6 +875,306 @@ function getInputValue(id: string): string {
   return el?.value?.trim() ?? '';
 }
 
+// ── Chat History / Conversation Management ─────────────────────────
+
+async function saveCurrentConversation(): Promise<void> {
+  if (conversationMessages.length === 0) return;
+  const now = new Date().toISOString();
+  const isNew = !currentConversationId;
+  const conversation: Conversation = {
+    id: currentConversationId || generateConversationId(),
+    title: currentConversationTitle || 'New Conversation',
+    messages: conversationMessages,
+    createdAt: isNew ? now : currentConversationCreatedAt || now,
+    updatedAt: now,
+  };
+  if (isNew) {
+    currentConversationId = conversation.id;
+    currentConversationCreatedAt = now;
+  }
+  try {
+    const workspaceRoot = getCurrentWorkspaceRoot();
+    await window.electronAPI.chatHistory.save(conversation, workspaceRoot);
+  } catch (err) {
+    console.warn('[ChatHistory] Failed to save conversation:', err);
+  }
+}
+
+function generateConversationId(): string {
+  return 'conv-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8);
+}
+
+async function loadConversationHistory(): Promise<void> {
+  const currentWorkspace = getCurrentWorkspaceRoot();
+
+  // Skip if already loaded for the same workspace
+  if (historyLoaded && loadedWorkspaceRoot === currentWorkspace) return;
+
+  // Workspace changed — clear current conversation
+  if (historyLoaded && loadedWorkspaceRoot !== currentWorkspace) {
+    chatHistory.length = 0;
+    conversationMessages = [];
+    currentConversationId = null;
+    currentConversationTitle = '';
+    currentConversationCreatedAt = '';
+    const container = document.getElementById('ai-chat-messages');
+    if (container) {
+      container.innerHTML =
+        '<div class="ai-chat-welcome">' +
+        '<div class="ai-chat-welcome-icon"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2a4 4 0 0 1 4 4c0 1.95-1.4 3.58-3.25 3.93L12 22"/><path d="M12 2a4 4 0 0 0-4 4c0 1.95 1.4 3.58 3.25 3.93"/><path d="M12 2v20"/></svg></div>' +
+        '<h3>AI 助手</h3>' +
+        '<p>我可以帮你分析代码、翻译文档、回答问题。</p>' +
+        '<div class="ai-chat-suggestions">' +
+        '<button class="ai-suggestion" data-msg="帮我解释一下这段代码">解释代码</button>' +
+        '<button class="ai-suggestion" data-msg="将以下内容翻译成英文">翻译内容</button>' +
+        '<button class="ai-suggestion" data-msg="总结一下这段内容的要点">内容摘要</button>' +
+        '</div></div>';
+    }
+  }
+
+  loadedWorkspaceRoot = currentWorkspace;
+  historyLoaded = true;
+
+  try {
+    const list = await window.electronAPI.chatHistory.list(currentWorkspace);
+    if (list.length === 0) return;
+
+    // Load the most recent conversation
+    const latest = list[0];
+    const conversation = await window.electronAPI.chatHistory.get(latest.id, currentWorkspace);
+    if (!conversation || conversation.messages.length === 0) return;
+
+    currentConversationId = conversation.id;
+    currentConversationTitle = conversation.title;
+    currentConversationCreatedAt = conversation.createdAt;
+    conversationMessages = conversation.messages;
+
+    // Restore chat UI and API context
+    chatHistory.length = 0;
+    const container = document.getElementById('ai-chat-messages');
+    if (!container) return;
+
+    const welcome = container.querySelector('.ai-chat-welcome');
+    if (welcome) welcome.remove();
+
+    for (const msg of conversation.messages) {
+      if (msg.role === 'system') continue;
+      const content = typeof msg.content === 'string' ? msg.content : '(image message)';
+      appendMessage(msg.role, content);
+      // Rebuild API context
+      if (msg.role === 'user' && typeof msg.content === 'string') {
+        chatHistory.push({ role: 'user', content: msg.content });
+      } else if (msg.role === 'assistant' && typeof msg.content === 'string') {
+        chatHistory.push({ role: 'assistant', content: msg.content });
+      }
+    }
+  } catch (err) {
+    console.warn('[ChatHistory] Failed to load history:', err);
+  }
+}
+
+async function loadConversation(conversationId: string): Promise<void> {
+  try {
+    const workspaceRoot = getCurrentWorkspaceRoot();
+    const conversation = await window.electronAPI.chatHistory.get(conversationId, workspaceRoot);
+    if (!conversation) return;
+
+    // Clear current state
+    chatHistory.length = 0;
+    conversationMessages = conversation.messages;
+    currentConversationId = conversation.id;
+    currentConversationTitle = conversation.title;
+    currentConversationCreatedAt = conversation.createdAt;
+
+    const container = document.getElementById('ai-chat-messages');
+    if (!container) return;
+
+    container.innerHTML = '';
+
+    for (const msg of conversation.messages) {
+      if (msg.role === 'system') continue;
+      const content = typeof msg.content === 'string' ? msg.content : '(image message)';
+      appendMessage(msg.role, content);
+      if (msg.role === 'user' && typeof msg.content === 'string') {
+        chatHistory.push({ role: 'user', content: msg.content });
+      } else if (msg.role === 'assistant' && typeof msg.content === 'string') {
+        chatHistory.push({ role: 'assistant', content: msg.content });
+      }
+    }
+
+    closeHistoryPanel();
+  } catch (err) {
+    console.warn('[ChatHistory] Failed to load conversation:', err);
+    showMsg('加载对话失败：' + (err instanceof Error ? err.message : String(err)), 'error');
+  }
+}
+
+async function deleteConversation(conversationId: string): Promise<void> {
+  try {
+    const workspaceRoot = getCurrentWorkspaceRoot();
+    await window.electronAPI.chatHistory.delete(conversationId, workspaceRoot);
+    // If deleting current conversation, start fresh
+    if (conversationId === currentConversationId) {
+      clearChat();
+    }
+    await refreshHistoryPanel();
+  } catch (err) {
+    console.warn('[ChatHistory] Failed to delete:', err);
+  }
+}
+
+function toggleHistoryPanel(): void {
+  historyPanelOpen = !historyPanelOpen;
+  const panel = document.getElementById('ai-history-panel');
+  if (panel) {
+    panel.style.display = historyPanelOpen ? 'flex' : 'none';
+  }
+  if (historyPanelOpen) {
+    void refreshHistoryPanel();
+  }
+}
+
+function closeHistoryPanel(): void {
+  historyPanelOpen = false;
+  const panel = document.getElementById('ai-history-panel');
+  if (panel) panel.style.display = 'none';
+}
+
+async function refreshHistoryPanel(): Promise<void> {
+  const listEl = document.getElementById('ai-history-list');
+  if (!listEl) return;
+
+  try {
+    const workspaceRoot = getCurrentWorkspaceRoot();
+    const list = await window.electronAPI.chatHistory.list(workspaceRoot);
+
+    if (list.length === 0) {
+      listEl.innerHTML = '<div class="ai-history-empty">暂无对话记录</div>';
+      return;
+    }
+
+    listEl.innerHTML = list.map(item => {
+      const isActive = item.id === currentConversationId;
+      const timeStr = formatConversationTime(item.updatedAt);
+      return '<div class="ai-history-item' + (isActive ? ' active' : '') + '" data-conv-id="' + escAttr(item.id) + '">' +
+        '<div class="ai-history-item-info">' +
+          '<div class="ai-history-item-title">' + escHTML(item.title) + '</div>' +
+          '<div class="ai-history-item-meta">' + item.messageCount + ' messages · ' + timeStr + '</div>' +
+        '</div>' +
+        '<button class="ai-history-item-delete" data-delete-id="' + escAttr(item.id) + '" title="Delete">' +
+          '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">' +
+          '<polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>' +
+          '</svg>' +
+        '</button>' +
+      '</div>';
+    }).join('');
+  } catch (err) {
+    listEl.innerHTML = '<div class="ai-history-empty">加载失败</div>';
+  }
+}
+
+function formatConversationTime(isoStr: string): string {
+  try {
+    const date = new Date(isoStr);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMin = Math.floor(diffMs / 60000);
+    if (diffMin < 1) return 'just now';
+    if (diffMin < 60) return diffMin + ' min ago';
+    const diffHour = Math.floor(diffMin / 60);
+    if (diffHour < 24) return diffHour + ' hr ago';
+    const diffDay = Math.floor(diffHour / 24);
+    if (diffDay < 7) return diffDay + ' day ago';
+    return date.toLocaleDateString('zh-CN');
+  } catch {
+    return '';
+  }
+}
+
+function initHistoryPanel(): void {
+  // Create history panel DOM
+  const actionsArea = document.querySelector('.ai-chat-actions');
+  if (!actionsArea || document.getElementById('ai-history-toggle-btn')) return;
+
+  const toggleWrap = document.createElement('div');
+  toggleWrap.className = 'ai-history-toggle';
+  toggleWrap.style.position = 'relative';
+
+  const toggleBtn = document.createElement('button');
+  toggleBtn.className = 'icon-btn';
+  toggleBtn.id = 'ai-history-toggle-btn';
+  toggleBtn.title = '对话历史';
+  toggleBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">' +
+    '<circle cx="12" cy="12" r="10"/>' +
+    '<polyline points="12 6 12 12 16 14"/>' +
+    '</svg>';
+  toggleBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    toggleHistoryPanel();
+  });
+
+  const panel = document.createElement('div');
+  panel.id = 'ai-history-panel';
+  panel.className = 'ai-history-panel';
+  panel.style.display = 'none';
+  panel.innerHTML =
+    '<div class="ai-history-panel-header">' +
+      '<span>对话历史</span>' +
+      '<div class="ai-history-panel-actions">' +
+        '<button id="ai-history-close" title="关闭">' +
+          '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>' +
+        '</button>' +
+      '</div>' +
+    '</div>' +
+    '<div class="ai-history-list" id="ai-history-list"></div>' +
+    '<button class="ai-history-new-btn" id="ai-history-new">' +
+      '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>' +
+      '新建对话' +
+    '</button>';
+
+  toggleWrap.appendChild(toggleBtn);
+  toggleWrap.appendChild(panel);
+  actionsArea.insertBefore(toggleWrap, actionsArea.firstChild);
+
+  // Bind events
+  panel.querySelector('#ai-history-close')?.addEventListener('click', closeHistoryPanel);
+  panel.querySelector('#ai-history-new')?.addEventListener('click', () => {
+    clearChat();
+    closeHistoryPanel();
+  });
+
+  // Delegate clicks on history list
+  const listEl = panel.querySelector('#ai-history-list');
+  listEl?.addEventListener('click', (event) => {
+    const target = event.target as HTMLElement;
+
+    // Delete button
+    const deleteBtn = target.closest('[data-delete-id]') as HTMLElement | null;
+    if (deleteBtn) {
+      event.stopPropagation();
+      const deleteId = deleteBtn.dataset.deleteId;
+      if (deleteId) void deleteConversation(deleteId);
+      return;
+    }
+
+    // Conversation item
+    const item = target.closest('[data-conv-id]') as HTMLElement | null;
+    if (item) {
+      const convId = item.dataset.convId;
+      if (convId) void loadConversation(convId);
+    }
+  });
+
+  // Close panel when clicking outside
+  document.addEventListener('click', (event) => {
+    if (!historyPanelOpen) return;
+    const target = event.target as HTMLElement;
+    if (!target.closest('.ai-history-toggle')) {
+      closeHistoryPanel();
+    }
+  });
+}
+
 // Init
 function bindAIPageEventsOnce(): void {
   if (aiPageBound) return;
@@ -860,10 +1204,24 @@ function bindAIPageEventsOnce(): void {
   initSidebarToggle();
 }
 
+let workspaceCheckInterval: ReturnType<typeof setInterval> | null = null;
+
 function initAIPage(): void {
   bindAIPageEventsOnce();
+  initHistoryPanel();
   void loadAIConfig();
+  void loadConversationHistory();
   updateStatsDisplay();
+
+  // Periodically check for workspace changes while on AI page
+  if (workspaceCheckInterval) clearInterval(workspaceCheckInterval);
+  workspaceCheckInterval = setInterval(() => {
+    const currentWorkspace = getCurrentWorkspaceRoot();
+    if (historyLoaded && currentWorkspace !== loadedWorkspaceRoot) {
+      void loadConversationHistory();
+    }
+  }, 1000);
+
   console.log('[AI] 页面初始化完成');
 }
 

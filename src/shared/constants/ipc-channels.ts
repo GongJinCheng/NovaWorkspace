@@ -76,6 +76,12 @@ export const IPC_CHANNELS = {
     STREAM_DONE: 'ai:stream-done',
     STREAM_ERROR: 'ai:stream-error',
   },
+  CHAT_HISTORY: {
+    LIST: 'chat-history:list',
+    GET: 'chat-history:get',
+    SAVE: 'chat-history:save',
+    DELETE: 'chat-history:delete',
+  },
 } as const;
 
 export type IpcChannel = typeof IPC_CHANNELS;

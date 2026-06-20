@@ -2,6 +2,7 @@ import { contextBridge, ipcRenderer } from 'electron';
 import { IPC_CHANNELS } from '../shared/constants/ipc-channels';
 import type { ElectronAPI } from '../shared/types/ipc';
 import type { AIChatRequest } from '../shared/types/ai';
+import type { Conversation } from '../shared/types/chat-history';
 
 function createRequestId(prefix: string): string {
   return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
@@ -114,6 +115,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
         },
       };
     },
+  },
+  chatHistory: {
+    list: (workspaceRoot?: string | null) => ipcRenderer.invoke(IPC_CHANNELS.CHAT_HISTORY.LIST, workspaceRoot),
+    get: (conversationId: string, workspaceRoot?: string | null) => ipcRenderer.invoke(IPC_CHANNELS.CHAT_HISTORY.GET, conversationId, workspaceRoot),
+    save: (conversation: Conversation, workspaceRoot?: string | null) => ipcRenderer.invoke(IPC_CHANNELS.CHAT_HISTORY.SAVE, conversation, workspaceRoot),
+    delete: (conversationId: string, workspaceRoot?: string | null) => ipcRenderer.invoke(IPC_CHANNELS.CHAT_HISTORY.DELETE, conversationId, workspaceRoot),
   },
 } satisfies ElectronAPI);
 
