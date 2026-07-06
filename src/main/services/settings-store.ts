@@ -3,6 +3,7 @@ import path from 'path';
 import { getSettingsDataPath } from '../utils/paths';
 import type { AIProviderConfig, AISettings } from '@shared/types/ai';
 import { normalizeAIModelCapabilities } from '@shared/utils/ai-capabilities';
+import { MASKED_API_KEY } from '@shared/constants/app';
 
 export interface AppSettings {
   ai: AISettings;
@@ -62,14 +63,35 @@ export async function writeSettings(settings: AppSettings): Promise<AppSettings>
 
 export async function getAISettings(): Promise<AISettings> {
   const settings = await readSettings();
-  return cloneAISettings(settings.ai);
+  return maskAISettings(settings.ai);
+}
+
+/** 读路径脱敏：渲染端永远拿不到明文密钥，仅在主进程持有明文用于请求。 */
+function maskAISettings(settings: AISettings): AISettings {
+  return {
+    defaultProviderId: settings.defaultProviderId,
+    providers: settings.providers.map(maskProvider),
+  };
+}
+
+function maskProvider(provider: AIProviderConfig): AIProviderConfig {
+  return { ...provider, apiKey: provider.apiKey ? MASKED_API_KEY : '' };
 }
 
 export async function saveAIProvider(provider: AIProviderConfig): Promise<AIProviderConfig> {
   const settings = await getMutableSettings();
   const now = Date.now();
+
+  // 渲染端未改密钥时回传脱敏哨兵，保留已存储明文
+  let apiKey = provider.apiKey;
+  if (apiKey === MASKED_API_KEY) {
+    const existing = settings.ai.providers.find(item => item.id === (provider.id || ''));
+    apiKey = existing?.apiKey ?? '';
+  }
+
   const normalized: AIProviderConfig = {
     ...provider,
+    apiKey,
     id: provider.id || createId('provider'),
     name: provider.name?.trim() || 'OpenAI Compatible',
     type: provider.type || 'custom',
@@ -140,10 +162,10 @@ export async function getDefaultAIProvider(): Promise<AIProviderConfig> {
 
   if (!provider) {
     const defaults = cloneAISettings(DEFAULT_SETTINGS.ai);
-    return defaults.providers[0];
+    return maskProvider(defaults.providers[0]);
   }
 
-  return { ...provider };
+  return maskProvider(provider);
 }
 
 async function getMutableSettings(): Promise<AppSettings> {

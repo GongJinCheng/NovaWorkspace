@@ -14,6 +14,8 @@ import type { Conversation, ChatHistoryMessage } from '../../../shared/types/cha
 import { getCurrentWorkspaceRoot } from '../../services/workspace-context';
 import { escHtml, escAttr } from '../../utils/escape';
 import { installAIStudio, consumePendingAIDraft } from './studio';
+import { MASKED_API_KEY } from '../../../shared/constants/app';
+import { bus, BusEvents } from '../../services/bus';
 
 window.aiService = aiService;
 
@@ -682,12 +684,7 @@ function installAIStudioBridge(): void {
     pickProjectFiles: () => { void pickProjectFiles(); },
     pickKnowledgeItems: () => { void pickKnowledgeItems(); },
     runFileWorkflow: async (workflowId: string) => {
-      const runner = window.__runFileAIWorkflow;
-      if (typeof runner !== 'function') {
-        appendMessage('system', '文件管理器还没有准备好，请先打开文件管理页面。');
-        return;
-      }
-      await runner(workflowId);
+      bus.emit(BusEvents.FileRunAIWorkflow, workflowId);
     },
   });
   consumePendingAIDraft({
@@ -698,7 +695,7 @@ function installAIStudioBridge(): void {
     pickProjectFiles: () => { void pickProjectFiles(); },
     pickKnowledgeItems: () => { void pickKnowledgeItems(); },
     runFileWorkflow: async (workflowId: string) => {
-      if (window.__runFileAIWorkflow) await window.__runFileAIWorkflow(workflowId);
+      bus.emit(BusEvents.FileRunAIWorkflow, workflowId);
     },
   });
 }
@@ -730,12 +727,7 @@ async function runAIWorkflow(workflowId: string): Promise<void> {
 
   if (workflowId === 'file-summary' || workflowId === 'file-todo') {
     await switchPage('files');
-    const runner = window.__runFileAIWorkflow;
-    if (typeof runner !== 'function') {
-      appendMessage('system', '文件管理器还没有准备好，请先打开文件管理页面。');
-      return;
-    }
-    await runner(workflowId === 'file-summary' ? 'summary' : 'todo');
+    bus.emit(BusEvents.FileRunAIWorkflow, workflowId === 'file-summary' ? 'summary' : 'todo');
     return;
   }
 
@@ -825,7 +817,8 @@ async function loadAIConfig(): Promise<void> {
 }
 
 async function saveAIConfig(): Promise<void> {
-  const apiKey = getInputValue('ai-api-key');
+  const apiKeyRaw = getInputValue('ai-api-key');
+  const apiKey = apiKeyRaw.trim() ? apiKeyRaw.trim() : MASKED_API_KEY;
   const baseUrl = getInputValue('ai-base-url');
   const modelSelect = document.getElementById('ai-model-select') as HTMLSelectElement | null;
   const selectedModel = modelSelect?.value?.trim() || '';

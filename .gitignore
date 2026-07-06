@@ -35,3 +35,6 @@ package-lock.json
 release/
 
 .workbuddy/
+
+# Local project data (per-workspace .nova/ state) — never commit
+.nova/

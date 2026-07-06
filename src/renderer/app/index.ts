@@ -10,6 +10,8 @@ import { ipcClient } from '../services/ipc-client';
 import { showInputPrompt } from '../components/modal';
 import { buildTemplateCommandResults } from '../services/template-service';
 import { escHtml } from '../utils/escape';
+import { toast } from '../utils/toast';
+import { bus, BusEvents } from '../services/bus';
 import { initWorkspaceSwitcher } from './workspace-switcher';
 import { initOnboarding } from './onboarding';
 import { novaIcon, NovaIconName } from '../utils/icons';
@@ -42,7 +44,7 @@ async function initApp(): Promise<void> {
   initLocalLogin();
   initAutoUpdateStatus();
   initOnboarding();
-  console.log('[App] \u521D\u59CB\u5316\u5B8C\u6210');
+  if (process.env.NODE_ENV !== 'production') console.log('[App] 初始化完成');
 }
 
 
@@ -136,8 +138,7 @@ function bindKeyboardShortcuts(): void {
 
     if (key === 's') {
       consumeShortcut();
-      const em = window.__editorManager;
-      if (em) em.saveFile();
+      bus.emit(BusEvents.EditorSave);
       return;
     }
 
@@ -145,8 +146,7 @@ function bindKeyboardShortcuts(): void {
       consumeShortcut();
       void (async () => {
         await switchPage('files');
-        const ft = window.__fileTree;
-        if (ft) ft.openFolder();
+        bus.emit(BusEvents.FileOpenFolder);
       })();
       return;
     }
@@ -155,19 +155,18 @@ function bindKeyboardShortcuts(): void {
       consumeShortcut();
       void (async () => {
         await switchPage('files');
-        window.__handleNewFile?.();
+        bus.emit(BusEvents.FileNew);
       })();
       return;
     }
 
     if (key === 'w') {
       consumeShortcut();
-      const em = window.__editorManager;
-      if (em?.activeEditor) em.closeTab(em.activeEditor);
+      bus.emit(BusEvents.EditorCloseActive);
     }
   };
 
-  document.addEventListener('keydown', handleGlobalShortcut, true);
+  // 仅挂在 window 捕获阶段即可，避免 document/window 双注册导致逻辑脆弱
   window.addEventListener('keydown', handleGlobalShortcut, true);
 
   // Some Electron/Chromium focus paths can miss the first document listener after
@@ -268,18 +267,31 @@ function getDefaultPaletteActions(): PaletteResult[] {
   ];
 }
 
+// 命令列表缓存：模板/命令结构在会话内基本稳定，避免每次打开命令面板都重建两次
+let cachedCommandActions: PaletteResult[] | null = null;
+
+export function invalidateCommandCache(): void {
+  cachedCommandActions = null;
+}
+
 function getCommandActions(): PaletteResult[] {
+  if (cachedCommandActions) return cachedCommandActions;
+  cachedCommandActions = buildCommandActions();
+  return cachedCommandActions;
+}
+
+function buildCommandActions(): PaletteResult[] {
   const templateActions = buildTemplateCommandResults((template) => {
     void (async () => {
       await switchPage('files');
-      void window.__handleNewFileFromTemplate?.(template.id);
+      bus.emit(BusEvents.FileNewFromTemplate, template.id);
     })();
   });
 
   return [
-    { id: 'cmd-open-folder', group: '常用命令', title: '打开工作区', subtitle: '选择一个本地文件夹作为项目', icon: '打开', iconHtml: commandIcon('folder'), hotkey: 'Ctrl+O', keywords: ['workspace', 'folder', '项目'], action: async () => { await switchPage('files'); void (window.__fileTree?.openFolder?.() || window.__chooseWorkspaceFolder?.()); } },
+    { id: 'cmd-open-folder', group: '常用命令', title: '打开工作区', subtitle: '选择一个本地文件夹作为项目', icon: '打开', iconHtml: commandIcon('folder'), hotkey: 'Ctrl+O', keywords: ['workspace', 'folder', '项目'], action: async () => { await switchPage('files'); bus.emit(BusEvents.FileOpenFolder); } },
     { id: 'cmd-project-overview', group: '常用命令', title: '打开项目概览', subtitle: '查看当前工作区统计和动态', icon: '项目', iconHtml: commandIcon('project'), hotkey: 'Alt+2', keywords: ['dashboard', 'overview'], action: () => { void switchPage('project'); } },
-    { id: 'cmd-new-file', group: '常用命令', title: '新建文档', subtitle: '选择模板并创建 Markdown 文档', icon: '文档', iconHtml: commandIcon('new-doc'), hotkey: 'Ctrl+N', keywords: ['markdown', 'template', 'md'], action: async () => { await switchPage('files'); void window.__handleNewFile?.(); } },
+    { id: 'cmd-new-file', group: '常用命令', title: '新建文档', subtitle: '选择模板并创建 Markdown 文档', icon: '文档', iconHtml: commandIcon('new-doc'), hotkey: 'Ctrl+N', keywords: ['markdown', 'template', 'md'], action: async () => { await switchPage('files'); bus.emit(BusEvents.FileNew); } },
     { id: 'cmd-new-todo', group: '常用命令', title: '新建待办', subtitle: '快速创建一条任务', icon: '待办', iconHtml: commandIcon('new-todo'), keywords: ['task', 'todo'], action: createQuickTodo },
     { id: 'cmd-ai', group: '常用命令', title: '打开 AI 助手', subtitle: '进入 AI 对话页', icon: 'AI', iconHtml: commandIcon('ai'), hotkey: 'Alt+4', keywords: ['chat', 'model'], action: () => { void switchPage('ai'); } },
     { id: 'cmd-settings', group: '常用命令', title: '打开设置', subtitle: '配置 AI Provider、主题和快捷键', icon: '设置', iconHtml: commandIcon('settings'), keywords: ['config', 'theme'], action: () => { void switchPage('settings'); } },
@@ -507,36 +519,21 @@ function openFileFromPalette(filePath: string): void {
 function runActiveMarkdownCommand(action: string): void {
   void (async () => {
     await switchPage('files');
-    const em = window.__editorManager;
-    if (!em?.activeEditor) {
-      alert('请先在文件管理器中打开一个 Markdown 文档');
-      return;
-    }
-    void em.runMarkdownCommand?.(action);
+    bus.emit(BusEvents.EditorRunCommand, action);
   })();
 }
 
 function runActiveMarkdownModeCommand(mode: 'edit' | 'preview' | 'split'): void {
   void (async () => {
     await switchPage('files');
-    const em = window.__editorManager;
-    if (!em?.activeEditor) {
-      alert('请先在文件管理器中打开一个 Markdown 文档');
-      return;
-    }
-    em.setMarkdownMode?.(mode);
+    bus.emit(BusEvents.EditorSetMode, mode);
   })();
 }
 
 function runFileWorkflowCommand(workflowId: string): void {
   void (async () => {
     await switchPage('files');
-    const runner = window.__runFileAIWorkflow;
-    if (typeof runner !== 'function') {
-      alert('文件管理器还没有准备好');
-      return;
-    }
-    await runner(workflowId);
+    bus.emit(BusEvents.FileRunAIWorkflow, workflowId);
   })();
 }
 

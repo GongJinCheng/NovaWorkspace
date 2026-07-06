@@ -8,6 +8,7 @@
 import { Logger } from '../../../shared/utils/logger';
 import type { AIMessage, AIProviderConfig, AISettings } from '../../../shared/types/ai';
 import { normalizeAIModelCapabilities, stripReasoningBlocks } from '../../../shared/utils/ai-capabilities';
+import { MASKED_API_KEY } from '../../../shared/constants/app';
 
 const aiLog = new Logger('AIService');
 
@@ -113,7 +114,8 @@ class AIService {
   }
 
   getApiKey(): string {
-    return this.activeProvider?.apiKey || '';
+    const key = this.activeProvider?.apiKey || '';
+    return key === MASKED_API_KEY ? '' : key;
   }
 
   getProviderId(): string | undefined {

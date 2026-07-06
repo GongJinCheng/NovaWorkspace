@@ -6,6 +6,7 @@
 import { registerPageInit } from '../../app/router';
 import { getThemeMode, setThemeMode } from '../../app/theme';
 import { AI_PROVIDER_PRESETS } from '../../../shared/constants/ai-providers';
+import { MASKED_API_KEY } from '../../../shared/constants/app';
 import type { AIModelCapabilities, AIProviderConfig, AIProviderType, AISettings } from '../../../shared/types/ai';
 import {
   AI_CAPABILITY_LABELS,
@@ -200,7 +201,7 @@ function selectProviderForEdit(provider: AIProviderConfig | null, clearModels = 
   setValue('settings-ai-preset', provider.type);
   setValue('settings-ai-name', provider.name);
   setValue('settings-ai-base-url', provider.baseUrl);
-  setValue('settings-ai-api-key', provider.apiKey || '');
+  setValue('settings-ai-api-key', (provider.apiKey && provider.apiKey !== MASKED_API_KEY) ? provider.apiKey : '');
   setValue('settings-ai-model', provider.defaultModel);
   const enabled = document.getElementById('settings-ai-enabled') as HTMLInputElement | null;
   if (enabled) enabled.checked = provider.enabled !== false;
@@ -219,10 +220,11 @@ async function saveProviderFromForm(): Promise<void> {
     defaultModel: getValue('settings-ai-model'),
   };
 
+  const rawKey = getValue('settings-ai-api-key');
   const provider: AIProviderConfig = {
     id: existing?.id || 'provider-' + now.toString(36) + '-' + Math.random().toString(36).slice(2, 8),
     ...providerDraft,
-    apiKey: getValue('settings-ai-api-key'),
+    apiKey: rawKey.trim() ? rawKey.trim() : MASKED_API_KEY,
     capabilities: getCapabilitiesFromForm(providerDraft),
     enabled: (document.getElementById('settings-ai-enabled') as HTMLInputElement | null)?.checked !== false,
     createdAt: existing?.createdAt || now,

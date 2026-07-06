@@ -10,6 +10,7 @@
     "build:preload": "node esbuild.preload.mjs",
     "build:renderer": "node esbuild.renderer.mjs",
     "build": "npm run build:main && npm run build:preload && npm run build:renderer",
+    "build:prod": "node scripts/build-prod.mjs",
     "typecheck": "tsc --noEmit",
     "start": "electron .",
     "dev": "npm run build && npm run start",

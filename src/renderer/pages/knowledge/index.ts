@@ -103,6 +103,20 @@ async function refreshKnowledgePage(): Promise<void> {
 
 // ── Render ────────────────────────────────────────────────────────
 
+function renderError(): void {
+  const listEl = document.getElementById('kb-list');
+  if (listEl) {
+    listEl.innerHTML = `<div class="kb-empty kb-error">
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.4">
+        <circle cx="12" cy="12" r="10"/>
+        <line x1="12" y1="8" x2="12" y2="12"/>
+        <line x1="12" y1="16" x2="12.01" y2="16"/>
+      </svg>
+      <p>知识库加载失败，请稍后重试</p>
+    </div>`;
+  }
+}
+
 function renderEmptyWorkspace(): void {
   const listEl = document.getElementById('kb-list');
   if (listEl) {

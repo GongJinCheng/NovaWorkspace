@@ -39,15 +39,22 @@ export function registerAIHandlers(): void {
     const controller = new AbortController();
     streamControllers.set(requestId, controller);
 
+    // 窗口关闭即中止请求，避免向已销毁的 webContents 持续推送
+    event.sender.once('destroyed', () => controller.abort());
+
+    const safeSend = (channel: string, ...args: unknown[]): void => {
+      if (!event.sender.isDestroyed()) event.sender.send(channel, requestId, ...args);
+    };
+
     void aiService.chatStream(request, {
-      onChunk: (chunk) => event.sender.send(IPC_CHANNELS.AI.STREAM_CHUNK, requestId, chunk),
+      onChunk: (chunk) => safeSend(IPC_CHANNELS.AI.STREAM_CHUNK, chunk),
       onDone: (fullText) => {
         streamControllers.delete(requestId);
-        event.sender.send(IPC_CHANNELS.AI.STREAM_DONE, requestId, fullText);
+        safeSend(IPC_CHANNELS.AI.STREAM_DONE, fullText);
       },
       onError: (error) => {
         streamControllers.delete(requestId);
-        event.sender.send(IPC_CHANNELS.AI.STREAM_ERROR, requestId, error.message);
+        safeSend(IPC_CHANNELS.AI.STREAM_ERROR, error.message);
       },
     }, controller.signal);
   });

@@ -1,6 +1,10 @@
 /**
  * 应用级常量
  */
+
+/** 返回给渲染端时用于替换明文 API Key 的脱敏哨兵。渲染端保存时原样回传表示"未修改"。 */
+export const MASKED_API_KEY = '[REDACTED]';
+
 export const APP_CONSTANTS = {
   /** 窗口默认配置 */
   WINDOW: {

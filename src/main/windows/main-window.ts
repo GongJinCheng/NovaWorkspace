@@ -32,10 +32,22 @@ export function createMainWindow(): BrowserWindow {
       preload: getPreloadPath(),
       contextIsolation: true,
       nodeIntegration: false,
+      sandbox: true,
     },
   });
 
   mainWindow.loadFile(getIndexPath());
+
+  // 安全守卫：阻止渲染端被诱导跳转到外部 URL、弹出新窗口
+  const isLocalUrl = (url: string): boolean => url.startsWith('file://') || url.startsWith('app://');
+  mainWindow.webContents.on('will-navigate', (event, url) => {
+    if (!isLocalUrl(url)) {
+      event.preventDefault();
+      console.warn('[Security] Blocked navigation to non-local URL:', url);
+    }
+  });
+  mainWindow.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
+  mainWindow.webContents.on('did-create-window', (child) => child.close());
 
   mainWindow.on('closed', () => {
     mainWindow = null;

@@ -146,12 +146,83 @@ interface IndexEntry {
   contentLower: string | null;
 }
 
+/**
+ * 前缀 Trie：token → 文件集合。
+ * 前缀匹配（collect）与按 token 增量增删均为 O(相关 token 长度)，
+ * 取代原先遍历整个 tokenIndex 的 O(N) 全量扫描。
+ */
+class Trie {
+  private children = new Map<string, Trie>();
+  files: Set<string> | null = null;
+  private distinctTokens = 0;
+
+  get tokenCount(): number {
+    return this.distinctTokens;
+  }
+
+  clear(): void {
+    this.children.clear();
+    this.files = null;
+    this.distinctTokens = 0;
+  }
+
+  insert(token: string, file: string): void {
+    let node: Trie = this;
+    for (const ch of token) {
+      let next = node.children.get(ch);
+      if (!next) {
+        next = new Trie();
+        node.children.set(ch, next);
+      }
+      node = next;
+    }
+    if (!node.files) {
+      node.files = new Set<string>();
+      this.distinctTokens += 1;
+    }
+    node.files.add(file);
+  }
+
+  private nodeFor(prefix: string): Trie | null {
+    let node: Trie | null = this;
+    for (const ch of prefix) {
+      node = node.children.get(ch) ?? null;
+      if (!node) return null;
+    }
+    return node;
+  }
+
+  /** 返回前缀（含精确）匹配到的所有文件集合。 */
+  collect(prefix: string): Set<string> {
+    const start = this.nodeFor(prefix);
+    const out = new Set<string>();
+    if (!start) return out;
+    const stack: Trie[] = [start];
+    while (stack.length) {
+      const n = stack.pop()!;
+      n.files?.forEach((f) => out.add(f));
+      n.children.forEach((c) => stack.push(c));
+    }
+    return out;
+  }
+
+  remove(token: string, file: string): void {
+    const node = this.nodeFor(token);
+    if (!node?.files) return;
+    node.files.delete(file);
+    if (node.files.size === 0) {
+      node.files = null;
+      this.distinctTokens -= 1;
+    }
+  }
+}
+
 class WorkspaceIndex {
   rootPath: string;
   workspaceName: string;
   entries = new Map<string, IndexEntry>(); // filePath → entry
-  /** token → set of file paths containing it */
-  tokenIndex = new Map<string, Set<string>>();
+  /** 前缀索引（token → 文件集合） */
+  private trie = new Trie();
   builtAt = 0;
   building = false;
 
@@ -167,7 +238,7 @@ class WorkspaceIndex {
     this.building = true;
     try {
       this.entries.clear();
-      this.tokenIndex.clear();
+      this.trie.clear();
       await this.walkDir(this.rootPath, 0);
       this.buildInvertedIndex();
       this.builtAt = Date.now();
@@ -245,16 +316,11 @@ class WorkspaceIndex {
   }
 
   private buildInvertedIndex(): void {
-    this.tokenIndex.clear();
+    this.trie.clear();
     for (const [filePath, entry] of this.entries) {
       const unique = new Set(entry.contentTokens);
       for (const token of unique) {
-        let set = this.tokenIndex.get(token);
-        if (!set) {
-          set = new Set();
-          this.tokenIndex.set(token, set);
-        }
-        set.add(filePath);
+        this.trie.insert(token, filePath);
       }
     }
   }
@@ -300,30 +366,21 @@ class WorkspaceIndex {
   }
 
   private removeFileInternal(filePath: string): void {
+    const entry = this.entries.get(filePath);
+    if (entry) {
+      for (const token of entry.contentTokens) this.trie.remove(token, filePath);
+    }
     this.entries.delete(filePath);
   }
 
   private rebuildTokensForFile(filePath: string): void {
-    // Remove this file from all token sets, then re-add if it still exists
-    for (const [, set] of this.tokenIndex) {
-      set.delete(filePath);
+    const before = this.entries.get(filePath);
+    if (before) {
+      for (const token of new Set(before.contentTokens)) this.trie.remove(token, filePath);
     }
-    // Clean up empty sets
-    for (const [token, set] of this.tokenIndex) {
-      if (set.size === 0) this.tokenIndex.delete(token);
-    }
-    // Re-add tokens if file still in entries
-    const entry = this.entries.get(filePath);
-    if (entry) {
-      const unique = new Set(entry.contentTokens);
-      for (const token of unique) {
-        let set = this.tokenIndex.get(token);
-        if (!set) {
-          set = new Set();
-          this.tokenIndex.set(token, set);
-        }
-        set.add(filePath);
-      }
+    const after = this.entries.get(filePath);
+    if (after) {
+      for (const token of new Set(after.contentTokens)) this.trie.insert(token, filePath);
     }
   }
 
@@ -397,13 +454,8 @@ class WorkspaceIndex {
     // Find files matching ALL query tokens (intersection)
     let candidatePaths: Set<string> | null = null;
     for (const token of queryTokens) {
-      // Prefix match: find all tokens in the index that start with the query token
-      const matching = new Set<string>();
-      for (const [indexToken, paths] of this.tokenIndex) {
-        if (indexToken.startsWith(token) || indexToken === token) {
-          for (const p of paths) matching.add(p);
-        }
-      }
+      // 前缀匹配：收集该前缀下的所有文件（含精确匹配）
+      const matching = this.trie.collect(token);
 
       if (candidatePaths === null) {
         candidatePaths = matching;
@@ -507,7 +559,7 @@ class WorkspaceIndex {
   getStats(): { fileCount: number; tokenCount: number; builtAt: number; building: boolean } {
     return {
       fileCount: this.entries.size,
-      tokenCount: this.tokenIndex.size,
+      tokenCount: this.trie.tokenCount,
       builtAt: this.builtAt,
       building: this.building,
     };

@@ -14,6 +14,8 @@ import { escHtml } from '../../utils/escape';
 import { refreshCurrentName as refreshWorkspaceSwitcherName } from '../../app/workspace-switcher';
 import { installFileCopilot } from './ai-copilot';
 import { stripReasoningBlocks } from '@shared/utils/ai-capabilities';
+import { bus, BusEvents } from '../../services/bus';
+import { toast } from '../../utils/toast';
 
 const store = new FilesStore();
 let fileTree: FileTree | null = null;
@@ -178,7 +180,7 @@ async function handleNewFolder(): Promise<void> {
 }
 
 
-function showToast(message: string, type: 'success' | 'error' | 'info' = 'info'): void {
+function showToast(message: string, type: 'success' | 'error' | 'info' | 'warning' = 'info'): void {
   const existing = document.querySelector('.toast');
   if (existing) existing.remove();
   const toast = document.createElement('div');
@@ -687,6 +689,34 @@ async function initFilesPage(): Promise<void> {
     await editorManager.openPath(filePath);
   };
   window.__getActiveFileSnapshot = () => editorManager?.getActiveFileSnapshot?.() || null;
+
+  // 事件总线注册（解耦跨页调用，逐步替代 window.__*）
+  bus.on(BusEvents.EditorSave, () => editorManager?.saveFile?.());
+  bus.on(BusEvents.EditorCloseActive, () => {
+    if (editorManager?.activeEditor) editorManager.closeTab(editorManager.activeEditor);
+  });
+  bus.on(BusEvents.EditorRunCommand, (action) => {
+    if (!editorManager?.activeEditor) {
+      toast('请先在文件管理器中打开一个 Markdown 文档');
+      return;
+    }
+    editorManager.runMarkdownCommand?.(action as string);
+  });
+  bus.on(BusEvents.EditorSetMode, (mode) => {
+    if (!editorManager?.activeEditor) {
+      toast('请先在文件管理器中打开一个 Markdown 文档');
+      return;
+    }
+    editorManager.setMarkdownMode?.(mode as 'edit' | 'preview' | 'split');
+  });
+  bus.on(BusEvents.FileOpenFolder, () => {
+    if (fileTree) fileTree.openFolder();
+    else window.__chooseWorkspaceFolder?.();
+  });
+  bus.on(BusEvents.FileRunAIWorkflow, (id) => {
+    if (typeof runFileAIWorkflow === 'function') runFileAIWorkflow(id as string);
+    else toast('文件管理器还没有准备好');
+  });
   installFileCopilot({
     runWorkflow: runFileAIWorkflow,
     getSnapshot: () => editorManager?.getActiveFileSnapshot?.() || null,
@@ -845,13 +875,17 @@ if (searchInput) {
 
   window.addEventListener('beforeunload', () => stopFsWatch());
 
-  console.log('[Files] page initialized');
+  if (process.env.NODE_ENV !== 'production') console.log('[Files] page initialized');
 }
 
 bindFilesToolbar();
 window.__handleNewFile = handleNewFile;
 window.__handleNewFileFromTemplate = handleNewFileFromTemplate;
 window.__runFileAIWorkflow = runFileAIWorkflow;
+
+// 模块级事件（函数在本模块已就绪，无需等待页面初始化）
+bus.on(BusEvents.FileNew, () => handleNewFile());
+bus.on(BusEvents.FileNewFromTemplate, (id) => handleNewFileFromTemplate(id as string));
 
 registerPageInit('files' as PageId, initFilesPage);
 

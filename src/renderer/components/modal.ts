@@ -74,15 +74,16 @@ export function showModal(options: ModalOptions): HTMLElement {
   let closed = false;
   overlay.addEventListener('click', (e) => {
     if (closed) return;
+    const target = e.target as HTMLElement | null;
     // Close button (or any child of it — SVG path, etc.)
-    if (e.target.closest('.modal-close-btn')) {
+    if (target?.closest('.modal-close-btn')) {
       closed = true;
       overlay.remove();
       onClose?.();
       return;
     }
     // Overlay background
-    if (e.target === overlay) {
+    if (target === overlay) {
       closed = true;
       overlay.remove();
       onClose?.();

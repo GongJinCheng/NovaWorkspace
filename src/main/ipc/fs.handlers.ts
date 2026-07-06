@@ -40,8 +40,22 @@ function timestampForFileName(date = new Date()): string {
  */
 function ensureInsideActiveWorkspace(targetPath: string): void {
   const root = getActiveWorkspaceRoot();
-  if (!root) return;
+  if (!root) throw new Error('请先打开一个工作区');
   ensureInsideWorkspace(root, targetPath);
+}
+
+/** 图片读取：允许工作区内或应用临时目录，避免任意文件读。 */
+function ensureInsideActiveWorkspaceOrTemp(targetPath: string): void {
+  const root = getActiveWorkspaceRoot();
+  if (root) {
+    try {
+      ensureInsideWorkspace(root, targetPath);
+      return;
+    } catch {
+      // 不在工作区内，继续尝试临时目录
+    }
+  }
+  ensureInsideWorkspace(app.getPath('temp'), targetPath);
 }
 
 
@@ -66,6 +80,7 @@ function getImageMimeType(filePath: string): string | null {
 export function registerFsHandlers(): void {
   ipcMain.handle(IPC_CHANNELS.FS.READ_DIR, async (_event, dirPath: string) => {
     try {
+      ensureInsideActiveWorkspace(dirPath);
       const entries = await fs.readdir(dirPath, { withFileTypes: true });
       return entries.map(entry => ({
         name: entry.name,
@@ -80,6 +95,7 @@ export function registerFsHandlers(): void {
 
   ipcMain.handle(IPC_CHANNELS.FS.READ_FILE, async (_event, filePath: string) => {
     try {
+      ensureInsideActiveWorkspace(filePath);
       return await fs.readFile(filePath, 'utf-8');
     } catch (error: unknown) {
       const msg = error instanceof Error ? error.message : String(error);
@@ -438,6 +454,7 @@ export function registerFsHandlers(): void {
   ipcMain.handle(IPC_CHANNELS.FS.READ_IMAGE_AS_DATA_URL, async (_event, filePath: string) => {
     try {
       const target = path.resolve(filePath.replace(/^file:\/\//i, ''));
+      ensureInsideActiveWorkspaceOrTemp(target);
       const mimeType = getImageMimeType(target);
       if (!mimeType) throw new Error('只支持 PNG、JPG、JPEG、WEBP、GIF、BMP 图片');
 

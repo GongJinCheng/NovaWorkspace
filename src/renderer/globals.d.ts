@@ -16,7 +16,7 @@ declare global {
     __startOnboarding: () => void;
 
     /** 导出项目报告 */
-    __exportProjectReport: (format: 'markdown' | 'pdf') => void;
+    __exportProjectReport: (format: 'markdown' | 'html' | 'pdf') => void;
 
     /** 打开指定待办任务 */
     __openTodoTask: (taskId: string) => Promise<void>;
@@ -35,7 +35,7 @@ declare global {
     __filesStore: import('./pages/files/files-store').FilesStore | undefined;
 
     /** 打开工作区根目录 */
-    __openWorkspaceRoot: () => Promise<void>;
+    __openWorkspaceRoot: (rootPath: string, options?: { restoreSession?: boolean }) => Promise<void>;
 
     /** 弹出文件夹选择并打开 */
     __chooseWorkspaceFolder: () => Promise<void>;

@@ -127,6 +127,12 @@ export class EditorManager {
     return this.editors.get(filePath);
   }
 
+  /** 切换 Monaco 编辑器主题（对外暴露，避免外部直接访问私有 monaco 字段） */
+  setTheme(theme: string): void {
+    const editorApi = this.monaco?.editor as { setTheme?: (t: string) => void } | undefined;
+    editorApi?.setTheme?.(theme);
+  }
+
   async init(): Promise<void> {
     return new Promise<void>((resolve, reject) => {
       try {
