@@ -17,17 +17,18 @@ import {
   getCategoryOpenCounts,
   removeTaskFromStore,
   updateTaskInStore,
+  isEffectivelyCompleted,
   PRI_COLORS,
   PRI_LABELS,
   PLANBOARD_BUCKETS,
 } from './stores/todo.store';
-import type { TodoTask } from '@shared/types/todo';
+import type { TodoTask, UpdateTaskInput } from '@shared/types/todo';
 
 // ── 撤销栈 ──────────────────────────────────────────────────────────────────
 
 type UndoEntry =
   | { type: 'delete'; task: TodoTask }
-  | { type: 'complete'; taskId: string; previousCompleted: boolean; previousCompletedAt?: string };
+  | { type: 'complete'; taskId: string; previousCompleted: boolean; previousCompletedAt?: string; previousSubtasks?: TodoTask['subtasks'] };
 
 const MAX_UNDO_STACK = 10;
 const undoStack: UndoEntry[] = [];
@@ -53,10 +54,12 @@ async function undoLastAction(): Promise<void> {
       await ipcClient.todo.updateTask(entry.taskId, {
         completed: entry.previousCompleted,
         completedAt: entry.previousCompletedAt,
+        ...(entry.previousSubtasks ? { subtasks: entry.previousSubtasks } : {}),
       });
       updateTaskInStore(entry.taskId, {
         completed: entry.previousCompleted,
         completedAt: entry.previousCompletedAt,
+        ...(entry.previousSubtasks ? { subtasks: entry.previousSubtasks } : {}),
       });
       await currentRefresh();
     } catch (err) {
@@ -100,7 +103,7 @@ export function renderCompletedTasks(): void {
 
   const tasks = getStore().data.tasks;
   const completed = tasks
-    .filter(t => t.completed)
+    .filter(t => isEffectivelyCompleted(t))
     .sort((a, b) => {
       const aTime = a.completedAt ? new Date(a.completedAt).getTime() : 0;
       const bTime = b.completedAt ? new Date(b.completedAt).getTime() : 0;
@@ -379,19 +382,27 @@ async function toggleTask(taskId: string, actionBtn: HTMLElement): Promise<void>
 
   const previousCompleted = task.completed;
   const previousCompletedAt = task.completedAt;
+  const previousSubtasks = task.subtasks ? task.subtasks.map(s => ({ ...s })) : undefined;
   const completed = !previousCompleted;
   const completedAt = completed ? new Date().toISOString() : undefined;
 
-  // Push undo entry only when marking as complete (completing is the action to undo)
-  if (completed) {
-    pushUndo({ type: 'complete', taskId, previousCompleted, previousCompletedAt });
+  // T1: when a parent task is toggled, cascade the state onto its subtasks so
+  // the parent and its children stay consistent.
+  const updates: UpdateTaskInput = { completed, completedAt };
+  if (task.subtasks && task.subtasks.length > 0) {
+    updates.subtasks = task.subtasks.map(s => ({ ...s, done: completed }));
   }
 
-  updateTaskInStore(taskId, { completed, completedAt });
+  // Push undo entry only when marking as complete (completing is the action to undo)
+  if (completed) {
+    pushUndo({ type: 'complete', taskId, previousCompleted, previousCompletedAt, previousSubtasks });
+  }
+
+  updateTaskInStore(taskId, updates);
   patchTaskCardCompletion(actionBtn, completed);
 
   try {
-    await ipcClient.todo.updateTask(taskId, { completed, completedAt });
+    await ipcClient.todo.updateTask(taskId, updates);
     await currentRefresh();
     if (completed) {
       showUndoToast(`已完成「${task.title.slice(0, 20)}${task.title.length > 20 ? '…' : ''}」`, undoLastAction);
@@ -399,7 +410,7 @@ async function toggleTask(taskId: string, actionBtn: HTMLElement): Promise<void>
   } catch (err) {
     console.error('[Todo] Toggle failed, rolling back:', err);
     undoStack.pop(); // remove the undo entry we just added since the operation failed
-    updateTaskInStore(taskId, { completed: previousCompleted, completedAt: previousCompletedAt });
+    updateTaskInStore(taskId, { completed: previousCompleted, completedAt: previousCompletedAt, ...(previousSubtasks ? { subtasks: previousSubtasks } : {}) });
     await currentRefresh();
   }
 }
@@ -437,18 +448,34 @@ async function toggleSubtask(taskId: string, subtaskId: string, actionBtn: HTMLE
   if (!task || !subtask) return;
 
   const rollbackSubtasks = task.subtasks.map(s => ({ ...s }));
+  const rollbackCompleted = task.completed;
+  const rollbackCompletedAt = task.completedAt;
   const nextSubtasks = task.subtasks.map(s => s.id === subtaskId ? { ...s, done: !s.done } : s);
-  updateTaskInStore(taskId, { subtasks: nextSubtasks });
+
+  // T1: a parent task is completed once all its subtasks are done. Unchecking any
+  // subtask reverts that derived completion so the two never disagree.
+  const allDone = nextSubtasks.length > 0 && nextSubtasks.every(s => s.done);
+  const nextCompleted = allDone;
+  const nextCompletedAt = allDone ? (task.completedAt ?? new Date().toISOString()) : undefined;
+
+  updateTaskInStore(taskId, { subtasks: nextSubtasks, completed: nextCompleted, completedAt: nextCompletedAt });
   patchSubtask(actionBtn, nextSubtasks.find(s => s.id === subtaskId)?.done || false, nextSubtasks);
+  patchParentCompletion(actionBtn, nextCompleted);
 
   try {
-    await ipcClient.todo.updateTask(taskId, { subtasks: nextSubtasks });
+    await ipcClient.todo.updateTask(taskId, { subtasks: nextSubtasks, completed: nextCompleted, completedAt: nextCompletedAt });
     await currentRefresh();
   } catch (err) {
     console.error('[Todo] Subtask toggle failed, rolling back:', err);
-    updateTaskInStore(taskId, { subtasks: rollbackSubtasks });
+    updateTaskInStore(taskId, { subtasks: rollbackSubtasks, completed: rollbackCompleted, completedAt: rollbackCompletedAt });
     await currentRefresh();
   }
+}
+
+function patchParentCompletion(subtaskActionBtn: HTMLElement, completed: boolean): void {
+  const parentCard = subtaskActionBtn.closest('.todo-task-card');
+  const parentCheckBtn = parentCard?.querySelector('.todo-check-btn') as HTMLElement | null;
+  if (parentCheckBtn) patchTaskCardCompletion(parentCheckBtn, completed);
 }
 
 function startInlineEdit(titleEl: HTMLElement): void {

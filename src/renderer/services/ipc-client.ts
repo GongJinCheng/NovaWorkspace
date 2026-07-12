@@ -7,7 +7,9 @@ import type { TodoData, TodoTask, TodoCategory, CreateTaskInput, UpdateTaskInput
 import type { Workspace, WorkspaceSession, OpenWorkspaceInput, SaveWorkspaceSessionInput, UpdateProjectMetaInput, ProjectMeta, ProjectOverview } from '../../shared/types/workspace';
 import type { AIChatRequest, AIProviderConfig, AIImageAttachment } from '../../shared/types/ai';
 import type { KnowledgeItem, KnowledgeIndex, CreateKnowledgeInput, KnowledgeStats } from '../../shared/types/knowledge';
+import type { Conversation } from '../../shared/types/chat-history';
 import { getCurrentWorkspaceRoot } from './workspace-context';
+import { showToast } from '../widgets/toast';
 
 const api = (): ElectronAPI => window.electronAPI;
 
@@ -97,4 +99,39 @@ export const ipcClient = {
     importWeb: (url: string, workspaceRoot = getCurrentWorkspaceRoot()): Promise<KnowledgeItem> => api().knowledge.importWeb(url, workspaceRoot),
     getStats: (workspaceRoot = getCurrentWorkspaceRoot()): Promise<KnowledgeStats> => api().knowledge.getStats(workspaceRoot),
   },
+  chatHistory: {
+    list: (workspaceRoot?: string | null): Promise<Array<{ id: string; title: string; createdAt: string; updatedAt: string; messageCount: number }>> => api().chatHistory.list(workspaceRoot),
+    get: (conversationId: string, workspaceRoot?: string | null): Promise<Conversation | null> => api().chatHistory.get(conversationId, workspaceRoot),
+    save: (conversation: Conversation, workspaceRoot?: string | null): Promise<Conversation> => api().chatHistory.save(conversation, workspaceRoot),
+    delete: (conversationId: string, workspaceRoot?: string | null): Promise<boolean> => api().chatHistory.delete(conversationId, workspaceRoot),
+  },
+  fsWatch: {
+    watch: (rootPath: string): void => api().fsWatch.watch(rootPath),
+    unwatch: (rootPath: string): void => api().fsWatch.unwatch(rootPath),
+    onChanged: (callback: (payload: { type: string; path: string; rootPath: string }) => void): () => void => api().fsWatch.onChanged(callback),
+  },
 };
+
+let errorBoundaryInstalled = false;
+
+/**
+ * Install a global safety net so that unhandled promise rejections — most
+ * commonly IPC calls that were awaited without a catch — surface to the user
+ * as a toast instead of failing silently. Idempotent.
+ */
+export function installIpcErrorBoundary(): void {
+  if (errorBoundaryInstalled) return;
+  errorBoundaryInstalled = true;
+
+  window.addEventListener('unhandledrejection', (event) => {
+    const reason = event.reason;
+    const message = reason instanceof Error ? reason.message : String(reason ?? '未知错误');
+    console.error('[IPC] Unhandled rejection:', reason);
+    showToast('操作失败：' + message, 'error');
+  });
+
+  window.addEventListener('error', (event) => {
+    if (!event.error) return; // ignore resource load failures
+    console.error('[IPC] Uncaught error:', event.error);
+  });
+}

@@ -12,6 +12,8 @@
     "build": "npm run build:main && npm run build:preload && npm run build:renderer",
     "build:prod": "node scripts/build-prod.mjs",
     "typecheck": "tsc --noEmit",
+    "lint": "eslint src --ext .ts",
+    "lint:fix": "eslint src --ext .ts --fix",
     "start": "electron .",
     "dev": "npm run build && npm run start",
     "package": "npm run build && electron-builder --win",
@@ -69,9 +71,14 @@
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
+    "@typescript-eslint/eslint-plugin": "^7.18.0",
+    "@typescript-eslint/parser": "^7.18.0",
     "electron": "^35.0.0",
     "electron-builder": "^26.8.1",
     "esbuild": "^0.24.0",
+    "eslint": "^8.57.0",
+    "eslint-config-prettier": "^9.1.0",
+    "prettier": "^3.4.2",
     "typescript": "^5.7.0"
   },
   "dependencies": {

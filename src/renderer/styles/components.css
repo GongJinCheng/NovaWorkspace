@@ -226,27 +226,27 @@
 }
 
 .stat-icon.blue {
-  background: linear-gradient(135deg, #6EB5FF, #4B8BEE);
+  background: var(--cat-blue-grad);
   color: #fff;
 }
 
 .stat-icon.purple {
-  background: linear-gradient(135deg, #A78BFA, #8B8BFF);
+  background: var(--cat-purple-grad);
   color: #fff;
 }
 
 .stat-icon.orange {
-  background: linear-gradient(135deg, #F5A623, #E8960A);
+  background: var(--cat-orange-grad);
   color: #fff;
 }
 
 .stat-icon.green {
-  background: linear-gradient(135deg, #34D399, #10B981);
+  background: var(--cat-green-grad);
   color: #fff;
 }
 
 .stat-icon.pink {
-  background: linear-gradient(135deg, #F472B6, #EC4899);
+  background: var(--cat-pink-grad);
   color: #fff;
 }
 

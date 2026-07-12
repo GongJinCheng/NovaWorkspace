@@ -9,10 +9,19 @@ import { Logger } from '../../../shared/utils/logger';
 import type { AIMessage, AIProviderConfig, AISettings } from '../../../shared/types/ai';
 import { normalizeAIModelCapabilities, stripReasoningBlocks } from '../../../shared/utils/ai-capabilities';
 import { MASKED_API_KEY } from '../../../shared/constants/app';
+import { ipcClient } from '../../services/ipc-client';
 
 const aiLog = new Logger('AIService');
 
 export type ChatMessage = AIMessage;
+
+/** Handle returned by {@link AIService.chatStream}. `text` resolves with the full
+ *  response; `cancel()` aborts the underlying request and resolves `text` with the
+ *  partial output streamed so far (instead of throwing). */
+export interface ChatStreamHandle {
+  text: Promise<string>;
+  cancel: () => void;
+}
 
 type LegacyConfig = {
   apiKey?: string;
@@ -20,7 +29,7 @@ type LegacyConfig = {
   model?: string;
 };
 
-class AIService {
+export class AIService {
   private settings: AISettings | null = null;
   private activeProvider: AIProviderConfig | null = null;
   private readyPromise: Promise<void>;
@@ -38,7 +47,7 @@ class AIService {
 
   async reloadConfig(options: { silent?: boolean } = {}): Promise<void> {
     try {
-      this.settings = await window.electronAPI.ai.getSettings();
+      this.settings = await ipcClient.ai.getSettings();
       await this.migrateLegacyLocalStorageIfNeeded();
       this.activeProvider = this.getDefaultProviderFromSettings();
       if (!options.silent) this.notifySettingsChanged();
@@ -51,7 +60,7 @@ class AIService {
 
 
   async getSettings(): Promise<AISettings> {
-    this.settings = await window.electronAPI.ai.getSettings();
+    this.settings = await ipcClient.ai.getSettings();
     this.activeProvider = this.getDefaultProviderFromSettings();
     return this.settings;
   }
@@ -61,19 +70,19 @@ class AIService {
   }
 
   async saveProvider(provider: AIProviderConfig): Promise<AIProviderConfig> {
-    const saved = await window.electronAPI.ai.saveProvider(provider);
+    const saved = await ipcClient.ai.saveProvider(provider);
     await this.reloadConfig();
     return saved;
   }
 
   async deleteProvider(providerId: string): Promise<boolean> {
-    const result = await window.electronAPI.ai.deleteProvider(providerId);
+    const result = await ipcClient.ai.deleteProvider(providerId);
     await this.reloadConfig();
     return result;
   }
 
   async setDefaultProvider(providerId: string): Promise<boolean> {
-    const result = await window.electronAPI.ai.setDefaultProvider(providerId);
+    const result = await ipcClient.ai.setDefaultProvider(providerId);
     await this.reloadConfig();
     return result;
   }
@@ -91,8 +100,8 @@ class AIService {
       updatedAt: now,
     };
 
-    const saved = await window.electronAPI.ai.saveProvider(nextProvider);
-    await window.electronAPI.ai.setDefaultProvider(saved.id);
+    const saved = await ipcClient.ai.saveProvider(nextProvider);
+    await ipcClient.ai.setDefaultProvider(saved.id);
 
     this.clearLegacyLocalStorage();
     await this.reloadConfig();
@@ -130,7 +139,7 @@ class AIService {
     if (!this.isConfigured()) throw new Error('请先配置 AI API Key');
 
     aiLog.debug('Starting chat request through main process');
-    const response = await window.electronAPI.ai.chat({
+    const response = await ipcClient.ai.chat({
       providerId: this.getProviderId(),
       model: options.model || this.getModel(),
       messages,
@@ -147,13 +156,25 @@ class AIService {
     messages: ChatMessage[],
     options: { model?: string; temperature?: number; max_tokens?: number; timeout?: number } = {},
     onChunk: (text: string) => void
-  ): Promise<string> {
+  ): Promise<ChatStreamHandle> {
     await this.reloadConfig({ silent: true });
     if (!this.isConfigured()) throw new Error('请先配置 AI API Key');
 
-    try {
-      return await new Promise((resolve, reject) => {
-        window.electronAPI.ai.chatStream(
+    let cancelFn: (() => void) | null = null;
+    let fullText = '';
+    let cancelled = false;
+    let settled = false;
+
+    const text = new Promise<string>((resolve, reject) => {
+      const finish = (value: string, isError: boolean): void => {
+        if (settled) return;
+        settled = true;
+        if (isError) reject(new Error(value));
+        else resolve(value);
+      };
+
+      try {
+        const handle = ipcClient.ai.chatStream(
           {
             providerId: this.getProviderId(),
             model: options.model || this.getModel(),
@@ -164,25 +185,47 @@ class AIService {
             timeout: options.timeout ?? 60000,
           },
           {
-            onChunk,
-            onDone: resolve,
-            onError: (message) => reject(new Error(message)),
+            onChunk: (chunk) => {
+              fullText += chunk;
+              onChunk(chunk);
+            },
+            onDone: (full) => {
+              fullText = full;
+              finish(full, false);
+            },
+            onError: (message) => {
+              // T2: a user-initiated cancel resolves with the partial output
+              // rather than surfacing an error toast.
+              if (cancelled) {
+                finish(fullText, false);
+                return;
+              }
+              // 部分国产 OpenAI-compatible 中转不支持 stream，或 SSE 格式不完全兼容。
+              // 聊天页不要直接失败，自动降级为普通非流式请求。
+              aiLog.warn('Stream failed, falling back to non-stream chat: ' + message);
+              this.chat(messages, {
+                model: options.model,
+                temperature: options.temperature,
+                max_tokens: options.max_tokens,
+                timeout: options.timeout ?? 60000,
+              }).then((fallbackText) => {
+                fullText = fallbackText;
+                onChunk(fallbackText);
+                finish(fallbackText, false);
+              }).catch((err) => finish(err instanceof Error ? err.message : String(err), true));
+            },
           }
         );
-      });
-    } catch (error) {
-      // 部分国产 OpenAI-compatible 中转不支持 stream，或 SSE 格式不完全兼容。
-      // 聊天页不要直接失败，自动降级为普通非流式请求。
-      aiLog.warn('Stream failed, falling back to non-stream chat: ' + (error instanceof Error ? error.message : String(error)));
-      const text = await this.chat(messages, {
-        model: options.model,
-        temperature: options.temperature,
-        max_tokens: options.max_tokens,
-        timeout: options.timeout ?? 60000,
-      });
-      onChunk(text);
-      return text;
-    }
+        cancelFn = () => {
+          cancelled = true;
+          handle.cancel();
+        };
+      } catch (error) {
+        finish(error instanceof Error ? error.message : String(error), true);
+      }
+    });
+
+    return { text, cancel: () => cancelFn?.() };
   }
 
   async formatMarkdown(content: string, signal?: AbortSignal): Promise<string> {
@@ -236,12 +279,12 @@ class AIService {
     await this.reloadConfig({ silent: true });
     if (!this.activeProvider?.baseUrl) throw new Error('请先填写 Base URL');
     if (this.activeProvider.type !== 'ollama' && !this.activeProvider.apiKey) throw new Error('请先填写 API Key');
-    return await window.electronAPI.ai.fetchModels(this.activeProvider.id);
+    return await ipcClient.ai.fetchModels(this.activeProvider.id);
   }
 
   async testConnection(): Promise<string> {
     await this.reloadConfig({ silent: true });
-    const result = await window.electronAPI.ai.testConnection(this.activeProvider?.id);
+    const result = await ipcClient.ai.testConnection(this.activeProvider?.id);
     if (!result.ok) throw new Error(result.message);
     return result.message;
   }
@@ -263,10 +306,10 @@ class AIService {
       updatedAt: Date.now(),
     };
 
-    const saved = await window.electronAPI.ai.saveProvider(migrated);
-    await window.electronAPI.ai.setDefaultProvider(saved.id);
+    const saved = await ipcClient.ai.saveProvider(migrated);
+    await ipcClient.ai.setDefaultProvider(saved.id);
     this.clearLegacyLocalStorage();
-    this.settings = await window.electronAPI.ai.getSettings();
+    this.settings = await ipcClient.ai.getSettings();
   }
 
   private getDefaultProviderFromSettings(): AIProviderConfig | null {

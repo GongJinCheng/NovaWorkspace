@@ -51,6 +51,15 @@
   --nova-burst: #F5A623;
   --nova-glow:  rgba(245, 166, 35, 0.12);
 
+  /* ── Category Gradient Tokens (stat-icon fills) ──
+     Tokenized from hardcoded hex so light/dark auto-adjust.
+     Dark defaults mirror the original vibrant gradients. */
+  --cat-blue-grad:   linear-gradient(135deg, #6EB5FF, #4B8BEE);
+  --cat-purple-grad: linear-gradient(135deg, #A78BFA, #8B8BFF);
+  --cat-orange-grad: linear-gradient(135deg, #F5A623, #E8960A);
+  --cat-green-grad:  linear-gradient(135deg, #34D399, #10B981);
+  --cat-pink-grad:   linear-gradient(135deg, #F472B6, #EC4899);
+
   /* ── Glass Morphism ── */
   --glass-bg:     rgba(15, 15, 24, 0.72);
   --glass-border: rgba(255, 255, 255, 0.05);
@@ -146,6 +155,13 @@
   /* ── Nova Burst (warm gold — visible glow) ── */
   --nova-burst: #D4780A;
   --nova-glow:  rgba(212, 120, 10, 0.22);
+
+  /* ── Category Gradient Tokens (light equivalents, aligned to light palette) ── */
+  --cat-blue-grad:   linear-gradient(135deg, #5B8DEF, #3B6CEE);
+  --cat-purple-grad: linear-gradient(135deg, #8B7BF5, #5858D6);
+  --cat-orange-grad: linear-gradient(135deg, #F5A623, #E07B00);
+  --cat-green-grad:  linear-gradient(135deg, #2DD4A0, #0D9488);
+  --cat-pink-grad:   linear-gradient(135deg, #F472B6, #EC4899);
 
   /* ── Glass Morphism ── */
   --glass-bg:     rgba(255, 255, 255, 0.78);

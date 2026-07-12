@@ -733,6 +733,51 @@
   color: var(--text-secondary);
 }
 
+/* === Narrow-window auto-collapse (T19) ===
+   Below 720px the shell auto-folds the sidebar to icon-only,
+   mirroring .sidebar.collapsed but driven by viewport width
+   instead of the manual toggle class. Scoped under .app-container
+   so it outranks the later .sidebar width rules in nova-ui-refresh.css. */
+@media (max-width: 720px) {
+  .app-container .sidebar {
+    width: 56px;
+    overflow: hidden;
+  }
+  .app-container .sidebar .sidebar-header { padding: 12px 10px; }
+  .app-container .sidebar .search-box { padding: 8px 10px; justify-content: center; }
+  .app-container .sidebar .search-box span,
+  .app-container .sidebar .search-box kbd { display: none; }
+  .app-container .sidebar .nav-label { display: none; }
+  .app-container .sidebar .nav-item { justify-content: center; padding: 9px; gap: 0; position: relative; }
+  .app-container .sidebar .nav-item span,
+  .app-container .sidebar .nav-item .badge { display: none; }
+  .app-container .sidebar .nav-item svg { opacity: 0.8; }
+  .app-container .sidebar .user-meta,
+  .app-container .sidebar .sidebar-footer { display: none; }
+  .app-container .sidebar .sidebar-nav { padding: 8px 6px; }
+
+  /* Hover tooltip for auto-collapsed nav items (mirrors .collapsed) */
+  .app-container .sidebar .nav-item:hover::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    left: 52px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-subtle);
+    border-radius: 6px;
+    padding: 6px 10px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-primary);
+    white-space: nowrap;
+    z-index: 100;
+    pointer-events: none;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    animation: fadeIn 0.1s ease;
+  }
+}
+
 .mini-toast {
   position: fixed;
   right: 20px;

@@ -1,4 +1,4 @@
-import { escHtml } from '../utils/escape';
+import { escHtml, escAttr } from '../utils/escape';
 import { novaIcon, novaIconTile, NovaIconName } from '../utils/icons';
 
 export type NovaHeroAction = {
@@ -60,10 +60,6 @@ export function novaEmptyState(options: NovaEmptyStateOptions): string {
 export function novaSkeleton(lines = 3): string {
   const rows = Array.from({ length: Math.max(1, lines) }, (_, index) => '<span class="nova-skeleton-line line-' + (index + 1) + '"></span>').join('');
   return '<div class="nova-skeleton-card">' + rows + '</div>';
-}
-
-function escAttr(str: string): string {
-  return escHtml(str).replace(/"/g, '&quot;');
 }
 
 export { novaIcon, novaIconTile };

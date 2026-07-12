@@ -6,6 +6,7 @@
 import { registerPageInit } from '../../app/router';
 import { getThemeMode, setThemeMode } from '../../app/theme';
 import { AI_PROVIDER_PRESETS } from '../../../shared/constants/ai-providers';
+import { showConfirmDialog } from '../../components/modal';
 import { MASKED_API_KEY } from '../../../shared/constants/app';
 import type { AIModelCapabilities, AIProviderConfig, AIProviderType, AISettings } from '../../../shared/types/ai';
 import {
@@ -16,6 +17,7 @@ import {
 } from '../../../shared/utils/ai-capabilities';
 import { aiService } from '../ai/ai-service';
 import { escHtml } from '../../utils/escape';
+import { ipcClient } from '../../services/ipc-client';
 
 let settingsPageBound = false;
 let currentAISettings: AISettings | null = null;
@@ -253,7 +255,7 @@ async function deleteProvider(providerId: string): Promise<void> {
   if (!providerId) return;
   const provider = getProvider(providerId);
   if (!provider) return;
-  if (!confirm('确定删除 “' + provider.name + '” 吗？')) return;
+  if (!(await showConfirmDialog({ title: '删除确认', message: '确定删除 “' + provider.name + '” 吗？' }))) return;
 
   await aiService.deleteProvider(providerId);
   currentAISettings = await aiService.getSettings();
@@ -280,7 +282,7 @@ async function testProviderFromForm(): Promise<void> {
   const original = btn?.textContent || '测试连接';
   if (btn) { btn.disabled = true; btn.textContent = '测试中...'; }
   try {
-    const result = await window.electronAPI.ai.testConnection(provider.id);
+    const result = await ipcClient.ai.testConnection(provider.id);
     setStatus(result.message, result.ok ? 'success' : 'error');
   } catch (error) {
     setStatus(error instanceof Error ? error.message : String(error), 'error');
@@ -296,7 +298,7 @@ async function fetchModelsFromForm(): Promise<void> {
   const original = btn?.textContent || '获取模型';
   if (btn) { btn.disabled = true; btn.textContent = '获取中...'; }
   try {
-    const models = await window.electronAPI.ai.fetchModels(provider.id);
+    const models = await ipcClient.ai.fetchModels(provider.id);
     if (models.length === 0) {
       setModelsMessage('没有获取到模型。');
     } else {

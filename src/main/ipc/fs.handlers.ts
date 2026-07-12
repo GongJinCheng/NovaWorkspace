@@ -1,7 +1,9 @@
 import { ipcMain, dialog, app } from 'electron';
 import fs from 'fs/promises';
 import path from 'path';
+import crypto from 'crypto';
 import { IPC_CHANNELS } from '@shared/constants/ipc-channels';
+import { MAX_IMAGE_BYTES } from '@shared/constants/limits';
 import { getMainWindow } from '../windows/main-window';
 import { handleExportDocument } from '../services/export-service';
 import { getActiveWorkspaceRoot } from '../utils/active-workspace';
@@ -32,6 +34,44 @@ function safeHistoryName(filePath: string, workspaceRoot: string): string {
 
 function timestampForFileName(date = new Date()): string {
   return date.toISOString().replace(/[:.]/g, '-');
+}
+
+type BackupEntry = {
+  id: string;
+  filePath: string;
+  fileName: string;
+  backupPath: string;
+  reason: string;
+  createdAt: string;
+  size: number;
+};
+
+/**
+ * T4: returns the most recent backup metadata for a given file, or null if none.
+ * Used to deduplicate identical content so the history doesn't grow unbounded.
+ */
+async function findLatestBackupForFile(historyDir: string, filePath: string): Promise<BackupEntry | null> {
+  let entries: string[] = [];
+  try {
+    entries = await fs.readdir(historyDir);
+  } catch {
+    return null;
+  }
+
+  let latest: BackupEntry | null = null;
+  for (const name of entries) {
+    if (!name.endsWith('.json')) continue;
+    try {
+      const item = JSON.parse(await fs.readFile(path.join(historyDir, name), 'utf-8')) as BackupEntry;
+      if (normalizePathForCompare(item.filePath) !== normalizePathForCompare(filePath)) continue;
+      if (!latest || new Date(item.createdAt).getTime() > new Date(latest.createdAt).getTime()) {
+        latest = item;
+      }
+    } catch {
+      // ignore broken metadata
+    }
+  }
+  return latest;
 }
 
 /**
@@ -327,15 +367,31 @@ export function registerFsHandlers(): void {
       const filePath = path.resolve(input.filePath);
       ensureInsideWorkspace(workspaceRoot, filePath);
 
-      const now = new Date();
-      const id = `${timestampForFileName(now)}-${Math.random().toString(36).slice(2, 8)}`;
+      const content = typeof input.content === 'string' ? input.content : '';
+      const contentHash = crypto.createHash('sha256').update(content).digest('hex');
+
       const historyDir = path.join(workspaceRoot, '.nova', 'history');
       await fs.mkdir(historyDir, { recursive: true });
 
+      // T4: if the most recent backup for this file already has identical content,
+      // skip writing a duplicate version (prevents unlimited growth of .bak files).
+      const latest = await findLatestBackupForFile(historyDir, filePath);
+      if (latest) {
+        try {
+          const prevContent = await fs.readFile(latest.backupPath, 'utf-8');
+          if (crypto.createHash('sha256').update(prevContent).digest('hex') === contentHash) {
+            return latest;
+          }
+        } catch {
+          // previous backup unreadable — fall through and create a fresh one
+        }
+      }
+
+      const now = new Date();
+      const id = `${timestampForFileName(now)}-${Math.random().toString(36).slice(2, 8)}`;
       const safeName = safeHistoryName(filePath, workspaceRoot);
       const backupPath = path.join(historyDir, `${safeName}.${id}.bak`);
       const metadataPath = `${backupPath}.json`;
-      const content = typeof input.content === 'string' ? input.content : '';
       await fs.writeFile(backupPath, content, 'utf-8');
 
       const stat = await fs.stat(backupPath);
@@ -460,7 +516,7 @@ export function registerFsHandlers(): void {
 
       const stat = await fs.stat(target);
       if (!stat.isFile()) throw new Error('目标不是文件');
-      const maxBytes = 20 * 1024 * 1024;
+      const maxBytes = MAX_IMAGE_BYTES;
       if (stat.size > maxBytes) throw new Error('图片超过 20MB，建议先压缩后再发送给 AI');
 
       const buffer = await fs.readFile(target);

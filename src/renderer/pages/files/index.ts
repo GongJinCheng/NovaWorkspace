@@ -7,15 +7,16 @@ import { EditorManager } from './editor-manager';
 import { FilesStore } from './files-store';
 import { ipcClient } from '../../services/ipc-client';
 import { registerPageInit, PageId } from '../../app/router';
-import { showInputPrompt } from '../../components/modal';
+import { showInputPrompt, showAlert } from '../../components/modal';
 import { aiService } from '../ai/ai-service';
 import { createDocumentFromTemplate } from '../../services/template-service';
-import { escHtml } from '../../utils/escape';
+import { escHtml, escAttr } from '../../utils/escape';
 import { refreshCurrentName as refreshWorkspaceSwitcherName } from '../../app/workspace-switcher';
 import { installFileCopilot } from './ai-copilot';
 import { stripReasoningBlocks } from '@shared/utils/ai-capabilities';
 import { bus, BusEvents } from '../../services/bus';
 import { toast } from '../../utils/toast';
+import { getRuntime, setRuntime } from '../../services/runtime';
 
 const store = new FilesStore();
 let fileTree: FileTree | null = null;
@@ -119,7 +120,7 @@ async function handleNewFile(): Promise<void> {
   if (newDocumentDialogOpen) return;
   const dir = getTargetDir();
   if (!dir) {
-    alert('请先打开一个文件夹');
+    showAlert('请先打开一个文件夹');
     return;
   }
 
@@ -141,7 +142,7 @@ async function handleNewFileFromTemplate(templateId: string): Promise<void> {
   if (newDocumentDialogOpen) return;
   const dir = getTargetDir();
   if (!dir) {
-    alert('请先打开一个文件夹');
+    showAlert('请先打开一个文件夹');
     return;
   }
   newDocumentDialogOpen = true;
@@ -162,7 +163,7 @@ async function handleNewFolder(): Promise<void> {
   console.debug('[Files] new-folder click');
   const dir = getTargetDir();
   if (!dir) {
-    alert('\u8BF7\u5148\u6253\u5F00\u4E00\u4E2A\u6587\u4EF6\u5939');
+    showAlert('\u8BF7\u5148\u6253\u5F00\u4E00\u4E2A\u6587\u4EF6\u5939');
     return;
   }
 
@@ -175,7 +176,7 @@ async function handleNewFolder(): Promise<void> {
     await fileTree?.render();
   } catch (err) {
     console.error('[Files] Create directory failed:', err);
-    alert('\u521B\u5EFA\u6587\u4EF6\u5939\u5931\u8D25: ' + (err instanceof Error ? err.message : String(err)));
+    showAlert('\u521B\u5EFA\u6587\u4EF6\u5939\u5931\u8D25: ' + (err instanceof Error ? err.message : String(err)));
   }
 }
 
@@ -199,7 +200,7 @@ function updateBreadcrumb(folderPath: string | null): void {
     breadcrumb.innerHTML = '<span class="breadcrumb-item active">工作区</span>';
     return;
   }
-  const parts = folderPath.replace(root, '').split(/[\/]/).filter(Boolean);
+  const parts = folderPath.replace(root, '').split('/').filter(Boolean);
   let html = '<span class="breadcrumb-item" data-path="' + root + '">工作区</span>';
   let accum = root;
   for (const part of parts) {
@@ -217,9 +218,6 @@ function updateBreadcrumb(folderPath: string | null): void {
   });
 }
 
-function escAttr(s: string): string {
-  return escHtml(s).replace(/\"/g, '&quot;');
-}
 
 
 function ensureFileEditorActions(): void {
@@ -491,7 +489,7 @@ async function runFileAIWorkflow(workflowId: string): Promise<void> {
     return;
   }
 
-  const snapshot = window.__getActiveFileSnapshot?.();
+  const snapshot = getRuntime('getActiveFileSnapshot')?.();
   const isMarkdown = Boolean(snapshot?.fileName && /\.(md|markdown|mdown|mkdn)$/i.test(snapshot.fileName));
 
   if (workflowId === 'format') {
@@ -679,16 +677,16 @@ async function initFilesPage(): Promise<void> {
   editorManager.attachStore(store);
   store.subscribe(() => scheduleWorkspaceSessionSave());
 
-  window.__fileTree = fileTree;
-  window.__editorManager = editorManager;
-  window.__filesStore = store;
-  window.__openWorkspaceRoot = openWorkspaceRoot;
-  window.__chooseWorkspaceFolder = chooseAndOpenWorkspace;
-  window.__openFilePath = async (filePath: string) => {
+  setRuntime('fileTree', fileTree);
+  setRuntime('editorManager', editorManager);
+  setRuntime('filesStore', store);
+  setRuntime('openWorkspaceRoot', openWorkspaceRoot);
+  setRuntime('chooseWorkspaceFolder', chooseAndOpenWorkspace);
+  setRuntime('openFilePath', async (filePath: string) => {
     if (!editorManager) return;
     await editorManager.openPath(filePath);
-  };
-  window.__getActiveFileSnapshot = () => editorManager?.getActiveFileSnapshot?.() || null;
+  });
+  setRuntime('getActiveFileSnapshot', () => editorManager?.getActiveFileSnapshot?.() || null);
 
   // 事件总线注册（解耦跨页调用，逐步替代 window.__*）
   bus.on(BusEvents.EditorSave, () => editorManager?.saveFile?.());
@@ -711,7 +709,7 @@ async function initFilesPage(): Promise<void> {
   });
   bus.on(BusEvents.FileOpenFolder, () => {
     if (fileTree) fileTree.openFolder();
-    else window.__chooseWorkspaceFolder?.();
+    else getRuntime('chooseWorkspaceFolder')?.();
   });
   bus.on(BusEvents.FileRunAIWorkflow, (id) => {
     if (typeof runFileAIWorkflow === 'function') runFileAIWorkflow(id as string);
@@ -831,14 +829,24 @@ if (searchInput) {
 
   window.addEventListener('beforeunload', () => { void flushWorkspaceSession(); });
 
+  // T3: block window close / app quit while there are unsaved editor tabs.
+  // Electron fires `beforeunload` for both the title-bar close and programmatic
+  // close, so this single guard covers every exit path.
+  window.addEventListener('beforeunload', (e: BeforeUnloadEvent) => {
+    if (store.getState().dirtySet.length > 0) {
+      e.preventDefault();
+      e.returnValue = '有未保存的文件，确定要离开吗？';
+    }
+  });
+
   // ── 文件系统监听（外部变化自动刷新）──
   let fsWatchCleanup: (() => void) | null = null;
   let fsRefreshTimer: ReturnType<typeof setTimeout> | null = null;
 
   function startFsWatch(rootPath: string): void {
     stopFsWatch();
-    window.electronAPI.fsWatch.watch(rootPath);
-    fsWatchCleanup = window.electronAPI.fsWatch.onChanged((payload) => {
+    ipcClient.fsWatch.watch(rootPath);
+    fsWatchCleanup = ipcClient.fsWatch.onChanged((payload) => {
       if (payload.rootPath !== rootPath) return;
       if (fsRefreshTimer) clearTimeout(fsRefreshTimer);
       fsRefreshTimer = setTimeout(() => {
@@ -858,7 +866,7 @@ if (searchInput) {
       fsRefreshTimer = null;
     }
     const root = fileTree?.getWorkspaceRoot();
-    if (root) window.electronAPI.fsWatch.unwatch(root);
+    if (root) ipcClient.fsWatch.unwatch(root);
   }
 
   // Hook into workspace changes
@@ -879,9 +887,9 @@ if (searchInput) {
 }
 
 bindFilesToolbar();
-window.__handleNewFile = handleNewFile;
-window.__handleNewFileFromTemplate = handleNewFileFromTemplate;
-window.__runFileAIWorkflow = runFileAIWorkflow;
+setRuntime('handleNewFile', handleNewFile);
+setRuntime('handleNewFileFromTemplate', handleNewFileFromTemplate);
+setRuntime('runFileAIWorkflow', runFileAIWorkflow);
 
 // 模块级事件（函数在本模块已就绪，无需等待页面初始化）
 bus.on(BusEvents.FileNew, () => handleNewFile());

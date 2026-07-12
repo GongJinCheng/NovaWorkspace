@@ -7,6 +7,7 @@ import { ipcClient } from '../services/ipc-client';
 import { getCurrentWorkspaceRoot } from '../services/workspace-context';
 import { escHtml, escAttr } from '../utils/escape';
 import { switchPage } from './router';
+import { getRuntime } from '../services/runtime';
 
 let dropdownEl: HTMLElement | null = null;
 let buttonEl: HTMLElement | null = null;
@@ -175,12 +176,12 @@ function bindActions(): void {
 async function switchToWorkspace(rootPath: string): Promise<void> {
   await ipcClient.workspace.open({ rootPath }).catch(() => null);
   await switchPage('files');
-  const openWorkspace = window.__openWorkspaceRoot;
+  const openWorkspace = getRuntime('openWorkspaceRoot');
   if (typeof openWorkspace === 'function') {
     await openWorkspace(rootPath, { restoreSession: true });
   } else {
-    const ft = window.__fileTree;
-    const store = window.__filesStore;
+    const ft = getRuntime('fileTree');
+    const store = getRuntime('filesStore');
     if (ft?.openProjectPath) {
       await ft.openProjectPath(rootPath);
       if (store) store.setWorkspaceRoot(rootPath);
@@ -192,8 +193,8 @@ async function switchToWorkspace(rootPath: string): Promise<void> {
 /** 打开文件夹选择器 */
 async function openFolderPicker(): Promise<void> {
   await switchPage('files');
-  const choose = window.__chooseWorkspaceFolder;
-  const ft = window.__fileTree;
+  const choose = getRuntime('chooseWorkspaceFolder');
+  const ft = getRuntime('fileTree');
   if (typeof choose === 'function') {
     await choose();
   } else if (ft?.openFolder) {

@@ -184,6 +184,19 @@ export function addCategoryToStore(category: TodoCategory): void {
   markDataChanged();
 }
 
+/**
+ * A task counts as completed when it is explicitly marked done OR all of its
+ * subtasks are checked. This lets parent tasks whose subtasks are fully done be
+ * treated as completed across stats, filters and the home dashboard.
+ */
+export function isEffectivelyCompleted(task: TodoTask): boolean {
+  if (task.completed) return true;
+  if (task.subtasks && task.subtasks.length > 0) {
+    return task.subtasks.every(s => s.done);
+  }
+  return false;
+}
+
 export function getFilteredTasks(): TodoTask[] {
   const key = [
     dataVersion,
@@ -198,7 +211,7 @@ export function getFilteredTasks(): TodoTask[] {
   const { tasks } = store.data;
   const catFiltered = store.selectedCatId ? tasks.filter(t => t.categoryId === store.selectedCatId) : tasks;
   const now = new Date();
-  const source = store.showCompletedInMain ? catFiltered : catFiltered.filter(t => !t.completed);
+  const source = store.showCompletedInMain ? catFiltered : catFiltered.filter(t => !isEffectivelyCompleted(t));
 
   let result: TodoTask[];
   switch (store.currentFilter) {
@@ -218,10 +231,10 @@ export function getFilteredTasks(): TodoTask[] {
       });
       break;
     case 'overdue':
-      result = source.filter(t => t.dueDate && new Date(t.dueDate) < now && !t.completed);
+      result = source.filter(t => t.dueDate && new Date(t.dueDate) < now && !isEffectivelyCompleted(t));
       break;
     case 'completed':
-      result = catFiltered.filter(t => t.completed);
+      result = catFiltered.filter(t => isEffectivelyCompleted(t));
       break;
     default:
       result = source;
@@ -249,7 +262,7 @@ export function getPlanboardGroups(): Map<string, TodoTask[]> {
   endOfWeek.setDate(endOfWeek.getDate() + (7 - endOfWeek.getDay()));
 
   const baseTasks = store.selectedCatId ? store.data.tasks.filter(t => t.categoryId === store.selectedCatId) : store.data.tasks;
-  const source = store.showCompletedInMain ? baseTasks : baseTasks.filter(t => !t.completed);
+  const source = store.showCompletedInMain ? baseTasks : baseTasks.filter(t => !isEffectivelyCompleted(t));
   const sorted = sortTasksByPriorityThenDue(source);
   const groups = new Map<string, TodoTask[]>();
 
@@ -275,7 +288,7 @@ export function getNextUpTask(): TodoTask | null {
   const key = `${dataVersion}|${getMinuteBucket()}`;
   if (nextUpCache?.key === key) return nextUpCache.task;
 
-  const pending = store.data.tasks.filter(t => !t.completed);
+  const pending = store.data.tasks.filter(t => !isEffectivelyCompleted(t));
   const task = pending.length === 0 ? null : sortTasksByPriorityThenDue(pending)[0];
   nextUpCache = { key, task };
   return task;
@@ -297,7 +310,7 @@ export function getStats(): TodoStats {
   let tomorrow = 0;
 
   for (const task of tasks) {
-    if (task.completed) {
+    if (isEffectivelyCompleted(task)) {
       completed += 1;
       continue;
     }
@@ -328,7 +341,7 @@ export function getSmartFilterCounts(): SmartFilterCounts {
   let completed = 0;
 
   for (const task of tasks) {
-    if (task.completed) {
+    if (isEffectivelyCompleted(task)) {
       completed += 1;
       continue;
     }

@@ -1,6 +1,7 @@
 import { switchPage } from '../../app/router';
 import { getCurrentWorkspaceRoot, getRelativePath } from '../../services/workspace-context';
 import { escHtml, escAttr } from '../../utils/escape';
+import { getRuntime } from '../../services/runtime';
 
 export interface AIStudioBridge {
   sendMessage: (text: string) => Promise<string>;
@@ -267,7 +268,7 @@ async function runActionWithBusy(button: HTMLElement, runner: () => Promise<void
 }
 
 function refreshStudioContext(): void {
-  const snapshot = window.__getActiveFileSnapshot?.();
+  const snapshot = getRuntime('getActiveFileSnapshot')?.();
   const root = getCurrentWorkspaceRoot();
   const pill = document.getElementById('ai-studio-context-pill');
   if (pill) {
@@ -310,7 +311,7 @@ function renderLastResultPreview(): void {
 }
 
 async function runWithActiveFile(bridge: AIStudioBridge, instruction: string): Promise<void> {
-  const snapshot = window.__getActiveFileSnapshot?.();
+  const snapshot = getRuntime('getActiveFileSnapshot')?.();
   if (!snapshot) {
     bridge.appendSystem('当前没有活动文件。请先在文件管理器打开一个文档。');
     return;
@@ -322,13 +323,13 @@ async function runWithActiveFile(bridge: AIStudioBridge, instruction: string): P
 
 async function runProjectBrief(bridge: AIStudioBridge): Promise<void> {
   const root = getCurrentWorkspaceRoot();
-  const snapshot = window.__getActiveFileSnapshot?.();
+  const snapshot = getRuntime('getActiveFileSnapshot')?.();
   await bridge.sendMessage('请基于当前项目上下文生成一份项目 Brief，包含：项目目标、已有资产、近期变化、风险、下一步建议。\n\n工作区：' + (root || '未打开') + '\n当前文件：' + (snapshot?.fileName || '无') + '\n\n当前文件内容摘要参考：\n' + truncate(snapshot?.content || '', 10000));
 }
 
 async function runProjectPlan(bridge: AIStudioBridge): Promise<void> {
   const root = getCurrentWorkspaceRoot();
-  const snapshot = window.__getActiveFileSnapshot?.();
+  const snapshot = getRuntime('getActiveFileSnapshot')?.();
   await bridge.sendMessage('请为当前项目生成下一步推进计划。要求：按 3 个阶段输出，每阶段包含目标、任务、风险和验收标准。\n\n工作区：' + (root || '未打开') + '\n当前文件：' + (snapshot?.fileName || '无') + '\n\n参考内容：\n' + truncate(snapshot?.content || '', 10000));
 }
 

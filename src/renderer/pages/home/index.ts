@@ -9,8 +9,11 @@ import type { Workspace } from '@shared/types/workspace';
 import type { TodoTask } from '@shared/types/todo';
 import type { RecentMarkdownFile } from '@shared/types/file';
 import { escHtml, escAttr } from '../../utils/escape';
+import { formatRelativeTime, getGreeting } from '../../utils/format';
 import { isOverdue, isDueToday } from '../../utils/date';
 import { novaIcon, novaIconTile } from '../../utils/icons';
+import { showAlert } from '../../components/modal';
+import { getRuntime } from '../../services/runtime';
 
 let quickActionsBound = false;
 let cachedAppVersion: string | null = null;
@@ -36,9 +39,7 @@ async function initHomePage(): Promise<void> {
 function renderGreeting(): void {
   const greeting = document.getElementById('home-greeting');
   const subtitle = document.querySelector('.home-subtitle') as HTMLElement | null;
-  const hour = new Date().getHours();
-  const text = hour < 6 ? '夜深了，注意休息 🌙' : hour < 12 ? '早上好 👋' : hour < 18 ? '下午好 👋' : '晚上好 👋';
-  if (greeting) greeting.textContent = text;
+  if (greeting) greeting.textContent = getGreeting() + ' 👋';
   if (subtitle) subtitle.textContent = '今天从一个文档开始，让 AI 帮你整理，再把任务推进下去。';
 }
 
@@ -91,7 +92,7 @@ function showOnboardingModal(): void {
       await openRecentProject(workspacePath);
       await renderRecentProjects();
     } catch (err) {
-      alert('创建示例工作区失败: ' + (err instanceof Error ? err.message : String(err)));
+      showAlert('创建示例工作区失败: ' + (err instanceof Error ? err.message : String(err)));
     } finally {
       if (btn) { btn.disabled = false; btn.textContent = '创建示例工作区'; }
     }
@@ -105,7 +106,7 @@ async function createSampleWorkspaceFromHome(): Promise<void> {
     await openRecentProject(workspacePath);
     await renderRecentProjects();
   } catch (err) {
-    alert('创建示例工作区失败: ' + (err instanceof Error ? err.message : String(err)));
+    showAlert('创建示例工作区失败: ' + (err instanceof Error ? err.message : String(err)));
   }
 }
 
@@ -268,7 +269,7 @@ async function renderRecentDocs(): Promise<void> {
 function openMarkdownFile(filePath: string): void {
   void (async () => {
     await switchPage('files');
-    const openFilePath = window.__openFilePath;
+    const openFilePath = getRuntime('openFilePath');
     if (typeof openFilePath === 'function') void openFilePath(filePath);
   })();
 }
@@ -298,7 +299,7 @@ async function renderAIStatus(): Promise<void> {
       if (btn) { btn.disabled = true; btn.textContent = '测试中...'; }
       try {
         const result = await ipcClient.ai.testConnection(provider.id);
-        alert(result.ok ? 'AI 连接成功' : ('AI 连接失败：' + result.message));
+        showAlert(result.ok ? 'AI 连接成功' : ('AI 连接失败：' + result.message));
       } finally {
         if (btn) { btn.disabled = false; btn.textContent = '测试连接'; }
       }
@@ -381,9 +382,9 @@ async function renderRecentProjects(): Promise<void> {
 async function openRecentProject(projectPath: string): Promise<void> {
   await ipcClient.workspace.open({ rootPath: projectPath }).catch(() => null);
   await switchPage('files');
-  const openWorkspace = window.__openWorkspaceRoot;
-  const ft = window.__fileTree;
-  const store = window.__filesStore;
+  const openWorkspace = getRuntime('openWorkspaceRoot');
+  const ft = getRuntime('fileTree');
+  const store = getRuntime('filesStore');
 
   if (typeof openWorkspace === 'function') {
     await openWorkspace(projectPath, { restoreSession: true });
@@ -398,8 +399,8 @@ async function openRecentProject(projectPath: string): Promise<void> {
 
 async function openWorkspacePicker(): Promise<void> {
   await switchPage('files');
-  const chooseWorkspace = window.__chooseWorkspaceFolder;
-  const ft = window.__fileTree;
+  const chooseWorkspace = getRuntime('chooseWorkspaceFolder');
+  const ft = getRuntime('fileTree');
   if (typeof chooseWorkspace === 'function') {
     await chooseWorkspace();
   } else if (ft?.openFolder) {
@@ -450,23 +451,6 @@ function formatDueDate(isoStr: string): string {
   if (date.toDateString() === yesterday.toDateString()) return '昨天';
   const tomorrow = new Date(today); tomorrow.setDate(today.getDate() + 1);
   if (date.toDateString() === tomorrow.toDateString()) return '明天';
-  return date.toLocaleDateString('zh-CN');
-}
-
-function formatRelativeTime(isoStr: string): string {
-  const date = new Date(isoStr);
-  const now = new Date();
-  const diff = now.getTime() - date.getTime();
-  const minutes = Math.floor(diff / 60000);
-  const hours = Math.floor(diff / 3600000);
-  const days = Math.floor(diff / 86400000);
-
-  if (Number.isNaN(date.getTime())) return '时间未知';
-  if (minutes < 1) return '刚刚';
-  if (minutes < 60) return minutes + ' 分钟前';
-  if (hours < 24) return hours + ' 小时前';
-  if (days === 1) return '昨天';
-  if (days < 7) return days + ' 天前';
   return date.toLocaleDateString('zh-CN');
 }
 

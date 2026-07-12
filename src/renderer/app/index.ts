@@ -5,13 +5,15 @@
  */
 
 import { initTheme, cycleTheme } from './theme';
-import { switchPage, registerPageInit, initializeActivePage } from './router';
-import { ipcClient } from '../services/ipc-client';
+import { switchPage, registerPageInit, initHashRouting } from './router';
+import { ipcClient, installIpcErrorBoundary } from '../services/ipc-client';
 import { showInputPrompt } from '../components/modal';
 import { buildTemplateCommandResults } from '../services/template-service';
-import { escHtml } from '../utils/escape';
+import { escHtml, escAttr } from '../utils/escape';
+import { getGreeting } from '../utils/format';
 import { toast } from '../utils/toast';
 import { bus, BusEvents } from '../services/bus';
+import { getRuntime, setRuntime } from '../services/runtime';
 import { initWorkspaceSwitcher } from './workspace-switcher';
 import { initOnboarding } from './onboarding';
 import { novaIcon, NovaIconName } from '../utils/icons';
@@ -30,6 +32,7 @@ export const aiStats = { tokens: 0, requests: 0 };
 
 async function initApp(): Promise<void> {
   installElectronDialogSafetyGuards();
+  installIpcErrorBoundary();
   initTheme();
   bindTitleBarEvents();
   bindNavEvents();
@@ -38,7 +41,7 @@ async function initApp(): Promise<void> {
   loadAIStats();
   setGreeting();
   registerPageInits();
-  initializeActivePage();
+  initHashRouting();
   initSidebarCollapse();
   initWorkspaceSwitcher();
   initLocalLogin();
@@ -65,16 +68,7 @@ function installElectronDialogSafetyGuards(): void {
 function setGreeting(): void {
   const el = document.getElementById('home-greeting');
   if (!el) return;
-  const hour = new Date().getHours();
-  let greeting = '\u4F60\u597D';
-  if (hour < 6) greeting = '\u591C\u6DF1\u4E86';
-  else if (hour < 9) greeting = '\u65E9\u4E0A\u597D';
-  else if (hour < 12) greeting = '\u4E0A\u5348\u597D';
-  else if (hour < 14) greeting = '\u4E2D\u5348\u597D';
-  else if (hour < 18) greeting = '\u4E0B\u5348\u597D';
-  else if (hour < 22) greeting = '\u665A\u4E0A\u597D';
-  else greeting = '\u591C\u6DF1\u4E86';
-  el.textContent = greeting + ' \uD83D\uDC4B';
+  el.textContent = getGreeting() + ' \uD83D\uDC4B';
 }
 
 function bindTitleBarEvents(): void {
@@ -175,7 +169,7 @@ function bindKeyboardShortcuts(): void {
   window.addEventListener('focus', () => {
     document.body?.setAttribute('data-shortcuts-ready', 'true');
   });
-  window.__openCommandPalette = openSearchOverlay;
+  setRuntime('openCommandPalette', openSearchOverlay);
 }
 
 
@@ -296,7 +290,7 @@ function buildCommandActions(): PaletteResult[] {
     { id: 'cmd-ai', group: '常用命令', title: '打开 AI 助手', subtitle: '进入 AI 对话页', icon: 'AI', iconHtml: commandIcon('ai'), hotkey: 'Alt+4', keywords: ['chat', 'model'], action: () => { void switchPage('ai'); } },
     { id: 'cmd-settings', group: '常用命令', title: '打开设置', subtitle: '配置 AI Provider、主题和快捷键', icon: '设置', iconHtml: commandIcon('settings'), keywords: ['config', 'theme'], action: () => { void switchPage('settings'); } },
     { id: 'cmd-theme-cycle', group: '常用命令', title: '切换深浅色主题', subtitle: '在浅色、深色和跟随系统之间切换', icon: '主题', iconHtml: commandIcon('sparkles'), keywords: ['theme', 'dark', 'light'], action: cycleTheme },
-    { id: 'cmd-onboarding', group: '常用命令', title: '重新查看首次使用引导', subtitle: '重新打开 Nova 工作台的五步引导', icon: '引导', iconHtml: commandIcon('learning'), keywords: ['guide', 'help', 'onboarding'], action: () => window.__startOnboarding?.() },
+    { id: 'cmd-onboarding', group: '常用命令', title: '重新查看首次使用引导', subtitle: '重新打开 Nova 工作台的五步引导', icon: '引导', iconHtml: commandIcon('learning'), keywords: ['guide', 'help', 'onboarding'], action: () => getRuntime('startOnboarding')?.() },
     { id: 'cmd-edit-mode', group: '文档命令', title: '切换到编辑模式', subtitle: '仅显示 Markdown 编辑器', icon: '编辑', iconHtml: commandIcon('new-doc'), action: () => runActiveMarkdownModeCommand('edit') },
     { id: 'cmd-preview-mode', group: '文档命令', title: '切换到预览模式', subtitle: '仅显示 Markdown 渲染预览', icon: '预览', iconHtml: commandIcon('file'), action: () => runActiveMarkdownModeCommand('preview') },
     { id: 'cmd-split-mode', group: '文档命令', title: '切换到分屏模式', subtitle: '左侧编辑右侧预览', icon: '分屏', iconHtml: commandIcon('files'), action: () => runActiveMarkdownModeCommand('split') },
@@ -373,7 +367,7 @@ async function searchTodoResults(lowerQuery: string): Promise<PaletteResult[]> {
       icon: task.completed ? '☑️' : '✅',
       action: async () => {
         await switchPage('todo');
-        void window.__openTodoTask?.(task.id);
+        void getRuntime('openTodoTask')?.(task.id);
       },
     }));
   } catch {
@@ -432,7 +426,7 @@ async function searchKnowledgeResults(lowerQuery: string): Promise<PaletteResult
         icon: sourceIcons[item.sourceType] || '📚',
         action: async () => {
           await switchPage('knowledge');
-          void window.__openKnowledgeItem?.(item.id);
+          void getRuntime('openKnowledgeItem')?.(item.id);
         },
       });
     }
@@ -447,7 +441,7 @@ async function searchKnowledgeResults(lowerQuery: string): Promise<PaletteResult
         icon: '🔎',
         action: async () => {
           await switchPage('knowledge');
-          void window.__openKnowledgeItem?.(item.id);
+          void getRuntime('openKnowledgeItem')?.(item.id);
         },
       });
     }
@@ -503,7 +497,7 @@ async function searchWorkspaceResults(query: string): Promise<PaletteResult[]> {
 }
 
 function getCurrentWorkspaceRoot(): string {
-  const store = window.__filesStore;
+  const store = getRuntime('filesStore');
   const root = store?.getWorkspaceRoot?.() || store?.getState?.()?.workspaceRoot || '';
   return typeof root === 'string' ? root : '';
 }
@@ -511,7 +505,7 @@ function getCurrentWorkspaceRoot(): string {
 function openFileFromPalette(filePath: string): void {
   void (async () => {
     await switchPage('files');
-    const openFilePath = window.__openFilePath;
+    const openFilePath = getRuntime('openFilePath');
     if (typeof openFilePath === 'function') void openFilePath(filePath);
   })();
 }
@@ -540,7 +534,7 @@ function runFileWorkflowCommand(workflowId: string): void {
 function runProjectExportCommand(format: 'markdown' | 'pdf' | 'html'): void {
   void (async () => {
     await switchPage('project');
-    void window.__exportProjectReport?.(format);
+    void getRuntime('exportProjectReport')?.(format);
   })();
 }
 
@@ -559,7 +553,7 @@ async function createQuickTodo(): Promise<void> {
   });
   window.dispatchEvent(new CustomEvent('nova:todo-data-changed'));
   await switchPage('todo');
-  window.__focusTodoQuickInput?.();
+  getRuntime('focusTodoQuickInput')?.();
 }
 
 function renderPaletteSections(container: HTMLElement, results: PaletteResult[]): void {
@@ -662,10 +656,6 @@ function fileIcon(fileName: string): string {
 
 function relativePath(root: string, fullPath: string): string {
   return fullPath.replace(root, '').replace(/^[/\\]/, '') || fullPath;
-}
-
-function escAttr(str: string): string {
-  return escHtml(str).replace(/"/g, '&quot;');
 }
 
 function loadAIStats(): void {
@@ -803,7 +793,7 @@ function getInitial(name: string): string {
 }
 
 function initAutoUpdateStatus(): void {
-  const updateApi = window.electronAPI.update;
+  const updateApi = ipcClient.update;
   if (!updateApi?.onStatus) return;
   updateApi.onStatus((state) => {
     if (state.status === 'error') console.warn('[Updater]', state.message);

@@ -1,8 +1,9 @@
-import { showInputPrompt, showModal } from '../components/modal';
+import { showInputPrompt, showModal, showAlert } from '../components/modal';
 import { ipcClient } from './ipc-client';
+import { formatAiError } from '@shared/utils/ai-error';
 import { getCurrentWorkspaceRoot } from './workspace-context';
 import { aiService } from '../pages/ai/ai-service';
-import { escHtml } from '../utils/escape';
+import { escHtml, escAttr } from '../utils/escape';
 import { novaIcon, iconForTemplate } from '../utils/icons';
 
 export type BuiltInTemplateId =
@@ -142,7 +143,7 @@ export async function createDocumentFromTemplate(
 ): Promise<string | null> {
   const targetDir = options.targetDir || getCurrentWorkspaceRoot();
   if (!targetDir) {
-    alert('请先打开一个工作区');
+    showAlert('请先打开一个工作区');
     return null;
   }
 
@@ -167,7 +168,7 @@ export async function createDocumentFromTemplate(
     return filePath;
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    alert('创建模板文档失败：' + message);
+    showAlert('创建模板文档失败：' + message);
     return null;
   }
 }
@@ -323,7 +324,7 @@ async function generateTemplateContentWithAI(request: TemplateCreateRequest, pro
     return cleaned || baseContent;
   } catch (error) {
     const message = formatAIError(error);
-    alert('AI 生成失败，已改为创建普通模板文档。\n\n原因：' + message);
+    showAlert('AI 生成失败，已改为创建普通模板文档。\n\n原因：' + message);
     return baseContent;
   } finally {
     loading.remove();
@@ -378,13 +379,7 @@ function cleanGeneratedMarkdown(value: string): string {
 }
 
 function formatAIError(error: unknown): string {
-  const raw = error instanceof Error ? error.message : String(error);
-  if (/api key|unauthorized|401/i.test(raw)) return 'API Key 无效或权限不足';
-  if (/timeout|timed out|aborted/i.test(raw)) return 'AI 请求超时';
-  if (/model|404/i.test(raw)) return '模型名称可能不正确';
-  if (/quota|billing|余额|额度/i.test(raw)) return '模型额度不足或账号未开通';
-  if (/network|fetch|ENOTFOUND|ECONN/i.test(raw)) return '网络连接失败或 Base URL 不可用';
-  return raw || '未知错误';
+  return formatAiError(error);
 }
 
 function getPreferredTemplateId(): BuiltInTemplateId {
@@ -425,6 +420,3 @@ function getRecentTemplateIds(): BuiltInTemplateId[] {
   }
 }
 
-function escAttr(text: string): string {
-  return escHtml(text).replace(/"/g, '&quot;');
-}

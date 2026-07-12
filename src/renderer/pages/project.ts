@@ -2,12 +2,14 @@
 import { registerPageInit, switchPage } from '../app/router';
 import { ipcClient } from '../services/ipc-client';
 import { getCurrentWorkspaceRoot } from '../services/workspace-context';
-import { showInputPrompt } from '../components/modal';
+import { showInputPrompt, showAlert } from '../components/modal';
 import { getBuiltInTemplates } from '../services/template-service';
 import { exportProjectReport, type ExportFormat } from '../services/export-service';
-import { escHtml } from '../utils/escape';
+import { escHtml, escAttr } from '../utils/escape';
+import { formatRelativeTime } from '../utils/format';
 import { novaIcon, iconForTemplate, iconForActivity } from '../utils/icons';
 import type { ProjectOverview, ProjectActivityItem, ProjectRecentDocument } from '@shared/types/workspace';
+import { getRuntime, setRuntime } from '../services/runtime';
 
 let currentOverview: ProjectOverview | null = null;
 let isBound = false;
@@ -24,8 +26,8 @@ function bindOnce(): void {
   document.getElementById('btn-project-open-workspace')?.addEventListener('click', openWorkspacePicker);
   document.getElementById('btn-project-refresh')?.addEventListener('click', () => { void renderProjectDashboard(); });
   document.getElementById('btn-project-edit-meta')?.addEventListener('click', () => { void editProjectMeta(); });
-  document.getElementById('btn-project-new-doc')?.addEventListener('click', () => { void (async () => { await switchPage('files'); void window.__handleNewFile?.(); })(); });
-  document.getElementById('btn-project-new-todo')?.addEventListener('click', () => { void (async () => { await switchPage('todo'); void window.__focusTodoQuickInput?.(); })(); });
+  document.getElementById('btn-project-new-doc')?.addEventListener('click', () => { void (async () => { await switchPage('files'); void getRuntime('handleNewFile')?.(); })(); });
+  document.getElementById('btn-project-new-todo')?.addEventListener('click', () => { void (async () => { await switchPage('todo'); void getRuntime('focusTodoQuickInput')?.(); })(); });
   document.getElementById('btn-project-files')?.addEventListener('click', () => { void switchPage('files'); });
   document.getElementById('btn-project-ai')?.addEventListener('click', () => { void switchPage('ai'); });
   document.getElementById('btn-project-summary')?.addEventListener('click', () => runProjectAI('summary'));
@@ -36,7 +38,7 @@ function bindOnce(): void {
   window.addEventListener('nova:todo-data-changed', () => { void renderProjectDashboard(); });
   window.addEventListener('nova:workspace-changed', () => { void renderProjectDashboard(); });
 
-  window.__exportProjectReport = (format: ExportFormat = 'markdown') => exportCurrentProjectReport(format);
+  setRuntime('exportProjectReport', (format: ExportFormat = 'markdown') => exportCurrentProjectReport(format));
 }
 
 async function renderProjectDashboard(): Promise<void> {
@@ -103,7 +105,7 @@ function renderRecentDocs(docs: ProjectRecentDocument[]): void {
       if (!filePath) return;
       void (async () => {
         await switchPage('files');
-        void window.__openFilePath?.(filePath);
+        void getRuntime('openFilePath')?.(filePath);
       })();
     });
   });
@@ -125,7 +127,7 @@ function renderTemplateShortcuts(): void {
       const templateId = (card as HTMLElement).dataset.templateId;
       if (!templateId) return;
       await switchPage('files');
-      void window.__handleNewFileFromTemplate?.(templateId);
+      void getRuntime('handleNewFileFromTemplate')?.(templateId);
     });
   });
 }
@@ -160,15 +162,15 @@ async function editProjectMeta(): Promise<void> {
 
 async function openWorkspacePicker(): Promise<void> {
   await switchPage('files');
-  const chooseWorkspace = window.__chooseWorkspaceFolder;
-  const ft = window.__fileTree;
+  const chooseWorkspace = getRuntime('chooseWorkspaceFolder');
+  const ft = getRuntime('fileTree');
   if (typeof chooseWorkspace === 'function') await chooseWorkspace();
   else if (ft?.openFolder) await ft.openFolder();
 }
 
 async function exportCurrentProjectReport(format: ExportFormat): Promise<void> {
   if (!currentOverview) {
-    alert('请先打开一个工作区');
+    showAlert('请先打开一个工作区');
     return;
   }
   try {
@@ -183,9 +185,9 @@ async function exportCurrentProjectReport(format: ExportFormat): Promise<void> {
       activities: currentOverview.activities,
       ai: currentOverview.ai,
     });
-    if (filePath) alert('项目报告已导出：\n' + filePath);
+    if (filePath) showAlert('项目报告已导出：\n' + filePath);
   } catch (error) {
-    alert('导出项目报告失败：' + (error instanceof Error ? error.message : String(error)));
+    showAlert('导出项目报告失败：' + (error instanceof Error ? error.message : String(error)));
   }
 }
 
@@ -219,26 +221,6 @@ function setText(id: string, text: string): void {
 
 function basename(filePath: string): string {
   return filePath.split(/[/\\]/).pop() || filePath;
-}
-
-function formatRelativeTime(isoStr: string): string {
-  const date = new Date(isoStr);
-  const now = new Date();
-  const diff = now.getTime() - date.getTime();
-  const minutes = Math.floor(diff / 60000);
-  const hours = Math.floor(diff / 3600000);
-  const days = Math.floor(diff / 86400000);
-  if (Number.isNaN(date.getTime())) return '时间未知';
-  if (minutes < 1) return '刚刚';
-  if (minutes < 60) return minutes + ' 分钟前';
-  if (hours < 24) return hours + ' 小时前';
-  if (days === 1) return '昨天';
-  if (days < 7) return days + ' 天前';
-  return date.toLocaleDateString('zh-CN');
-}
-
-function escAttr(str: string): string {
-  return String(str).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
 registerPageInit('project', initProjectPage);

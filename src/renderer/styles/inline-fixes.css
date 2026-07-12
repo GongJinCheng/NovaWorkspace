@@ -1,235 +1,77 @@
 /* ============================================================
- * inline-fixes.css — 从 index.html 迁移的内联样式
+ * inline-fixes.css — Todo layout specificity fix
  *
- * 这些样式原本以内联 <style> 方式写在 index.html 中，
- * 现提取到独立文件，按功能区域分组。
+ * 这些规则最初从 index.html 内联 <style> 提取，曾以最高优先级硬压
+ * 后续 nova-v29xx 设计层。现已改为以 #page-todo 作用域提升
+ * 特异性（id 0,1,0,0 + 类），不再依赖优先级硬压。
+ * 与 nova-v299-layout-rebalance.css 同特异性时由加载顺序决定，
+ * 最终布局以 nova-v299-layout-rebalance.css 为准。
+ *
+ * - sidebar.collapsed 规则归属 layout.css（此处为冗余副本，已删除）
+ * - files 顶栏 / 面包屑 / 搜索框规则已并入 nova-ui-refresh.css
  * ============================================================ */
 
-/* ── Sidebar collapsed state ── */
-.sidebar.collapsed .search-box {
-  padding: 8px 10px;
-  justify-content: center;
-}
-
-.sidebar.collapsed .search-box span,
-.sidebar.collapsed .search-box kbd {
-  display: none;
-}
-
-.sidebar.collapsed .nav-label {
-  display: none;
-}
-
-.sidebar.collapsed .nav-item {
-  justify-content: center;
-  padding: 9px;
-  gap: 0;
-}
-
-.sidebar.collapsed .nav-item span,
-.sidebar.collapsed .nav-item .badge {
-  display: none;
-}
-
-.sidebar.collapsed .nav-item svg {
-  opacity: 0.8;
-}
-
-.sidebar.collapsed .user-meta,
-.sidebar.collapsed .sidebar-footer {
-  display: none;
-}
-
-.sidebar.collapsed .sidebar-nav {
-  padding: 8px 6px;
-}
-
-.sidebar.collapsed .sidebar-header {
-  padding: 12px 10px;
-}
-
-.sidebar.collapsed .nav-item {
-  position: relative;
-}
-
-.sidebar.collapsed .nav-item:hover::after {
-  content: attr(data-tooltip);
-  position: absolute;
-  left: 52px;
-  top: 50%;
-  transform: translateY(-50%);
-  background: var(--bg-elevated);
-  border: 1px solid var(--border-subtle);
-  border-radius: 6px;
-  padding: 6px 10px;
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--text-primary);
-  white-space: nowrap;
-  z-index: 100;
-  pointer-events: none;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-  animation: fadeIn 0.1s ease;
-}
-
-.sidebar {
-  transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-/* ── Files page: top bar / breadcrumb / search ── */
-.files-top-bar {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
-  border-bottom: 1px solid var(--border-subtle);
-  background: var(--bg-surface);
-  flex-shrink: 0;
-}
-
-.breadcrumb-bar {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  padding: 0 8px;
-  flex: 0 1 auto;
-  overflow: hidden;
-}
-
-.breadcrumb-item {
-  font-size: 12px;
-  color: var(--text-tertiary);
-  cursor: pointer;
-  padding: 3px 8px;
-  border-radius: 4px;
-  white-space: nowrap;
-  transition: all 0.15s ease;
-}
-
-.breadcrumb-item:hover {
-  color: var(--text-primary);
-  background: var(--bg-hover);
-}
-
-.breadcrumb-item.active {
-  color: var(--text-primary);
-  font-weight: 600;
-}
-
-.breadcrumb-separator {
-  color: var(--text-tertiary);
-  margin: 0 2px;
-  font-size: 10px;
-}
-
-.files-search-box {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 12px;
-  background: var(--bg-elevated);
-  border: 1px solid var(--border-subtle);
-  border-radius: 8px;
-  margin: 0 8px;
-  transition: all 0.15s ease;
-  flex: 0 1 200px;
-}
-
-.files-search-box:focus-within {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px var(--accent-soft);
-}
-
-.files-search-box svg {
-  color: var(--text-tertiary);
-  flex-shrink: 0;
-}
-
-.files-search-box input {
-  border: none;
-  background: transparent;
-  color: var(--text-primary);
-  font-family: inherit;
-  font-size: 13px;
-  outline: none;
-  width: 100%;
-}
-
-.files-search-box input::placeholder {
-  color: var(--text-tertiary);
-}
-
-.files-search-box kbd {
-  font-family: inherit;
-  font-size: 10px;
-  padding: 2px 5px;
-  background: var(--bg-surface);
-  border: 1px solid var(--border-subtle);
-  border-radius: 3px;
-  color: var(--text-tertiary);
-  flex-shrink: 0;
-}
-
-/* ── Todo layout fix (migrated from index.html inline styles) ── */
+/* ── Todo layout (specificity-scoped) ── */
 #page-todo {
-  width: 100% !important;
-  height: 100% !important;
+  width: 100%;
+  height: 100%;
 }
 
-.todo-workstation {
-  display: flex !important;
-  width: 100% !important;
-  height: 100% !important;
+#page-todo .todo-workstation {
+  display: flex;
+  width: 100%;
+  height: 100%;
 }
 
+#page-todo .todo-command-bar {
+  display: flex;
+  align-items: stretch;
+  gap: 16px;
+  margin-bottom: 20px;
+  width: 100%;
+  flex-shrink: 0;
+}
+
+#page-todo .todo-command-ring-card {
+  flex: 0 0 220px;
+  width: 220px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+#page-todo .todo-next-up-card {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+}
+
+#page-todo .todo-command-metrics {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+#page-todo .todo-metric-chip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 72px;
+  height: 100%;
+  min-height: 72px;
+  padding: 8px;
+  box-sizing: border-box;
+}
+
+/* ── Todo workspace / task area (unchanged) ── */
 .todo-workspace {
   display: flex;
   flex-direction: column;
   height: 100%;
   overflow: hidden;
-}
-
-.todo-command-bar {
-  display: flex !important;
-  align-items: stretch !important;
-  gap: 16px !important;
-  margin-bottom: 20px !important;
-  width: 100% !important;
-  flex-shrink: 0 !important;
-}
-
-.todo-command-ring-card {
-  flex: 0 0 220px !important;
-  width: 220px !important;
-  display: flex !important;
-  align-items: center !important;
-  gap: 16px !important;
-}
-
-.todo-next-up-card {
-  flex: 1 !important;
-  display: flex !important;
-  flex-direction: column !important;
-  justify-content: center !important;
-  min-width: 0 !important;
-}
-
-.todo-command-metrics {
-  display: flex !important;
-  gap: 8px !important;
-  flex-shrink: 0 !important;
-}
-
-.todo-metric-chip {
-  display: flex !important;
-  flex-direction: column !important;
-  align-items: center !important;
-  justify-content: center !important;
-  width: 72px !important;
-  height: 100% !important;
-  min-height: 72px !important;
-  padding: 8px !important;
-  box-sizing: border-box !important;
 }
 
 .todo-task-area {
@@ -254,4 +96,9 @@
 
 .todo-task-area::-webkit-scrollbar-thumb:hover {
   background: var(--text-tertiary, rgba(255, 255, 255, 0.3));
+}
+
+/* ── Shell transition (unchanged) ── */
+.sidebar {
+  transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }

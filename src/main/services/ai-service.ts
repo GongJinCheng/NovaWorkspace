@@ -9,6 +9,8 @@ import type {
 } from '@shared/types/ai';
 import { getAISettings, getDefaultAIProvider } from './settings-store';
 import { providerSupportsCapability } from '@shared/utils/ai-capabilities';
+import { formatAiError } from '@shared/utils/ai-error';
+import { AI_TIMEOUT_MS, AI_TEST_TIMEOUT_MS, AI_STREAM_TIMEOUT_MS } from '@shared/constants/limits';
 
 type StreamCallbacks = {
   onChunk(chunk: string): void;
@@ -16,13 +18,11 @@ type StreamCallbacks = {
   onError(error: Error): void;
 };
 
-const DEFAULT_TIMEOUT = 30000;
-
 export async function chat(request: AIChatRequest): Promise<AIChatResponse> {
   const provider = await resolveProvider(request.providerId);
   ensureProviderReady(provider);
 
-  const timeout = request.timeout ?? DEFAULT_TIMEOUT;
+  const timeout = request.timeout ?? AI_TIMEOUT_MS;
   const controller = new AbortController();
   const timer = timeout > 0 ? setTimeout(() => controller.abort(), timeout) : null;
 
@@ -67,7 +67,7 @@ export async function chatStream(request: AIChatRequest, callbacks: StreamCallba
     fullText += chunk;
     callbacks.onChunk(chunk);
   };
-  const timeout = request.timeout ?? DEFAULT_TIMEOUT * 2;
+  const timeout = request.timeout ?? AI_STREAM_TIMEOUT_MS;
   const controller = new AbortController();
   const timer = timeout > 0 ? setTimeout(() => controller.abort(), timeout) : null;
   if (signal) {
@@ -187,7 +187,7 @@ export async function testConnection(providerId?: string): Promise<AIConnectionT
       messages: [{ role: 'user', content: 'Say "connection ok" in 3 words or less.' }],
       max_tokens: 20,
       temperature: 0,
-      timeout: 20000,
+      timeout: AI_TEST_TIMEOUT_MS,
     });
 
     return { ok: true, message: result.content || 'connection ok' };
@@ -317,5 +317,5 @@ async function assertOk(response: Response, fallbackMessage: string): Promise<vo
     }
   }
 
-  throw new Error(message);
+  throw new Error(formatAiError(message));
 }

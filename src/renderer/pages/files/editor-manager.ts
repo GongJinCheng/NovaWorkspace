@@ -15,78 +15,31 @@ import { switchPage } from '../../app/router';
 import { getCurrentWorkspaceRoot, getRelativePath } from '../../services/workspace-context';
 import { exportMarkdownDocument, type ExportFormat } from '../../services/export-service';
 import { escHtml as _escHtml, escAttr as _escAttr } from '../../utils/escape';
+import {
+  fileToBase64,
+  type EditorTab,
+  type MarkdownViewMode,
+  type MonacoEditor,
+  type MonacoEditorInstance,
+  type MonacoRange,
+  type MonacoModel,
+  type MonacoStatic,
+} from './editor-types';
+import { detectLanguage } from './language-detect';
+import { extractHeadings } from './markdown-outline';
+import { formatAiError } from '@shared/utils/ai-error';
+import { parseTodoCandidates, parseJsonTasks, dedupeTasks, type ExtractedTask } from './todo-extractor';
+import { resolveImageSrc } from './preview-image-resolver';
+import { getRuntime } from '../../services/runtime';
 
-/** Convert a browser File (e.g. clipboard screenshot) to a base64 string. */
-function fileToBase64(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      const result = reader.result as string;
-      // data URL format: "data:<mime>;base64,<payload>" — strip the prefix
-      const comma = result.indexOf(',');
-      resolve(comma >= 0 ? result.slice(comma + 1) : result);
-    };
-    reader.onerror = () => reject(reader.error);
-    reader.readAsDataURL(file);
-  });
-}
+/** Files larger than this (bytes) open read-only to avoid freezing the render thread. */
+export const LARGE_FILE_BYTES = 2 * 1024 * 1024;
 
-interface MonacoEditor {
-  create(container: HTMLElement, options: Record<string, unknown>): MonacoEditorInstance;
-  createModel(value: string, language: string): MonacoModel;
-  defineTheme(name: string, config: Record<string, unknown>): void;
-}
-
-interface MonacoEditorInstance {
-  setModel(model: MonacoModel | null): void;
-  getModel(): MonacoModel | null;
-  layout(): void;
-  focus(): void;
-  updateOptions(options: Record<string, unknown>): void;
-  getPosition(): { lineNumber: number; column: number } | null;
-  saveViewState(): unknown;
-  restoreViewState(state: unknown): void;
-  getSelection(): MonacoRange | null;
-}
-
-interface MonacoRange {
-  startLineNumber: number;
-  startColumn: number;
-  endLineNumber: number;
-  endColumn: number;
-}
-
-interface MonacoModel {
-  getValue(): string;
-  setValue(value: string): void;
-  getLanguageId(): string;
-  dispose(): void;
-  getFullModelRange(): MonacoRange;
-  getValueInRange(range: MonacoRange): string;
-  pushEditOperations(before: unknown[], operations: unknown[], fn: (() => null) | null): void;
-  onDidChangeContent(listener: () => void): { dispose(): void };
-}
-
-interface MonacoStatic {
-  editor: MonacoEditor;
-}
-
-interface EditorTab {
-  filePath: string;
-  fileName: string;
-  model: MonacoModel;
-  viewState: unknown;
-  isPreview: boolean;
-}
-
-type MarkdownViewMode = 'edit' | 'preview' | 'split';
-
-declare global {
-  interface Window {
-    monaco: any;
-    require: any;
-  }
-}
+// NOTE: Monaco type interfaces, the `fileToBase64` helper, and the
+// `window.monaco` / `window.require` global augmentation now live in
+// ./editor-types. Pure helpers (language detection, outline extraction,
+// AI error formatting, todo extraction, image-path resolution) are in
+// their own modules under this directory.
 
 export class EditorManager {
   private container: HTMLElement;
@@ -95,6 +48,8 @@ export class EditorManager {
   private tabElements = new Map<string, HTMLElement>();
   private activeEditorPath: string | null = null;
   private previewPath: string | null = null;
+  /** Paths opened in read-only mode because they exceeded LARGE_FILE_BYTES. */
+  private largeFilePaths = new Set<string>();
   private monaco: MonacoStatic | null = null;
   private editor: MonacoEditorInstance | null = null;
   private editorHost: HTMLElement | null = null;
@@ -145,6 +100,15 @@ export class EditorManager {
 
         const monacoPath = 'node_modules/monaco-editor/min/vs';
         window.require.config({ paths: { vs: monacoPath } });
+
+        // Explicitly wire Monaco's web workers so language services run off the
+        // main thread (tokenization, IntelliSense, JSON/CSS/TS validation). Without
+        // this Monaco falls back to main-thread work and can freeze the UI.
+        if (!window.MonacoEnvironment) {
+          window.MonacoEnvironment = {
+            getWorkerUrl: () => 'node_modules/monaco-editor/min/vs/base/worker/workerMain.js',
+          };
+        }
         window.require(
           ['vs/editor/editor.main'],
           (m: MonacoStatic) => {
@@ -440,6 +404,8 @@ export class EditorManager {
   }
 
   private updateMarkdownChrome(): void {
+    // Never render the (expensive) markdown preview chrome for very large files.
+    if (this.activeEditorPath && this.largeFilePaths.has(this.activeEditorPath)) return;
     const visible = this.isActiveMarkdown();
     if (this.markdownToolbar) {
       this.markdownToolbar.dataset.visible = visible ? 'true' : 'false';
@@ -523,29 +489,10 @@ export class EditorManager {
     const workspaceRoot = getCurrentWorkspaceRoot();
     if (!workspaceRoot) return;
 
-    // Determine the directory of the current file for relative-path resolution
-    const sep = currentFilePath.includes('/') ? '/' : '\\';
-    const fileDir = currentFilePath.substring(0, currentFilePath.lastIndexOf(sep));
-    const rootDir = workspaceRoot.replace(/[\\/]+$/, '');
-
     this.markdownPreview.querySelectorAll<HTMLImageElement>('img').forEach(img => {
       const src = img.getAttribute('src') || '';
-      if (!src) return;
-      // Skip already-absolute URLs
-      if (/^(https?:|file:|data:|blob:)/i.test(src)) return;
-      if (src.startsWith('/') || src.startsWith('\\')) return;
-
-      // Try workspace-root-relative first (e.g. ".nova/images/foo.png")
-      let absPath: string;
-      if (src.startsWith('.nova/') || src.startsWith('.nova\\')) {
-        absPath = rootDir + '/' + src;
-      } else {
-        // Otherwise resolve relative to the file's directory
-        absPath = fileDir + '/' + src;
-      }
-      // Normalise to forward slashes and encode for file:// URL
-      absPath = absPath.replace(/\\/g, '/');
-      img.src = 'file:///' + absPath.replace(/^\/+/, '');
+      const resolved = resolveImageSrc(src, currentFilePath, workspaceRoot);
+      if (resolved) img.src = resolved;
     });
   }
 
@@ -560,24 +507,7 @@ export class EditorManager {
     const listEl = panel.querySelector('.outline-list') as HTMLElement | null;
     if (!listEl) return;
 
-    const headings: { level: number; text: string; slug: string; line: number }[] = [];
-    const lines = markdown.split('\n');
-    let inCode = false;
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i].trim();
-      if (line.startsWith('```')) { inCode = !inCode; continue; }
-      if (inCode) continue;
-      const m = line.match(/^(#{1,6})\s+(.+)$/);
-      if (m) {
-        const text = m[2].trim();
-        headings.push({
-          level: m[1].length,
-          text,
-          slug: text.toLowerCase().replace(/[^\w\u4e00-\u9fa5]+/g, '-').replace(/^-+|-+$/g, '') || 'section',
-          line: i + 1, // 1-based line number
-        });
-      }
-    }
+    const headings = extractHeadings(markdown);
 
     if (headings.length === 0) {
       listEl.innerHTML = '<div class="outline-empty">暂无标题</div>';
@@ -769,7 +699,7 @@ ${content}
       button.textContent = '完成';
     } catch (error) {
       console.error('[EditorManager] Markdown AI action failed:', error);
-      showToast('AI 操作失败：' + this.toFriendlyAiError(error), 'error');
+      showToast('AI 操作失败：' + formatAiError(error), 'error');
       button.textContent = '失败';
     } finally {
       setTimeout(() => {
@@ -894,7 +824,7 @@ ${content}
     }
 
     try {
-      let tasks = useAi ? [] : this.parseTodoCandidates(sourceText);
+      let tasks: ExtractedTask[] = useAi ? [] : parseTodoCandidates(sourceText);
       if (useAi || tasks.length === 0) {
         await aiService.reloadConfig().catch(() => undefined);
         if (!aiService.isConfigured()) {
@@ -905,10 +835,10 @@ ${content}
           { role: 'system', content: '请从用户提供的内容中提取可执行任务。只输出 JSON 数组，不要解释。每项包含 title、description、priority。priority 只能是 low、medium、high、urgent。' },
           { role: 'user', content: sourceText },
         ], { temperature: 0.2, timeout: 60000 });
-        tasks = this.parseJsonTasks(raw);
+        tasks = parseJsonTasks(raw);
       }
 
-      tasks = this.dedupeTasks(tasks);
+      tasks = dedupeTasks(tasks);
       if (tasks.length === 0) {
         showToast('没有识别到可创建的待办', 'info');
         return;
@@ -946,7 +876,7 @@ ${content}
       if (goTodo) void switchPage('todo');
     } catch (error) {
       console.error('[EditorManager] Create todos failed:', error);
-      showToast('创建待办失败：' + this.toFriendlyAiError(error), 'error');
+      showToast('创建待办失败：' + formatAiError(error), 'error');
     } finally {
       this.todoCreationBusy = false;
       modalTodoButton = document.querySelector('.markdown-ai-todo-btn');
@@ -957,45 +887,6 @@ ${content}
     }
   }
 
-  private parseTodoCandidates(text: string): Array<{ title: string; description: string; priority: 'low' | 'medium' | 'high' | 'urgent' }> {
-    return text.split(/\r?\n/)
-      .map(line => line.trim().replace(/^[-*]\s+\[[ xX]\]\s*/, '').replace(/^[-*]\s+/, '').replace(/^\d+[.)]\s*/, ''))
-      .filter(line => line.length >= 3 && line.length <= 120)
-      .slice(0, 12)
-      .map(title => ({ title, description: '', priority: 'medium' }));
-  }
-
-  private parseJsonTasks(raw: string): Array<{ title: string; description: string; priority: 'low' | 'medium' | 'high' | 'urgent' }> {
-    const cleaned = raw.replace(/```json|```/g, '').trim();
-    const start = cleaned.indexOf('[');
-    const end = cleaned.lastIndexOf(']');
-    if (start === -1 || end === -1 || end <= start) return this.parseTodoCandidates(raw);
-    try {
-      const parsed = JSON.parse(cleaned.slice(start, end + 1));
-      if (!Array.isArray(parsed)) return [];
-      return parsed.map((item) => ({
-        title: String(item.title || '').trim(),
-        description: String(item.description || '').trim(),
-        priority: ['low', 'medium', 'high', 'urgent'].includes(item.priority) ? item.priority : 'medium',
-      })).filter(item => item.title).slice(0, 20);
-    } catch {
-      return this.parseTodoCandidates(raw);
-    }
-  }
-
-  private dedupeTasks(tasks: Array<{ title: string; description: string; priority: 'low' | 'medium' | 'high' | 'urgent' }>): Array<{ title: string; description: string; priority: 'low' | 'medium' | 'high' | 'urgent' }> {
-    const seen = new Set<string>();
-    const result = [] as Array<{ title: string; description: string; priority: 'low' | 'medium' | 'high' | 'urgent' }>;
-    for (const task of tasks) {
-      const title = task.title.trim();
-      const key = title.replace(/\s+/g, '').toLowerCase();
-      if (!title || seen.has(key)) continue;
-      seen.add(key);
-      result.push({ ...task, title });
-    }
-    return result.slice(0, 20);
-  }
-
   private async showAiConfigGuide(): Promise<void> {
     const goSettings = await showConfirmDialog({
       title: '需要配置 AI 模型',
@@ -1004,16 +895,6 @@ ${content}
       cancelText: '稍后',
     });
     if (goSettings) void switchPage('settings');
-  }
-
-  private toFriendlyAiError(error: unknown): string {
-    const message = error instanceof Error ? error.message : String(error);
-    if (/timeout|超时|AbortError/i.test(message)) return '请求超时了。国产模型或中转服务可能响应较慢，请稍后重试，或检查 Base URL / 模型名是否正确。';
-    if (/401|unauthorized|api key|apikey|密钥|鉴权/i.test(message)) return 'API Key 可能不正确或没有权限，请到设置页重新保存。';
-    if (/404|model|模型/i.test(message)) return '模型名称可能不存在，请检查设置页的默认模型。';
-    if (/network|fetch failed|ENOTFOUND|ECONNREFUSED|Failed to fetch/i.test(message)) return '网络连接失败，请检查 Base URL 是否可访问。';
-    if (/余额|quota|insufficient|credit/i.test(message)) return '账号额度可能不足，请检查服务商余额或套餐。';
-    return message || '未知错误，请检查 AI 配置。';
   }
 
   private getCurrentTheme(): string {
@@ -1058,8 +939,22 @@ ${content}
       const monaco = this.monaco;
       if (!monaco) return;
       const content = await ipcClient.fs.readFile(filePath);
-      const language = this.detectLanguage(fileName);
+      const isLarge = new TextEncoder().encode(content).length > LARGE_FILE_BYTES;
+      const language = detectLanguage(fileName);
       const model = monaco.editor.createModel(content, language);
+
+      if (isLarge) {
+        // Open huge files read-only and skip the expensive markdown preview so
+        // the render thread never locks up on tokenization / outline work.
+        model.updateOptions({ readOnly: true });
+        this.largeFilePaths.add(filePath);
+        showToast(
+          `文件较大（${(new TextEncoder().encode(content).length / (1024 * 1024)).toFixed(1)} MB），已以只读模式打开以防卡顿。`,
+          'warning',
+        );
+      } else {
+        this.largeFilePaths.delete(filePath);
+      }
 
       // Check if we can replace the current preview tab
       const previewTab = this.previewPath ? this.editors.get(this.previewPath) : null;
@@ -1210,12 +1105,15 @@ ${content}
     return paths.filter((p) => Boolean(this.store?.isDirty(p)));
   }
 
-  private confirmCloseDirtyTabs(paths: string[]): boolean {
+  private async confirmCloseDirtyTabs(paths: string[]): Promise<boolean> {
     const dirty = this.getDirtyOpenTabs(paths);
     if (dirty.length === 0) return true;
     const names = dirty.slice(0, 5).map((p) => p.split(/[/\\]/).pop() || p).join('、');
     const more = dirty.length > 5 ? ` 等 ${dirty.length} 个文件` : '';
-    return window.confirm(`有未保存的更改：${names}${more}。确定关闭并丢弃这些更改吗？`);
+    return showConfirmDialog({
+      title: '未保存的更改',
+      message: `有未保存的更改：${names}${more}。确定关闭并丢弃这些更改吗？`,
+    });
   }
 
   // --- Tab Context Menu ---
@@ -1264,13 +1162,13 @@ ${content}
 
   private async closeOtherTabs(keepPath: string): Promise<void> {
     const paths = Array.from(this.editors.keys()).filter(p => p !== keepPath);
-    if (!this.confirmCloseDirtyTabs(paths)) return;
+    if (!(await this.confirmCloseDirtyTabs(paths))) return;
     for (const p of paths) await this.closeTab(p, { force: true });
   }
 
   private async closeAllTabs(): Promise<void> {
     const paths = Array.from(this.editors.keys());
-    if (!this.confirmCloseDirtyTabs(paths)) return;
+    if (!(await this.confirmCloseDirtyTabs(paths))) return;
     for (const p of paths) await this.closeTab(p, { force: true });
   }
 
@@ -1312,7 +1210,7 @@ ${content}
     }
 
     if (!options?.force && this.store?.isDirty(filePath)) {
-      if (!this.confirmCloseDirtyTabs([filePath])) return;
+      if (!(await this.confirmCloseDirtyTabs([filePath]))) return;
     }
 
     const remaining = Array.from(this.editors.keys()).filter((key) => key !== filePath);
@@ -1420,7 +1318,7 @@ ${content}
 
   async revealActiveFile(): Promise<void> {
     if (!this.activeEditorPath) return;
-    const fileTree = window.__fileTree;
+    const fileTree = getRuntime('fileTree');
     await fileTree?.revealPath?.(this.activeEditorPath);
   }
 
@@ -1680,27 +1578,6 @@ ${content}
       const tab = this.editors.get(this.activeEditorPath);
       if (tab) langEl.textContent = tab.model.getLanguageId();
     }
-  }
-
-  private detectLanguage(fileName: string): string {
-    const ext = fileName.split('.').pop()?.toLowerCase() ?? '';
-    const map: Record<string, string> = {
-      ts: 'typescript',
-      tsx: 'typescript',
-      js: 'javascript',
-      jsx: 'javascript',
-      json: 'json',
-      md: 'markdown',
-      html: 'html',
-      css: 'css',
-      py: 'python',
-      rs: 'rust',
-      go: 'go',
-      java: 'java',
-      c: 'c',
-      cpp: 'cpp',
-    };
-    return map[ext] ?? 'plaintext';
   }
 
   private escHTML(str: string): string { return _escHtml(str); }

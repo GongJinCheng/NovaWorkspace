@@ -12,26 +12,43 @@
  * - Checkbox selection mode
  */
 
-import { switchPage, registerPageInit } from '../../app/router';
+import { switchPage, registerPageInit, registerPageCleanup } from '../../app/router';
 import { ipcClient } from '../../services/ipc-client';
 import { getCurrentWorkspaceRoot } from '../../services/workspace-context';
 import { escHtml } from '../../utils/escape';
+import { showConfirmDialog } from '../../components/modal';
 import type { KnowledgeItem, KnowledgeIndex, KnowledgeStats, KnowledgeSourceType } from '../../../shared/types/knowledge';
+import { setRuntime } from '../../services/runtime';
 
 let items: KnowledgeItem[] = [];
 let currentDetailId: string | null = null;
 let searchQuery = '';
-let selectedItems = new Set<string>();
+const selectedItems = new Set<string>();
+let knowledgeBound = false;
 
 export function initKnowledgePage(): void {
-  bindEvents();
-  refreshKnowledgePage();
+  // Bind DOM listeners exactly once — re-entering the page must not stack duplicates.
+  if (!knowledgeBound) {
+    bindEvents();
+    knowledgeBound = true;
+    registerPageCleanup('knowledge', cleanupKnowledgePage);
 
-  // Expose knowledge item opener for command palette
-  window.__openKnowledgeItem = async (itemId: string) => {
-    await refreshKnowledgePage();
-    void viewItem(itemId);
-  };
+    // Expose knowledge item opener for command palette
+    setRuntime('openKnowledgeItem', async (itemId: string) => {
+      await refreshKnowledgePage();
+      void viewItem(itemId);
+    });
+  }
+
+  refreshKnowledgePage();
+}
+
+/** Reset transient UI state when navigating away from the knowledge page. */
+function cleanupKnowledgePage(): void {
+  selectedItems.clear();
+  searchQuery = '';
+  const searchInput = document.getElementById('kb-search-input') as HTMLInputElement | null;
+  if (searchInput) searchInput.value = '';
 }
 
 function bindEvents(): void {
@@ -140,7 +157,7 @@ function renderStats(stats: KnowledgeStats): void {
   `;
 }
 
-let fullTextCache = new Map<string, string>();
+const fullTextCache = new Map<string, string>();
 
 function renderList(): void {
   const listEl = document.getElementById('kb-list');
@@ -379,13 +396,14 @@ async function summarizeItemBg(itemId: string): Promise<void> {
       { role: 'user' as const, content: prompt },
     ];
 
-    const summary = await svc.chatStream(messages, { temperature: 0.3, max_tokens: 400 }, () => {
+    const summaryHandle = await svc.chatStream(messages, { temperature: 0.3, max_tokens: 400 }, () => {
       // No streaming UI needed for background summarization
     });
+    const summary = await summaryHandle.text;
 
     if (summary) {
       const workspaceRoot = getCurrentWorkspaceRoot();
-      await window.electronAPI.knowledge.updateSummary(itemId, summary, workspaceRoot);
+      await ipcClient.knowledge.updateSummary(itemId, summary, workspaceRoot);
       // Update local item
       item.summary = summary;
       // Refresh the card
@@ -426,7 +444,7 @@ async function batchSummarize(): Promise<void> {
 // ── Actions ───────────────────────────────────────────────────────
 
 async function handleImportPdf(): Promise<void> {
-  const result = await window.electronAPI.fs.showOpenDialog({
+  const result = await ipcClient.fs.showOpenDialog({
     filters: [{ name: 'PDF Files', extensions: ['pdf'] }],
     properties: ['openFile'],
   });
@@ -514,7 +532,7 @@ async function confirmClipImport(): Promise<void> {
 }
 
 async function handleImportFile(): Promise<void> {
-  const result = await window.electronAPI.fs.showOpenDialog({
+  const result = await ipcClient.fs.showOpenDialog({
     filters: [
       { name: 'Text Files', extensions: ['txt', 'md', 'markdown'] },
     ],
@@ -565,7 +583,7 @@ async function deleteItem(itemId: string): Promise<void> {
   const item = items.find((i) => i.id === itemId);
   if (!item) return;
 
-  if (!confirm(`确定要删除「${item.title}」吗？此操作不可撤销。`)) return;
+  if (!(await showConfirmDialog({ title: '删除确认', message: `确定要删除「${item.title}」吗？此操作不可撤销。` }))) return;
 
   try {
     await ipcClient.knowledge.delete(itemId);
@@ -581,7 +599,7 @@ async function deleteItem(itemId: string): Promise<void> {
 async function batchDelete(): Promise<void> {
   const ids = [...selectedItems];
   if (ids.length === 0) return;
-  if (!confirm(`确定要删除选中的 ${ids.length} 篇资料吗？此操作不可撤销。`)) return;
+  if (!(await showConfirmDialog({ title: '删除确认', message: `确定要删除选中的 ${ids.length} 篇资料吗？此操作不可撤销。` }))) return;
 
   try {
     for (const id of ids) {

@@ -6,6 +6,7 @@
 import { aiService, type ChatMessage } from './ai-service';
 import type { AIImageAttachment, AIMessageContent, AIModelCapabilities, AIProviderConfig } from '../../../shared/types/ai';
 import { AI_CAPABILITY_LABELS, normalizeAIModelCapabilities, providerSupportsCapability, stripReasoningBlocks } from '../../../shared/utils/ai-capabilities';
+import { formatAiError } from '../../../shared/utils/ai-error';
 import { registerPageInit, registerPageCleanup, switchPage } from '../../app/router';
 import { aiStats } from '../../app/index';
 import { renderMarkdown } from '../../utils/markdown-renderer';
@@ -15,13 +16,17 @@ import { getCurrentWorkspaceRoot } from '../../services/workspace-context';
 import { escHtml, escAttr } from '../../utils/escape';
 import { installAIStudio, consumePendingAIDraft } from './studio';
 import { MASKED_API_KEY } from '../../../shared/constants/app';
+import { MAX_IMAGE_BYTES } from '../../../shared/constants/limits';
 import { bus, BusEvents } from '../../services/bus';
+import { getRuntime, setRuntime } from '../../services/runtime';
+import { ipcClient } from '../../services/ipc-client';
 
-window.aiService = aiService;
+setRuntime('aiService', aiService);
 
 // Chat state
 const chatHistory: ChatMessage[] = [];
 let isGenerating = false;
+let activeStreamCancel: (() => void) | null = null;
 let aiPageBound = false;
 let pendingImages: AIImageAttachment[] = [];
 let pendingFiles: Array<{ path: string; name: string }> = [];
@@ -117,7 +122,7 @@ async function sendMessage(text: string): Promise<string> {
   const fileNames: string[] = [];
   for (const file of pendingFiles) {
     try {
-      const content = await window.electronAPI.fs.readFile(file.path);
+      const content = await ipcClient.fs.readFile(file.path);
       fileContext += '--- FILE: ' + file.name + ' ---\n' + content + '\n--- END FILE ---\n\n';
       fileNames.push(file.name);
     } catch (error) {
@@ -154,11 +159,17 @@ async function sendMessage(text: string): Promise<string> {
       : [systemMsg, ...chatHistory].map(toTextOnlyMessage);
 
     let streamed = '';
-    const result = await aiService.chatStream(messages, { temperature: 0.7, timeout: 60000 }, (chunk) => {
+    const streamHandle = await aiService.chatStream(messages, { temperature: 0.7, timeout: 60000 }, (chunk) => {
       streamed += chunk;
       renderAssistantBubble(bubble, streamed);
       if (container) container.scrollTop = container.scrollHeight;
     });
+
+    // T2: expose the cancel handle so the Stop button can abort the stream.
+    activeStreamCancel = streamHandle.cancel;
+    updateSendButton();
+
+    const result = await streamHandle.text;
 
     bubble.classList.remove('streaming');
     renderAssistantBubble(bubble, result);
@@ -184,6 +195,7 @@ async function sendMessage(text: string): Promise<string> {
     appendMessage('system', '请求失败：' + formatFriendlyAiError(errMsg));
     return '';
   } finally {
+    activeStreamCancel = null;
     isGenerating = false;
     updateSendButton();
   }
@@ -293,7 +305,7 @@ async function attachImagesFromLocalPaths(text: string, images: AIImageAttachmen
   for (const filePath of paths) {
     if (existing.has(filePath)) continue;
     try {
-      const image = await window.electronAPI.fs.readImageAsDataUrl(filePath);
+      const image = await ipcClient.fs.readImageAsDataUrl(filePath);
       images.push(image);
       existing.add(filePath);
     } catch (error) {
@@ -331,7 +343,7 @@ async function addImageFiles(files: FileList | File[]): Promise<void> {
 
 function readBrowserImageFile(file: File): Promise<AIImageAttachment> {
   return new Promise((resolve, reject) => {
-    const maxBytes = 20 * 1024 * 1024;
+    const maxBytes = MAX_IMAGE_BYTES;
     if (file.size > maxBytes) {
       reject(new Error('图片超过 20MB'));
       return;
@@ -352,14 +364,14 @@ function readBrowserImageFile(file: File): Promise<AIImageAttachment> {
 async function pickLocalImages(): Promise<void> {
   if (!(await ensureImageInputAvailable())) return;
   try {
-    const result = await window.electronAPI.fs.showOpenDialog({
+    const result = await ipcClient.fs.showOpenDialog({
       properties: ['openFile', 'multiSelections'],
       filters: [{ name: 'Images', extensions: ['png', 'jpg', 'jpeg', 'webp', 'gif', 'bmp'] }],
     });
     if (result.canceled) return;
     const remainingSlots = Math.max(0, 6 - pendingImages.length);
     for (const filePath of result.filePaths.slice(0, remainingSlots)) {
-      pendingImages.push(await window.electronAPI.fs.readImageAsDataUrl(filePath));
+      pendingImages.push(await ipcClient.fs.readImageAsDataUrl(filePath));
     }
     if (result.filePaths.length > remainingSlots) showMsg('一次最多附加 6 张图片', 'warn');
     renderPendingImages();
@@ -383,7 +395,7 @@ function renderPendingImages(): void {
 
 async function pickProjectFiles(): Promise<void> {
   try {
-    const result = await window.electronAPI.fs.showOpenDialog({
+    const result = await ipcClient.fs.showOpenDialog({
       properties: ['openFile', 'multiSelections'],
       filters: [
         { name: 'Text/Code Files', extensions: ['ts','tsx','js','jsx','vue','svelte','py','java','go','rs','c','cpp','h','cs','php','rb','sh','md','markdown','txt','json','yaml','yml','xml','html','css','scss','less','sql','graphql','dockerfile','makefile','toml','ini','env'] },
@@ -429,7 +441,7 @@ async function pickKnowledgeItems(): Promise<void> {
   // Load knowledge items
   let kbItems: Array<{ id: string; title: string; sourceType: string; summary?: string; wordCount: number }> = [];
   try {
-    const index = await window.electronAPI.knowledge.list(workspaceRoot);
+    const index = await ipcClient.knowledge.list(workspaceRoot);
     kbItems = index.items || [];
   } catch (err) {
     console.warn('Failed to load knowledge items:', err);
@@ -438,7 +450,7 @@ async function pickKnowledgeItems(): Promise<void> {
   // Show picker popup
   showKnowledgePicker(kbItems, async (itemId) => {
     try {
-      const text = await window.electronAPI.knowledge.getText(itemId, workspaceRoot);
+      const text = await ipcClient.knowledge.getText(itemId, workspaceRoot);
       const item = kbItems.find(i => i.id === itemId);
       if (item && text) {
         pendingKnowledgeItems.push({ id: item.id, name: item.title, text });
@@ -520,8 +532,11 @@ function showKnowledgePicker(
 }
 
 function updateSendButton(): void {
-  const btn = document.getElementById('btn-ai-send') as HTMLButtonElement;
+  const btn = document.getElementById('btn-ai-send') as HTMLButtonElement | null;
   if (btn) btn.disabled = isGenerating;
+  // T2: Show the Stop button only while a stream is in flight.
+  const stopBtn = document.getElementById('btn-ai-stop') as HTMLButtonElement | null;
+  if (stopBtn) stopBtn.hidden = !isGenerating;
 }
 
 function clearChat(): void {
@@ -567,6 +582,22 @@ function initChatInput(): void {
 
   sendBtn?.addEventListener('click', () => {
     if (input) void sendMessage(input.value);
+  });
+
+  // T2: Stop button — created next to the send button, hidden until generating.
+  let stopBtn = document.getElementById('btn-ai-stop') as HTMLButtonElement | null;
+  if (!stopBtn && sendBtn) {
+    stopBtn = document.createElement('button');
+    stopBtn.id = 'btn-ai-stop';
+    stopBtn.className = 'ai-send-stop';
+    stopBtn.type = 'button';
+    stopBtn.title = '停止生成';
+    stopBtn.textContent = '停止';
+    stopBtn.hidden = true;
+    sendBtn.insertAdjacentElement('afterend', stopBtn);
+  }
+  stopBtn?.addEventListener('click', () => {
+    if (activeStreamCancel) activeStreamCancel();
   });
 
   clearBtn?.addEventListener('click', clearChat);
@@ -659,7 +690,7 @@ function appendSystemMessage(text: string): void {
 }
 
 function attachActiveFileToAIContext(): void {
-  const snapshot = window.__getActiveFileSnapshot?.();
+  const snapshot = getRuntime('getActiveFileSnapshot')?.();
   if (!snapshot) {
     appendMessage('system', '当前没有活动文件。请先在文件管理器打开一个文件。');
     showMsg('请先在文件管理器打开一个文件', 'warn');
@@ -731,7 +762,7 @@ async function runAIWorkflow(workflowId: string): Promise<void> {
     return;
   }
 
-  const snapshot = window.__getActiveFileSnapshot?.();
+  const snapshot = getRuntime('getActiveFileSnapshot')?.();
   if (!snapshot) {
     appendMessage('system', '当前没有可用的活动文件。请先在文件管理器打开一个文档，再使用这个工作流。');
     showMsg('请先在文件管理器打开一个文档', 'warn');
@@ -974,14 +1005,7 @@ function incrementAIStats(tokens: number): void {
 }
 
 function formatFriendlyAiError(error: unknown): string {
-  const message = error instanceof Error ? error.message : String(error || '');
-  if (/timeout|超时|AbortError/i.test(message)) return '请求超时了。模型或中转服务可能响应较慢，请稍后重试。';
-  if (/401|unauthorized|api key|apikey|密钥|鉴权/i.test(message)) return 'API Key 可能不正确或没有权限，请重新保存配置。';
-  if (/404|model|模型/i.test(message)) return '模型名称可能不存在，请检查默认模型。';
-  if (/network|fetch failed|ENOTFOUND|ECONNREFUSED|Failed to fetch/i.test(message)) return '网络连接失败，请检查 Base URL 是否可访问。';
-  if (/image_url|图片输入|image.*unsupported|unsupported.*image|multimodal|vision|expected.*text|unknown variant/i.test(message)) return '当前模型或接口不支持图片输入。请切换到支持视觉/多模态的模型，或移除图片后只发送文字。';
-  if (/余额|quota|insufficient|credit/i.test(message)) return '账号额度可能不足，请检查服务商余额或套餐。';
-  return message || '未知错误，请检查 AI 配置。';
+  return formatAiError(error);
 }
 
 function showMsg(text: string, type: string = 'info'): void {
@@ -1148,7 +1172,7 @@ async function saveCurrentConversation(): Promise<void> {
   }
   try {
     const workspaceRoot = getCurrentWorkspaceRoot();
-    await window.electronAPI.chatHistory.save(conversation, workspaceRoot);
+    await ipcClient.chatHistory.save(conversation, workspaceRoot);
   } catch (err) {
     console.warn('[ChatHistory] Failed to save conversation:', err);
   }
@@ -1190,12 +1214,12 @@ async function loadConversationHistory(): Promise<void> {
   historyLoaded = true;
 
   try {
-    const list = await window.electronAPI.chatHistory.list(currentWorkspace);
+    const list = await ipcClient.chatHistory.list(currentWorkspace);
     if (list.length === 0) return;
 
     // Load the most recent conversation
     const latest = list[0];
-    const conversation = await window.electronAPI.chatHistory.get(latest.id, currentWorkspace);
+    const conversation = await ipcClient.chatHistory.get(latest.id, currentWorkspace);
     if (!conversation || conversation.messages.length === 0) return;
 
     currentConversationId = conversation.id;
@@ -1230,7 +1254,7 @@ async function loadConversationHistory(): Promise<void> {
 async function loadConversation(conversationId: string): Promise<void> {
   try {
     const workspaceRoot = getCurrentWorkspaceRoot();
-    const conversation = await window.electronAPI.chatHistory.get(conversationId, workspaceRoot);
+    const conversation = await ipcClient.chatHistory.get(conversationId, workspaceRoot);
     if (!conversation) return;
 
     // Clear current state
@@ -1266,7 +1290,7 @@ async function loadConversation(conversationId: string): Promise<void> {
 async function deleteConversation(conversationId: string): Promise<void> {
   try {
     const workspaceRoot = getCurrentWorkspaceRoot();
-    await window.electronAPI.chatHistory.delete(conversationId, workspaceRoot);
+    await ipcClient.chatHistory.delete(conversationId, workspaceRoot);
     // If deleting current conversation, start fresh
     if (conversationId === currentConversationId) {
       clearChat();
@@ -1281,7 +1305,18 @@ function toggleHistoryPanel(): void {
   historyPanelOpen = !historyPanelOpen;
   const panel = document.getElementById('ai-history-panel');
   if (panel) {
-    panel.style.display = historyPanelOpen ? 'flex' : 'none';
+    if (historyPanelOpen) {
+      // Position the fixed panel directly below the toggle button
+      const btn = document.getElementById('ai-history-toggle-btn');
+      if (btn) {
+        const rect = btn.getBoundingClientRect();
+        panel.style.top = (rect.bottom + 4) + 'px';
+        panel.style.right = (window.innerWidth - rect.right) + 'px';
+      }
+      panel.style.display = 'flex';
+    } else {
+      panel.style.display = 'none';
+    }
   }
   if (historyPanelOpen) {
     void refreshHistoryPanel();
@@ -1300,7 +1335,7 @@ async function refreshHistoryPanel(): Promise<void> {
 
   try {
     const workspaceRoot = getCurrentWorkspaceRoot();
-    const list = await window.electronAPI.chatHistory.list(workspaceRoot);
+    const list = await ipcClient.chatHistory.list(workspaceRoot);
 
     if (list.length === 0) {
       listEl.innerHTML = '<div class="ai-history-empty">暂无对话记录</div>';
@@ -1352,7 +1387,6 @@ function initHistoryPanel(): void {
 
   const toggleWrap = document.createElement('div');
   toggleWrap.className = 'ai-history-toggle';
-  toggleWrap.style.position = 'relative';
 
   const toggleBtn = document.createElement('button');
   toggleBtn.className = 'icon-btn';
@@ -1367,9 +1401,11 @@ function initHistoryPanel(): void {
     toggleHistoryPanel();
   });
 
+  // Panel is appended to document.body to escape parent stacking context issues
+  // (studio-board z-index:!important was clipping the absolute-positioned panel)
   const panel = document.createElement('div');
   panel.id = 'ai-history-panel';
-  panel.className = 'ai-history-panel';
+  panel.className = 'ai-history-panel ai-history-panel--fixed';
   panel.style.display = 'none';
   panel.innerHTML =
     '<div class="ai-history-panel-header">' +
@@ -1387,8 +1423,8 @@ function initHistoryPanel(): void {
     '</button>';
 
   toggleWrap.appendChild(toggleBtn);
-  toggleWrap.appendChild(panel);
   actionsArea.insertBefore(toggleWrap, actionsArea.firstChild);
+  document.body.appendChild(panel);
 
   // Bind events
   panel.querySelector('#ai-history-close')?.addEventListener('click', closeHistoryPanel);
@@ -1423,7 +1459,7 @@ function initHistoryPanel(): void {
   document.addEventListener('click', (event) => {
     if (!historyPanelOpen) return;
     const target = event.target as HTMLElement;
-    if (!target.closest('.ai-history-toggle')) {
+    if (!target.closest('.ai-history-toggle') && !target.closest('.ai-history-panel')) {
       closeHistoryPanel();
     }
   });
@@ -1506,7 +1542,7 @@ async function handleKnowledgeSummarize(): Promise<void> {
   if (summary) {
     try {
       const workspaceRoot = getCurrentWorkspaceRoot();
-      await window.electronAPI.knowledge.updateSummary(itemId, summary, workspaceRoot);
+      await ipcClient.knowledge.updateSummary(itemId, summary, workspaceRoot);
       appendMessage('system', '✅ 摘要已自动保存到知识库。');
     } catch (err) {
       console.error('Failed to save knowledge summary:', err);

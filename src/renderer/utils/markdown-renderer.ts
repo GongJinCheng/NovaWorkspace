@@ -4,6 +4,7 @@
  */
 import { Marked } from 'marked';
 import hljs from 'highlight.js/lib/core';
+import { escAttr } from './escape';
 
 // Register commonly-used languages to keep bundle small.
 // Users can add more by importing from highlight.js/lib/languages/*.
@@ -78,10 +79,10 @@ const marked = new Marked({
         highlighted = escHtml(text);
       }
       const langLabel = language ? '<span class="md-code-lang">' + escHtml(language) + '</span>' : '';
-      const copyBtn = '<button class="md-code-copy" title="Copy code" data-code="' + escapeAttr(text) + '"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>';
+      const copyBtn = '<button class="md-code-copy" title="Copy code" data-code="' + escAttr(text) + '"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>';
       return '<div class="md-code-block">' +
         '<div class="md-code-header">' + langLabel + copyBtn + '</div>' +
-        '<pre><code class="hljs' + (language ? ' language-' + escapeAttr(language) : '') + '">' + highlighted + '</code></pre>' +
+        '<pre><code class="hljs' + (language ? ' language-' + escAttr(language) : '') + '">' + highlighted + '</code></pre>' +
         '</div>';
     },
     codespan({ text }: { text: string }): string {
@@ -90,9 +91,6 @@ const marked = new Marked({
   },
 });
 
-function escapeAttr(str: string): string {
-  return escHtml(str).replace(/`/g, '&#96;');
-}
 
 /**
  * Render Markdown content to HTML string.

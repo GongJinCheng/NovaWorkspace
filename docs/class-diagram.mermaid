@@ -1,0 +1,114 @@
+classDiagram
+    %% ===== 事件总线（A5） =====
+    class Bus {
+        +on(event, handler) Handler
+        +off(event, handler) void
+        +emit(event, payload?) void
+        +respond(event, handler) unsubscribe   %% 新增
+        +request(event, payload?, timeoutMs?) Promise~T~  %% 新增
+    }
+    class BusEvents {
+        <<const>>
+        +EditorSave
+        +EditorCloseActive
+        +EditorRunCommand
+        +EditorSetMode
+        +FileOpenFolder
+        +FileNew
+        +FileNewFromTemplate
+        +FileRunAIWorkflow
+        +RequestActiveFileSnapshot  %% 新增: 'request:active-file-snapshot'
+    }
+    Bus ..> BusEvents : 使用事件名
+
+    %% ===== 共享 AI 错误文案（A4） =====
+    class AiErrorUtil {
+        <<module>>
+        +formatAiError(error: unknown): string
+    }
+
+    %% ===== Toast / Modal 契约（A3） =====
+    class Toast {
+        <<module widgets/toast.ts>>
+        +showToast(message, type?) void
+        +toast(message, type?) void   %% 新增别名 (message, type?)
+        +showUndoToast(message, onUndo, duration?) void
+    }
+    class Modal {
+        <<module components/modal.ts>>
+        +showModal(opts): HTMLElement
+        +showInputPrompt(title, placeholder, defaultValue?) Promise~string|null~
+        +showConfirmDialog(opts): Promise~boolean~
+        +showTaskConfirmDialog(tasks): Promise~boolean~
+    }
+
+    %% ===== editor-manager 拆分后（A2） =====
+    class EditorManager {
+        <<orchestrator 公开API不变>>
+        +init(): Promise~void~
+        +openFile(filePath, fileName): Promise~void~
+        +openPath(filePath): Promise~void~
+        +saveFile(): Promise~void~
+        +getActiveFileSnapshot(): ActiveFileSnapshot
+        +closeTab(filePath, options?): Promise~void~
+        +runMarkdownCommand(action): Promise~void~
+        +setMarkdownMode(mode): void
+        +pinTab(filePath): void
+        +renameTab(old, new, name): void
+        +resetForWorkspace(): void
+        +switchToTab(filePath): void
+    }
+    class EditorCore {
+        +init/loader/theme/welcome/save/statusBar()
+    }
+    class TabsController {
+        +openFile/openPath/closeTab/switchToTab/pin/rename/contextMenu()
+    }
+    class MarkdownController {
+        +applyMarkdownMode/preview/outline/toolbar()
+    }
+    class EditorAiActions {
+        +runMarkdownAiAction/rewrite/todos/showAiResult()
+    }
+    class ImageDropPaste {
+        +bindImageDropPaste/fileToBase64()
+    }
+    class VersionHistory {
+        +createVersionBackup/showVersionHistory/showVersionPreview()
+    }
+    class ExportActions {
+        +exportCurrentMarkdown/exportActiveMarkdown()
+    }
+
+    EditorManager *-- EditorCore
+    EditorManager *-- TabsController
+    EditorManager *-- MarkdownController
+    EditorManager *-- EditorAiActions
+    EditorManager *-- ImageDropPaste
+    EditorManager *-- VersionHistory
+    EditorManager *-- ExportActions
+
+    %% ===== 跨页快照请求（A5 时序关系） =====
+    class FilesPage {
+        +bus.respond(RequestActiveFileSnapshot, () => editorManager.getActiveFileSnapshot())
+        +window.__getActiveFileSnapshot  %% deprecated 壳
+    }
+    class AiPage {
+        +bus.request(RequestActiveFileSnapshot)
+    }
+    class AiStudio {
+        +bus.request(RequestActiveFileSnapshot)  x4
+    }
+
+    AiPage ..> Bus : request
+    AiStudio ..> Bus : request
+    FilesPage ..> Bus : respond
+    FilesPage ..> EditorManager : getActiveFileSnapshot()
+    Bus ..> EditorManager : responder 调用
+
+    %% 依赖关系
+    AiPage ..> AiErrorUtil : formatAiError
+    AiStudio ..> AiErrorUtil : formatAiError
+    EditorManager ..> AiErrorUtil : formatAiError (原 toFriendlyAiError)
+    EditorManager ..> Modal : showConfirmDialog / showToast
+    EditorManager ..> Toast : showToast

@@ -3,7 +3,7 @@
  * Features: distinct file/folder icons, AI analysis integration
  */
 import { ipcClient } from '../../services/ipc-client';
-import { showInputPrompt } from '../../components/modal';
+import { showInputPrompt, showAlert, showConfirmDialog } from '../../components/modal';
 import type { FileEntry } from '../../../shared/types/file';
 
 export type FileSelectedHandler = (filePath: string, fileName: string) => void;
@@ -315,7 +315,7 @@ export class FileTree {
       await this.render();
       this.onFileSelect?.(filePath, name.trim());
     } catch (err) {
-      alert('\u521B\u5EFA\u6587\u4EF6\u5931\u8D25: ' + (err instanceof Error ? err.message : String(err)));
+      showAlert('\u521B\u5EFA\u6587\u4EF6\u5931\u8D25: ' + (err instanceof Error ? err.message : String(err)));
     }
   }
 
@@ -326,7 +326,7 @@ export class FileTree {
       await ipcClient.fs.createDirectory(dirPath, name.trim());
       await this.render();
     } catch (err) {
-      alert('\u521B\u5EFA\u6587\u4EF6\u5939\u5931\u8D25: ' + (err instanceof Error ? err.message : String(err)));
+      showAlert('\u521B\u5EFA\u6587\u4EF6\u5939\u5931\u8D25: ' + (err instanceof Error ? err.message : String(err)));
     }
   }
 
@@ -338,18 +338,18 @@ export class FileTree {
       await this.render();
       this.onFileRenamed?.(itemPath, newPath, isDir);
     } catch (err) {
-      alert('\u91CD\u547D\u540D\u5931\u8D25: ' + (err instanceof Error ? err.message : String(err)));
+      showAlert('\u91CD\u547D\u540D\u5931\u8D25: ' + (err instanceof Error ? err.message : String(err)));
     }
   }
 
   private async deleteItem(itemPath: string, itemName: string, isDir: boolean): Promise<void> {
-    if (!confirm('\u786E\u5B9A\u8981\u5220\u9664' + (isDir ? '\u6587\u4EF6\u5939' : '\u6587\u4EF6') + ' "' + itemName + '" \u5417\uFF1F')) return;
+    if (!(await showConfirmDialog({ title: '删除确认', message: '\u786E\u5B9A\u8981\u5220\u9664' + (isDir ? '\u6587\u4EF6\u5939' : '\u6587\u4EF6') + ' "' + itemName + '" \u5417\uFF1F' }))) return;
     try {
       await ipcClient.fs.deleteItem(itemPath);
       await this.render();
       this.onFileDeleted?.(itemPath, isDir);
     } catch (err) {
-      alert('\u5220\u9664\u5931\u8D25: ' + (err instanceof Error ? err.message : String(err)));
+      showAlert('\u5220\u9664\u5931\u8D25: ' + (err instanceof Error ? err.message : String(err)));
     }
   }
 

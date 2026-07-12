@@ -7,6 +7,8 @@
  *  - light: manual light override
  */
 
+import { getRuntime } from '../services/runtime';
+
 type ThemeMode = 'system' | 'dark' | 'light';
 type EffectiveTheme = 'dark' | 'light';
 
@@ -93,7 +95,7 @@ function syncThemeButton(): void {
 }
 
 function updateMonacoTheme(): void {
-  const editorManager = window.__editorManager;
+  const editorManager = getRuntime('editorManager');
   if (editorManager) {
     editorManager.setTheme(effectiveTheme === 'dark' ? 'custom-dark' : 'custom-light');
   }

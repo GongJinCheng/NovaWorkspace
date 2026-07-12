@@ -31,6 +31,7 @@ import { measure, measureAsync } from '../../utils/performance';
 import { escHtml } from '../../utils/escape';
 import type { TodoTask } from '@shared/types/todo';
 import { getCurrentWorkspaceRoot, resolveWorkspacePath } from '../../services/workspace-context';
+import { getRuntime, setRuntime } from '../../services/runtime';
 
 let initialized = false;
 let refreshTimer: ReturnType<typeof setTimeout> | null = null;
@@ -55,13 +56,13 @@ async function initTodoPage(): Promise<void> {
     void refreshAll();
   });
 
-  window.__openTodoTask = async (taskId: string) => {
+  setRuntime('openTodoTask', async (taskId: string) => {
     await refreshAll();
     openDrawer(taskId);
-  };
-  window.__focusTodoQuickInput = () => {
+  });
+  setRuntime('focusTodoQuickInput', () => {
     (document.getElementById('todo-quick-input') as HTMLInputElement | null)?.focus();
-  };
+  });
 
   // Bind details drawer close trigger
   document.getElementById('todo-drawer-close')?.addEventListener('click', () => {
@@ -349,7 +350,7 @@ function bindDrawerEvents(taskId: string): void {
     if (!sourcePath) return;
     void (async () => {
       await switchPage('files');
-      const openFilePath = window.__openFilePath;
+      const openFilePath = getRuntime('openFilePath');
       if (typeof openFilePath === 'function') {
         void openFilePath(sourcePath);
       }

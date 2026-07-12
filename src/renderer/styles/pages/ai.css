@@ -283,6 +283,31 @@
   transform: none;
 }
 
+/* T2: Stop button shown while a response is streaming */
+.ai-send-stop {
+  height: 36px;
+  padding: 0 14px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.15s ease;
+}
+
+.ai-send-stop:hover {
+  border-color: var(--danger, #ef4444);
+  color: var(--danger, #ef4444);
+}
+
+.ai-send-stop[hidden] {
+  display: none;
+}
+
 .ai-chat-hint {
   font-size: 11px;
   color: var(--text-tertiary);
@@ -1420,6 +1445,7 @@
 
 .ai-history-toggle {
   position: relative;
+  isolation: isolate;
 }
 
 .ai-history-toggle .history-count {
@@ -1454,6 +1480,12 @@
   flex-direction: column;
   animation: fadeIn 0.15s ease;
   overflow: hidden;
+}
+
+/* Fixed variant — appended to document.body to escape parent stacking context */
+.ai-history-panel--fixed {
+  position: fixed;
+  z-index: 9999;
 }
 
 .ai-history-panel-header {

@@ -1,0 +1,51 @@
+%% ===== A1: 启动 → 拷贝 → 运行时解析 → 加载 Monaco =====
+sequenceDiagram
+    participant Build as 构建脚本
+    participant Pkg as electron-builder
+    participant HTML as index.html
+    participant EM as EditorManager.init()
+    participant Loader as window.require (AMD)
+    participant FS as 文件系统/asar
+
+    Build->>Build: esbuild.renderer.mjs → dist/renderer/index.js
+    Build->>Build: copy-monaco-assets.mjs → dist/renderer/vs(loader.js+editor.main+base/workers)
+    Pkg->>FS: dist/**/* 进 asar
+    Pkg->>FS: asarUnpack dist/renderer/vs → app.asar.unpacked/dist/renderer/vs (真实文件)
+
+    HTML->>Loader: <script src="dist/renderer/vs/loader.js">
+    Loader-->>HTML: 定义 window.require
+    HTML->>EM: 打开文件 → init()
+
+    EM->>EM: vsBase = new URL('dist/renderer/vs', document.baseURI).href
+    EM->>EM: self.MonacoEnvironment.getWorkerUrl = blob(importScripts(vsBase+base/worker/workerMain.js))
+    EM->>Loader: require.config({ paths: { vs: vsBase } })
+    EM->>Loader: require(['vs/editor/editor.main'], cb, errCb)
+    alt 加载成功
+        Loader-->>EM: monaco 实例
+        EM->>EM: createEditor() → resolve()
+    else 加载失败
+        Loader-->>EM: errCb(err)
+        EM->>EM: showToast('编辑器加载失败，请重启应用','error')
+        EM-->>EM: reject() 保留欢迎屏（不白屏）
+    end
+
+%% ===== A5: ai 经 bus 请求快照 → files responder 回传 =====
+sequenceDiagram
+    participant AI as ai/index.ts 或 ai/studio.ts
+    participant Bus as bus
+    participant FP as files/index.ts
+    participant EM as EditorManager
+
+    Note over FP,EM: initFilesPage 时注册 responder（一次）
+    FP->>Bus: respond(RequestActiveFileSnapshot, () => editorManager.getActiveFileSnapshot())
+    FP->>FP: window.__getActiveFileSnapshot = deprecated 壳 (warn 一次)
+
+    AI->>Bus: request(RequestActiveFileSnapshot)
+    Bus->>FP: 调用已注册 responder
+    FP->>EM: getActiveFileSnapshot()
+    EM-->>FP: { filePath, fileName, content, selection? } | null
+    FP-->>Bus: 返回 snapshot
+    Bus-->>AI: resolve(snapshot)
+    AI->>AI: 据 snapshot 加入 pendingFiles / 渲染上下文中心
+
+    Note over AI,FP: files/index.ts:494 同页自读 → 直接 editorManager.getActiveFileSnapshot()（不走 bus）
